@@ -11,7 +11,8 @@ interface DashboardStats {
   openConversations: number;
   resolvedConversations: number;
   totalMessages: number;
-  avgResponseTime: string;
+  totalContacts: number;
+  newContactsToday: number;
   todayMessages: number;
 }
 
@@ -21,13 +22,16 @@ export default function DashboardPanel() {
     openConversations: 0,
     resolvedConversations: 0,
     totalMessages: 0,
-    avgResponseTime: '0m',
+    totalContacts: 0,
+    newContactsToday: 0,
     todayMessages: 0,
   });
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelDistribution, setLabelDistribution] = useState<Array<{ name: string; value: number; color: string }>>([]);
+  const [messageVolumeData, setMessageVolumeData] = useState<Array<{ day: string; messages: number }>>([]);
+  const [peakHoursData, setPeakHoursData] = useState<Array<{ hour: string; messages: number }>>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -53,6 +57,7 @@ export default function DashboardPanel() {
       let totalMessages = 0;
       let todayMessages = 0;
       const today = new Date().toDateString();
+      const allMessages: Message[] = [];
       
       for (const conv of convResponse.conversations.slice(0, 10)) {
         try {
@@ -61,10 +66,55 @@ export default function DashboardPanel() {
           todayMessages += msgResponse.messages.filter(m => 
             new Date(m.timestamp).toDateString() === today
           ).length;
+          allMessages.push(...msgResponse.messages);
         } catch (err) {
           console.error('Error loading messages for conversation:', err);
         }
       }
+
+      // Calculate message volume for last 7 days
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return date;
+      });
+
+      const volumeData = last7Days.map(date => {
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateStr = date.toDateString();
+        const count = allMessages.filter(m => 
+          new Date(m.timestamp).toDateString() === dateStr
+        ).length;
+        return { day: dayName, messages: count };
+      });
+      setMessageVolumeData(volumeData);
+
+      // Calculate peak hours activity (incoming messages per time slot)
+      const hourSlots = [
+        { hour: '00:00', start: 0, end: 4 },
+        { hour: '04:00', start: 4, end: 8 },
+        { hour: '08:00', start: 8, end: 12 },
+        { hour: '12:00', start: 12, end: 16 },
+        { hour: '16:00', start: 16, end: 20 },
+        { hour: '20:00', start: 20, end: 24 },
+      ];
+
+      const peakData = hourSlots.map(slot => {
+        const slotMessages = allMessages.filter(m => {
+          const hour = new Date(m.timestamp).getHours();
+          return hour >= slot.start && hour < slot.end && m.direction === 'inbound';
+        });
+        return { hour: slot.hour, messages: slotMessages.length };
+      });
+      setPeakHoursData(peakData);
+
+      // Calculate contact growth
+      const uniqueContacts = new Set(convResponse.conversations.map(c => c.contactId));
+      const todayContacts = convResponse.conversations.filter(c => {
+        const createdDate = new Date(c.createdAt).toDateString();
+        return createdDate === today;
+      });
+      const uniqueTodayContacts = new Set(todayContacts.map(c => c.contactId));
 
       // Calculate label distribution
       const labelCounts = new Map<string, { count: number; color: string }>();
@@ -96,7 +146,8 @@ export default function DashboardPanel() {
         openConversations: openConvs,
         resolvedConversations: resolvedConvs,
         totalMessages: totalMessages,
-        avgResponseTime: '2.5m',
+        totalContacts: uniqueContacts.size,
+        newContactsToday: uniqueTodayContacts.size,
         todayMessages: todayMessages,
       });
     } catch (error) {
@@ -110,25 +161,6 @@ export default function DashboardPanel() {
   const conversationStatusData = [
     { name: 'Open', value: stats.openConversations, color: '#3B82F6' },
     { name: 'Resolved', value: stats.resolvedConversations, color: '#10B981' },
-  ];
-
-  const messageVolumeData = [
-    { day: 'Mon', messages: 45 },
-    { day: 'Tue', messages: 62 },
-    { day: 'Wed', messages: 58 },
-    { day: 'Thu', messages: 71 },
-    { day: 'Fri', messages: 83 },
-    { day: 'Sat', messages: 39 },
-    { day: 'Sun', messages: 28 },
-  ];
-
-  const responseTimeData = [
-    { hour: '00:00', time: 5 },
-    { hour: '04:00', time: 3 },
-    { hour: '08:00', time: 2 },
-    { hour: '12:00', time: 4 },
-    { hour: '16:00', time: 3 },
-    { hour: '20:00', time: 6 },
   ];
 
   if (loading) {
@@ -168,10 +200,10 @@ export default function DashboardPanel() {
             color="bg-gradient-to-br from-purple-500 to-purple-600"
           />
           <StatCard
-            icon={<Clock className="w-8 h-8" />}
-            title="Avg Response Time"
-            value={stats.avgResponseTime}
-            subtitle="Quick response rate"
+            icon={<Users className="w-8 h-8" />}
+            title="Contact Growth"
+            value={stats.totalContacts.toString()}
+            subtitle={`${stats.newContactsToday} new contacts today`}
             color="bg-gradient-to-br from-green-500 to-green-600"
           />
         </div>
@@ -181,50 +213,62 @@ export default function DashboardPanel() {
           {/* Message Volume Chart */}
           <div className="bg-white rounded-3xl shadow-soft p-6">
             <h3 className="text-xl font-bold text-saas-text-primary mb-4">Message Volume (Last 7 Days)</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={messageVolumeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="day" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="messages" 
-                  stroke="#3B82F6" 
-                  strokeWidth={3}
-                  dot={{ fill: '#3B82F6', r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {messageVolumeData.some(d => d.messages > 0) ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={messageVolumeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="day" stroke="#6B7280" />
+                  <YAxis stroke="#6B7280" />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="messages" 
+                    stroke="#3B82F6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3B82F6', r: 5 }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px]">
+                <p className="text-gray-500">No messages in the last 7 days</p>
+              </div>
+            )}
           </div>
 
           {/* Conversation Status Chart */}
           <div className="bg-white rounded-3xl shadow-soft p-6">
             <h3 className="text-xl font-bold text-saas-text-primary mb-4">Conversation Status</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={conversationStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {conversationStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {stats.totalConversations > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={conversationStatusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {conversationStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px]">
+                <p className="text-gray-500">No conversations yet</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -265,61 +309,73 @@ export default function DashboardPanel() {
             )}
           </div>
 
-          {/* Response Time by Hour */}
+          {/* Peak Hours Activity */}
           <div className="bg-white rounded-3xl shadow-soft p-6">
-            <h3 className="text-xl font-bold text-saas-text-primary mb-4">Avg Response Time by Hour</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={responseTimeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="hour" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="time" fill="#10B981" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <h3 className="text-xl font-bold text-saas-text-primary mb-4">Peak Hours Activity</h3>
+            {peakHoursData.some(d => d.messages > 0) ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={peakHoursData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="hour" stroke="#6B7280" />
+                  <YAxis stroke="#6B7280" label={{ value: 'Messages', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                  />
+                  <Bar dataKey="messages" fill="#10B981" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px]">
+                <p className="text-gray-500">No incoming messages to show peak hours</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Recent Activity */}
         <div className="bg-white rounded-3xl shadow-soft p-6">
           <h3 className="text-xl font-bold text-saas-text-primary mb-4">Recent Conversations</h3>
-          <div className="space-y-3">
-            {conversations.slice(0, 5).map((conv) => (
-              <div key={conv.id} className="flex items-center justify-between p-4 bg-saas-bg rounded-2xl hover:shadow-soft-sm transition-shadow">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    conv.status === 'open' ? 'bg-blue-100' : 'bg-green-100'
-                  }`}>
-                    <Users className={`w-6 h-6 ${
-                      conv.status === 'open' ? 'text-blue-600' : 'text-green-600'
-                    }`} />
+          {conversations.length > 0 ? (
+            <div className="space-y-3">
+              {conversations.slice(0, 5).map((conv) => (
+                <div key={conv.id} className="flex items-center justify-between p-4 bg-saas-bg rounded-2xl hover:shadow-soft-sm transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      conv.status === 'open' ? 'bg-blue-100' : 'bg-green-100'
+                    }`}>
+                      <Users className={`w-6 h-6 ${
+                        conv.status === 'open' ? 'text-blue-600' : 'text-green-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-saas-text-primary">
+                        {conv.contact?.name || conv.contact?.phoneNumber || 'Unknown'}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate max-w-md">
+                        {conv.lastMessageText || 'No messages yet'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-saas-text-primary">
-                      {conv.contact?.name || conv.contact?.phoneNumber || 'Unknown'}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate max-w-md">
-                      {conv.lastMessageText || 'No messages yet'}
+                  <div className="text-right">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      conv.status === 'open' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {conv.status}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {conv.unreadCount > 0 && `${conv.unreadCount} unread`}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    conv.status === 'open' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-green-100 text-green-700'
-                  }`}>
-                    {conv.status}
-                  </span>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {conv.unreadCount > 0 && `${conv.unreadCount} unread`}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-gray-500">No conversations yet</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
