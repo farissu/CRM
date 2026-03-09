@@ -181,8 +181,16 @@ export default function HomePage() {
     try {
       await conversationApi.resolveConversation(activeConversation.id);
       
-      // Remove from list and clear active
-      setConversations(prev => prev.filter(conv => conv.id !== activeConversation.id));
+      // Update conversation status to 'resolved' instead of removing it
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === activeConversation.id 
+            ? { ...conv, status: 'resolved' as const }
+            : conv
+        )
+      );
+      
+      // Clear active conversation and messages
       setActiveConversation(null);
       setMessages([]);
     } catch (error) {
@@ -205,8 +213,8 @@ export default function HomePage() {
   };
 
   // Handle logout
-  const handleLogout = () => {
-    authApi.logout();
+  const handleLogout = async () => {
+    await authApi.logout();
     setIsAuthenticated(false);
     setAgent(null);
     setAgentId('');

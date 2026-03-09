@@ -2,6 +2,7 @@ import axios from 'axios';
 import { redisClient } from '../config/redis';
 
 const WAPPIN_TOKEN_KEY = 'wappin:token';
+const WAPPIN_AGENT_TOKEN_PREFIX = 'wappin:agent:';
 
 interface WappinLoginResponse {
   users: Array<{
@@ -95,6 +96,90 @@ export class WappinAuthService {
     console.log('Forcing Wappin token refresh...');
     await redisClient.del(WAPPIN_TOKEN_KEY);
     return await this.login();
+  }
+
+  /**
+   * Login to Wappin for specific agent and store token with agent ID
+   */
+  async loginForAgent(agentId: string): Promise<string> {
+    try {
+      const authString = Buffer.from(`${this.username}:${this.password}`).toString('base64');
+      
+      console.log(`Logging in to Wappin for agent ${agentId}...`);
+      
+      const response = await axios.post<WappinLoginResponse>(
+        `${this.apiUrl}/users/login`,
+        {},
+        {
+          headers: {
+            'Authorization': `Basic ${authString}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.data.users || response.data.users.length === 0) {
+        throw new Error('No user data in Wappin login response');
+      }
+
+      const { token, expired_after } = response.data.users[0];
+
+      // Calculate TTL in seconds
+      const expirationDate = new Date(expired_after);
+      const now = new Date();
+      const ttlSeconds = Math.floor((expirationDate.getTime() - now.getTime()) / 1000);
+
+      // Store token in Redis with agent-specific key
+      const agentTokenKey = `${WAPPIN_AGENT_TOKEN_PREFIX}${agentId}`;
+      const ttlWithBuffer = Math.max(ttlSeconds - 300, 60);
+      await redisClient.setEx(agentTokenKey, ttlWithBuffer, token);
+
+      console.log(`Wappin token stored for agent ${agentId}, expires in ${ttlWithBuffer} seconds`);
+
+      return token;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Wappin login failed for agent:', error.response?.data || error.message);
+        throw new Error(`Wappin authentication failed: ${error.response?.data?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get Wappin token for specific agent
+   */
+  async getTokenForAgent(agentId: string): Promise<string> {
+    try {
+      const agentTokenKey = `${WAPPIN_AGENT_TOKEN_PREFIX}${agentId}`;
+      const cachedToken = await redisClient.get(agentTokenKey);
+      
+      if (cachedToken) {
+        console.log(`Using cached Wappin token for agent ${agentId}`);
+        return cachedToken;
+      }
+
+      // Token not in cache or expired, login again
+      console.log(`Wappin token not found for agent ${agentId}, logging in...`);
+      return await this.loginForAgent(agentId);
+    } catch (error) {
+      console.error(`Failed to get Wappin token for agent ${agentId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Logout agent from Wappin (delete token from Redis)
+   */
+  async logoutAgent(agentId: string): Promise<void> {
+    try {
+      const agentTokenKey = `${WAPPIN_AGENT_TOKEN_PREFIX}${agentId}`;
+      await redisClient.del(agentTokenKey);
+      console.log(`Wappin token deleted for agent ${agentId}`);
+    } catch (error) {
+      console.error(`Failed to logout agent ${agentId} from Wappin:`, error);
+      throw error;
+    }
   }
 
   /**

@@ -46,9 +46,18 @@ export const authApi = {
     return response.data;
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('agent');
+  logout: async () => {
+    try {
+      // Call backend logout to clear Wappin token
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Backend logout failed:', error);
+      // Continue with local logout even if backend fails
+    } finally {
+      // Always clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('agent');
+    }
   },
 
   getToken: (): string | null => {

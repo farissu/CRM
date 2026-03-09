@@ -4,13 +4,13 @@ import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All routes require authentication
+// Wappin webhook endpoint (NO authentication required - external webhook)
+router.post('/webhooks/wappin', (req, res) => messageController.handleWebhook(req, res));
+
+// All other routes require authentication
 router.use(authenticate);
 
 // Send message
 router.post('/', (req, res) => messageController.sendMessage(req, res));
-
-// Wappin webhook endpoint
-router.post('/webhooks/wappin', (req, res) => messageController.handleWebhook(req, res));
 
 export default router;
