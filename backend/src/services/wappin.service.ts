@@ -5,6 +5,7 @@ interface SendMessageParams {
   to: string;
   text: string;
   recipientType?: 'individual' | 'group';
+  agentId?: string;
 }
 
 interface WappinMessageResponse {
@@ -26,8 +27,10 @@ export class WappinService {
    */
   async sendMessage(params: SendMessageParams): Promise<string> {
     try {
-      // Get valid token
-      const token = await wappinAuthService.getToken();
+      // Get valid token (agent-specific if agentId provided, otherwise global)
+      const token = params.agentId 
+        ? await wappinAuthService.getTokenForAgent(params.agentId)
+        : await wappinAuthService.getToken();
 
       const payload = {
         recipient_type: params.recipientType || 'individual',
@@ -62,10 +65,17 @@ export class WappinService {
         // If unauthorized, try to refresh token and retry once
         if (error.response?.status === 401) {
           console.log('Wappin token expired, refreshing...');
-          await wappinAuthService.refreshToken();
+          // If agent-specific token, re-login for that agent
+          if (params.agentId) {
+            await wappinAuthService.loginForAgent(params.agentId);
+          } else {
+            await wappinAuthService.refreshToken();
+          }
           
           // Retry the request with new token
-          const newToken = await wappinAuthService.getToken();
+          const newToken = params.agentId
+            ? await wappinAuthService.getTokenForAgent(params.agentId)
+            : await wappinAuthService.getToken();
           const payload = {
             recipient_type: params.recipientType || 'individual',
             to: params.to,

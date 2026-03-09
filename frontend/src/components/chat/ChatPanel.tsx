@@ -5,6 +5,58 @@ import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ManageLabelsModal from './ManageLabelsModal';
 
+// Helper function to format date for separator
+function formatDateSeparator(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // Reset time to compare dates only
+  today.setHours(0, 0, 0, 0);
+  yesterday.setHours(0, 0, 0, 0);
+  const messageDate = new Date(date);
+  messageDate.setHours(0, 0, 0, 0);
+  
+  if (messageDate.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else {
+    // Format: "Tue, 10 Feb" or with year if different year
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    };
+    
+    if (messageDate.getFullYear() !== today.getFullYear()) {
+      options.year = 'numeric';
+    }
+    
+    return messageDate.toLocaleDateString('en-US', options);
+  }
+}
+
+// Helper function to check if two dates are same day
+function isSameDay(date1: Date, date2: Date): boolean {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+}
+
+// DateSeparator component
+function DateSeparator({ date }: { date: string }) {
+  return (
+    <div className="flex items-center justify-center my-4">
+      <div className="bg-gray-100 rounded-full px-4 py-1.5 shadow-sm">
+        <span className="text-xs font-semibold text-gray-600">{date}</span>
+      </div>
+    </div>
+  );
+}
+
 interface ChatPanelProps {
   conversation: Conversation | null;
   messages: Message[];
@@ -169,9 +221,28 @@ export default function ChatPanel({
           </div>
         ) : (
           <>
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))}
+            {messages.map((message, index) => {
+              // Check if we need to show date separator
+              let showDateSeparator = false;
+              if (index === 0) {
+                // Always show separator for first message
+                showDateSeparator = true;
+              } else {
+                // Show separator if date is different from previous message
+                const currentDate = new Date(message.timestamp);
+                const previousDate = new Date(messages[index - 1].timestamp);
+                showDateSeparator = !isSameDay(currentDate, previousDate);
+              }
+
+              return (
+                <React.Fragment key={message.id}>
+                  {showDateSeparator && (
+                    <DateSeparator date={formatDateSeparator(new Date(message.timestamp))} />
+                  )}
+                  <MessageBubble message={message} />
+                </React.Fragment>
+              );
+            })}
             {typingIndicator && (
               <div className="px-4 mb-3">
                 <div className="bg-white max-w-[70%] rounded-2xl px-5 py-3 shadow-soft-sm border border-saas-border">

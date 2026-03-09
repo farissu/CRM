@@ -86,7 +86,8 @@ export class MessageService {
     try {
       const wappinMessageId = await wappinService.sendMessage({
         to: conversation.contact.phoneNumber,
-        text
+        text,
+        agentId: senderId
       });
 
       // Update message status

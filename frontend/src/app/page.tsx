@@ -134,27 +134,15 @@ export default function HomePage() {
     if (!activeConversation) return;
 
     try {
-      const message = await messageApi.sendMessage({
+      await messageApi.sendMessage({
         conversationId: activeConversation.id,
         text,
         senderId: agentId,
       });
 
-      // Add message to list
-      setMessages(prev => [...prev, message]);
-
-      // Update conversation last message
-      setConversations(prevConversations =>
-        prevConversations.map(conv =>
-          conv.id === activeConversation.id
-            ? {
-                ...conv,
-                lastMessageText: text,
-                lastMessageAt: new Date().toISOString(),
-              }
-            : conv
-        )
-      );
+      // Don't add message to state here - let WebSocket handle it
+      // This prevents duplicate messages
+      // The message will be added when backend emits 'message_received' event
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message');
@@ -237,7 +225,12 @@ export default function HomePage() {
       const message = data.message;
       // Add message to list if it's for active conversation
       if (data.conversationId === activeConversation?.id) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // Check if message already exists (prevent duplicates)
+          const exists = prev.some(m => m.id === message.id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
       }
 
       // Check if conversation exists in list
