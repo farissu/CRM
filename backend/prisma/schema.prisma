@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  AGENT
+}
+
+model Company {
+  id               String   @id @default(uuid())
+  name             String
+  brand            String?
+  address          String?
+  businessEntities String?
+  businessType     String?
+  email            String?
+  phone            String?
+  logo             String?
+  webhookUrl       String?  // Webhook URL for incoming messages
+  webhookCallbackUrl String?  // Webhook callback URL for status updates
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  agents Agent[]
+
+  @@map("companies")
+}
+
+model Agent {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(AGENT)
+  companyId String
+  avatar    String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  conversations Conversation[]
+  messages      Message[]
+
+  @@index([companyId])
+  @@map("agents")
+}
+
+model Contact {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique
+  name        String?
+  email       String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  conversations Conversation[]
+  labels        ContactLabel[]
+
+  @@map("contacts")
+}
+
+model Label {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts ContactLabel[]
+
+  @@map("labels")
+}
+
+model ContactLabel {
+  contactId String
+  labelId   String
+  createdAt DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  label   Label   @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, labelId])
+  @@map("contact_labels")
+}
+
+model Conversation {
+  id               String   @id @default(uuid())
+  contactId        String
+  assignedAgentId  String?
+  status           String   @default("open") // open, resolved
+  unreadCount      Int      @default(0)
+  lastMessageAt    DateTime @default(now())
+  lastMessageText  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  contact       Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  assignedAgent Agent?   @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  messages      Message[]
+
+  @@index([contactId])
+  @@index([assignedAgentId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  direction      String   // inbound, outbound
+  text           String
+  messageType    String   @default("text") // text, image, document, etc.
+  status         String?  @default("sent") // sent, delivered, read, failed
+  senderId       String?  // agent ID who sent the message
+  metadata       Json?
+  timestamp      DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       Agent?       @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([timestamp])
+  @@map("messages")
+}
