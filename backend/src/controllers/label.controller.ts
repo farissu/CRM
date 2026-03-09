@@ -10,6 +10,11 @@ export const labelController = {
     try {
       const labels = await prisma.label.findMany({
         orderBy: { createdAt: 'asc' },
+        include: {
+          _count: {
+            select: { contacts: true }
+          }
+        }
       });
       res.json({ labels });
     } catch (error) {

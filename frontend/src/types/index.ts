@@ -37,6 +37,9 @@ export interface Label {
   id: string;
   name: string;
   color: string;
+  _count?: {
+    contacts: number;
+  };
 }
 
 export interface Contact {

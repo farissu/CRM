@@ -116,25 +116,11 @@ export default function DashboardPanel() {
       });
       const uniqueTodayContacts = new Set(todayContacts.map(c => c.contactId));
 
-      // Calculate label distribution
-      const labelCounts = new Map<string, { count: number; color: string }>();
-      labelsResponse.labels.forEach(label => {
-        labelCounts.set(label.id, { count: 0, color: label.color });
-      });
-      
-      convResponse.conversations.forEach(conv => {
-        conv.contact?.labels?.forEach(label => {
-          const current = labelCounts.get(label.id);
-          if (current) {
-            labelCounts.set(label.id, { ...current, count: current.count + 1 });
-          }
-        });
-      });
-
+      // Calculate label distribution from contact_labels (via _count)
       const labelDistData = labelsResponse.labels
         .map(label => ({
           name: label.name,
-          value: labelCounts.get(label.id)?.count || 0,
+          value: label._count?.contacts || 0,
           color: label.color
         }))
         .filter(item => item.value > 0);
