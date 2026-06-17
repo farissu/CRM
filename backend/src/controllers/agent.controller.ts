@@ -46,8 +46,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
 
     return res.json({ agent: updatedAgent });
-  } catch (error) {
-    console.error('Update profile error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to update profile' });
   }
 };
@@ -95,8 +94,7 @@ export const changePassword = async (req: Request, res: Response) => {
     });
 
     return res.json({ message: 'Password updated successfully' });
-  } catch (error) {
-    console.error('Change password error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to change password' });
   }
 };
@@ -135,8 +133,7 @@ export const getAllAgents = async (req: Request, res: Response) => {
     });
 
     return res.json({ agents });
-  } catch (error) {
-    console.error('Get agents error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to get agents' });
   }
 };
@@ -200,8 +197,7 @@ export const createAgent = async (req: Request, res: Response) => {
     });
 
     return res.status(201).json({ agent: newAgent });
-  } catch (error) {
-    console.error('Create agent error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to create agent' });
   }
 };
@@ -257,8 +253,7 @@ export const updateAgent = async (req: Request, res: Response) => {
     });
 
     return res.json({ agent: updatedAgent });
-  } catch (error) {
-    console.error('Update agent error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to update agent' });
   }
 };
@@ -279,8 +274,7 @@ export const deleteAgent = async (req: Request, res: Response) => {
     });
 
     return res.json({ message: 'Agent deleted successfully' });
-  } catch (error) {
-    console.error('Delete agent error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to delete agent' });
   }
 };
@@ -309,8 +303,7 @@ export const updateAgentRole = async (req: Request, res: Response) => {
     });
 
     return res.json({ agent: updatedAgent });
-  } catch (error) {
-    console.error('Update agent role error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to update agent role' });
   }
 };

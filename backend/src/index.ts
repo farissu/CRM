@@ -2,11 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import path from 'path';
+import jwt from 'jsonwebtoken';
+import { rateLimit } from 'express-rate-limit';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
-import { wappinAuthService } from './services/wappin-auth.service';
 import routes from './routes';
 
 // Load environment variables
@@ -16,16 +18,21 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  process.env.FRONTEND_URL_NGROK,
+].filter(Boolean) as string[];
+
 // Create Socket.IO server
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST']
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -35,53 +42,54 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Rate limiting
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+app.use('/api', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+
+// Serve uploaded media files — JWT required
+app.use('/uploads', (req, res, next) => {
+  const token = (req.query.token as string | undefined) ?? req.headers.authorization?.replace('Bearer ', '');
+  if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+  try {
+    jwt.verify(token, process.env.JWT_SECRET!);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}, express.static(path.join(__dirname, '../uploads')));
+
 // API routes
 app.use('/api', routes);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  // Join conversation room
   socket.on('join_conversation', (conversationId: string) => {
     socket.join(`conversation:${conversationId}`);
-    console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
   });
 
-  // Leave conversation room
   socket.on('leave_conversation', (conversationId: string) => {
     socket.leave(`conversation:${conversationId}`);
-    console.log(`Socket ${socket.id} left conversation ${conversationId}`);
   });
 
-  // Typing indicator - start
   socket.on('typing_start', (data: { conversationId: string; agentName: string }) => {
     socket.to(`conversation:${data.conversationId}`).emit('typing_start', {
       conversationId: data.conversationId,
       agentName: data.agentName
     });
-    console.log(`Typing started in conversation ${data.conversationId} by ${data.agentName}`);
   });
 
-  // Typing indicator - stop
   socket.on('typing_stop', (data: { conversationId: string }) => {
     socket.to(`conversation:${data.conversationId}`).emit('typing_stop', {
       conversationId: data.conversationId
     });
-    console.log(`Typing stopped in conversation ${data.conversationId}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
   });
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
-  });
+app.use((err: { status?: number; message?: string }, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
 // Initialize and start server
@@ -90,9 +98,6 @@ async function start() {
     // Connect to databases
     await connectDatabase();
     await connectRedis();
-
-    // Initialize Wappin authentication
-    await wappinAuthService.initialize();
 
     // Start server
     const PORT = process.env.PORT || 3001;

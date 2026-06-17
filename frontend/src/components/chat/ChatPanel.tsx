@@ -167,7 +167,7 @@ export default function ChatPanel({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {conversation.status === 'open' && onResolveConversation && (
+          {conversation.status === 'OPEN' && onResolveConversation && (
             <button
               onClick={onResolveConversation}
               className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm"
@@ -284,7 +284,7 @@ export default function ChatPanel({
         onSendMessage={onSendMessage}
         onTypingStart={onTypingStart}
         onTypingStop={onTypingStop}
-        disabled={conversation.status === 'resolved'}
+        disabled={conversation.status === 'RESOLVED'}
       />
 
       {/* Manage Labels Modal */}

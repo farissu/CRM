@@ -1,172 +1,223 @@
 import { Request, Response } from 'express';
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
 import { messageService } from '../services/message.service';
+import { mediaService } from '../services/media.service';
+
+interface WhatsAppContact {
+  wa_id: string;
+  profile?: { name?: string };
+}
+
+interface WhatsAppMediaPayload {
+  id: string;
+  mime_type?: string;
+  caption?: string;
+  filename?: string;
+}
+
+interface WhatsAppMessage {
+  id: string;
+  from: string;
+  type: string;
+  timestamp?: string;
+  text?: { body: string };
+  image?: WhatsAppMediaPayload;
+  video?: WhatsAppMediaPayload;
+  document?: WhatsAppMediaPayload;
+  audio?: WhatsAppMediaPayload;
+  sticker?: WhatsAppMediaPayload;
+  button?: { text: string };
+  interactive?: { button_reply?: { title: string }; list_reply?: { title: string } };
+}
+
+function extractContactName(contacts: WhatsAppContact[] | undefined, from: string): string {
+  if (!contacts) return from;
+  const match = contacts.find(c => c.wa_id === from);
+  return match?.profile?.name ?? from;
+}
+
+async function extractMediaContent(message: WhatsAppMessage): Promise<{
+  text: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  caption?: string;
+}> {
+  const type = message.type;
+
+  async function downloadOrFallback(payload: WhatsAppMediaPayload): Promise<string> {
+    try {
+      return await mediaService.downloadAndSave(payload.id, payload.mime_type);
+    } catch {
+      return payload.id;
+    }
+  }
+
+  if (type === 'text' && message.text) {
+    return { text: message.text.body };
+  }
+
+  if (type === 'image' && message.image) {
+    const { mime_type, caption } = message.image;
+    return { text: caption ?? '', mediaUrl: await downloadOrFallback(message.image), mediaType: mime_type, caption };
+  }
+
+  if (type === 'video' && message.video) {
+    const { mime_type, caption } = message.video;
+    return { text: caption ?? '', mediaUrl: await downloadOrFallback(message.video), mediaType: mime_type, caption };
+  }
+
+  if (type === 'document' && message.document) {
+    const { mime_type, caption, filename } = message.document;
+    return { text: caption ?? '', mediaUrl: await downloadOrFallback(message.document), mediaType: mime_type, fileName: filename, caption };
+  }
+
+  if (type === 'audio' && message.audio) {
+    return { text: '', mediaUrl: await downloadOrFallback(message.audio), mediaType: message.audio.mime_type };
+  }
+
+  if (type === 'sticker' && message.sticker) {
+    return { text: '', mediaUrl: await downloadOrFallback(message.sticker), mediaType: message.sticker.mime_type };
+  }
+
+  if (type === 'button' && message.button) {
+    return { text: message.button.text };
+  }
+
+  if (type === 'interactive' && message.interactive) {
+    const title = message.interactive.button_reply?.title ?? message.interactive.list_reply?.title ?? '';
+    return { text: title };
+  }
+
+  return { text: '' };
+}
+
+async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsAppContact[] | undefined) {
+  if (!message.from) return;
+  const timestamp = message.timestamp ? parseInt(message.timestamp) * 1000 : Date.now();
+  const { text, mediaUrl, mediaType, fileName, caption } = await extractMediaContent(message);
+  const contactName = extractContactName(contacts, message.from);
+
+  await messageService.receiveMessage({
+    phoneNumber: message.from,
+    text,
+    contactName,
+    timestamp: new Date(timestamp),
+    messageType: message.type,
+    externalId: message.id,
+    mediaUrl,
+    mediaType,
+    fileName,
+    caption,
+  });
+}
 
 export class MessageController {
-  /**
-   * GET /api/conversations/:id/messages
-   */
   async getMessages(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const { page = '1', limit = '50' } = req.query;
-
-      const result = await messageService.getMessages(
-        id,
-        parseInt(page as string),
-        parseInt(limit as string)
-      );
-
+      const result = await messageService.getMessages(id, parseInt(page as string), parseInt(limit as string));
       res.json(result);
-    } catch (error: any) {
-      console.error('Get messages error:', error);
-      res.status(500).json({
-        error: 'Failed to fetch messages',
-        message: error.message
-      });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to fetch messages', message: err instanceof Error ? err.message : 'Unknown error' });
     }
   }
 
-  /**
-   * POST /api/messages
-   */
   async sendMessage(req: Request, res: Response) {
     try {
       const { conversationId, text, senderId } = req.body;
-
       if (!conversationId || !text || !senderId) {
-        return res.status(400).json({
-          error: 'conversationId, text, and senderId are required'
-        });
+        res.status(400).json({ error: 'conversationId, text, and senderId are required' });
+        return;
       }
-
-      const message = await messageService.sendMessage({
-        conversationId,
-        text,
-        senderId
-      });
-
+      const message = await messageService.sendMessage({ conversationId, text, senderId });
       res.status(201).json(message);
-    } catch (error: any) {
-      console.error('Send message error:', error);
-      res.status(500).json({
-        error: 'Failed to send message',
-        message: error.message
-      });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to send message', message: err instanceof Error ? err.message : 'Unknown error' });
     }
   }
 
-  /**
-   * POST /api/webhooks/wappin
-   * Receive inbound messages from Wappin (WhatsApp Business API format)
-   */
+  verifyWebhook(req: Request, res: Response) {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+    if (mode === 'subscribe' && token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
+      res.status(200).send(challenge);
+    } else {
+      res.status(403).json({ error: 'Forbidden' });
+    }
+  }
+
   async handleWebhook(req: Request, res: Response) {
     try {
-      const webhookData = req.body;
-      
-      console.log('Webhook received:', JSON.stringify(webhookData, null, 2));
+      const body = req.body;
 
-      // WhatsApp Business API format
-      // Structure: body.entry[].changes[].value.messages[]
-      if (webhookData.entry && Array.isArray(webhookData.entry)) {
-        for (const entry of webhookData.entry) {
-          if (entry.changes && Array.isArray(entry.changes)) {
-            for (const change of entry.changes) {
-              const value = change.value;
-              
-              // Process messages
-              if (value.messages && Array.isArray(value.messages)) {
-                for (const message of value.messages) {
-                  // Extract message data
-                  const from = message.from; // Phone number
-                  const messageId = message.id;
-                  const timestamp = message.timestamp ? parseInt(message.timestamp) * 1000 : Date.now();
-                  
-                  // Get text content
-                  let text = '';
-                  if (message.type === 'text' && message.text) {
-                    text = message.text.body;
-                  } else if (message.type === 'button' && message.button) {
-                    text = message.button.text;
-                  } else if (message.type === 'interactive' && message.interactive) {
-                    text = message.interactive.button_reply?.title || 
-                           message.interactive.list_reply?.title || '';
-                  }
-                  
-                  // Get contact name
-                  let contactName = from;
-                  if (value.contacts && Array.isArray(value.contacts)) {
-                    const contact = value.contacts.find((c: any) => c.wa_id === from);
-                    if (contact && contact.profile && contact.profile.name) {
-                      contactName = contact.profile.name;
-                    }
-                  }
-                  
-                  // Process message if we have required data
-                  if (from && text) {
-                    await messageService.receiveMessage({
-                      phoneNumber: from,
-                      text,
-                      contactName,
-                      timestamp: new Date(timestamp)
-                    });
-                  }
-                }
-              }
+      if (body.entry && Array.isArray(body.entry)) {
+        for (const entry of body.entry) {
+          for (const change of entry.changes ?? []) {
+            const value = change.value;
+            for (const message of value.messages ?? []) {
+              await processWhatsAppMessage(message as WhatsAppMessage, value.contacts);
             }
           }
         }
-      }
-      // Fallback: Simple format (for backward compatibility)
-      else if (webhookData.from && webhookData.text) {
+      } else if (body.from && body.text) {
         await messageService.receiveMessage({
-          phoneNumber: webhookData.from,
-          text: webhookData.text,
-          contactName: webhookData.name,
-          timestamp: webhookData.timestamp ? new Date(webhookData.timestamp) : undefined
+          phoneNumber: body.from,
+          text: body.text,
+          contactName: body.name,
+          timestamp: body.timestamp ? new Date(body.timestamp) : undefined,
         });
-      }
-      // Alternative format: body.body (based on user's structure)
-      else if (webhookData.body) {
-        const body = webhookData.body;
-        
-        // Check for messages in body
-        if (body.messages && Array.isArray(body.messages)) {
-          for (const message of body.messages) {
-            const from = message.from;
-            let text = '';
-            
-            if (message.type === 'text' && message.text) {
-              text = message.text.body;
-            }
-            
-            // Get contact name from contacts array
-            let contactName = from;
-            if (body.contacts && Array.isArray(body.contacts)) {
-              const contact = body.contacts.find((c: any) => c.wa_id === from);
-              if (contact && contact.profile && contact.profile.name) {
-                contactName = contact.profile.name;
-              }
-            }
-            
-            if (from && text) {
-              await messageService.receiveMessage({
-                phoneNumber: from,
-                text,
-                contactName,
-                timestamp: message.timestamp ? new Date(parseInt(message.timestamp) * 1000) : undefined
-              });
-            }
-          }
+      } else if (body.body?.messages) {
+        for (const message of body.body.messages) {
+          if (!message.from) continue;
+          const text = message.type === 'text' ? message.text?.body ?? '' : '';
+          const contactName = extractContactName(body.body.contacts, message.from);
+          await messageService.receiveMessage({
+            phoneNumber: message.from,
+            text,
+            contactName,
+            timestamp: message.timestamp ? new Date(parseInt(message.timestamp) * 1000) : undefined,
+          });
         }
       }
 
       res.status(200).json({ success: true });
-    } catch (error: any) {
-      console.error('Webhook error:', error);
-      res.status(500).json({
-        error: 'Failed to process webhook',
-        message: error.message
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to process webhook', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+
+  async getMedia(req: Request, res: Response) {
+    const token = (req.query.token as string | undefined) ?? req.headers.authorization?.replace('Bearer ', '');
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    try {
+      jwt.verify(token, process.env.JWT_SECRET!);
+    } catch {
+      res.status(401).json({ error: 'Invalid token' }); return;
+    }
+
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    if (!accessToken) { res.status(500).json({ error: 'WhatsApp not configured' }); return; }
+
+    try {
+      const metaRes = await axios.get<{ url: string; mime_type: string }>(
+        `https://graph.facebook.com/v19.0/${req.params.mediaId}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const { url, mime_type } = metaRes.data;
+      const mediaRes = await axios.get<NodeJS.ReadableStream>(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        responseType: 'stream',
       });
+      res.setHeader('Content-Type', mime_type || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      mediaRes.data.pipe(res);
+    } catch {
+      res.status(404).json({ error: 'Media not found or expired' });
     }
   }
 }

@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // Extend Express Request type to include user
 declare global {
@@ -31,7 +32,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Verify JWT token
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: string };
 
     // Get agent with company from database
     const agent = await prisma.agent.findUnique({
@@ -60,8 +61,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     };
 
     next();
-  } catch (error: any) {
-    console.error('Authentication error:', error);
+  } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

@@ -3,9 +3,12 @@ import { wappinAuthService } from './wappin-auth.service';
 
 interface SendMessageParams {
   to: string;
-  text: string;
+  text?: string;
   recipientType?: 'individual' | 'group';
   agentId?: string;
+  messageType?: string;
+  mediaUrl?: string;
+  caption?: string;
 }
 
 interface WappinMessageResponse {
@@ -32,14 +35,60 @@ export class WappinService {
         ? await wappinAuthService.getTokenForAgent(params.agentId)
         : await wappinAuthService.getToken();
 
-      const payload = {
+      let payload: any = {
         recipient_type: params.recipientType || 'individual',
-        to: params.to,
-        type: 'text',
-        text: {
-          body: params.text
-        }
+        to: params.to
       };
+
+      // Build payload based on message type
+      const messageType = params.messageType || 'text';
+      
+      if (messageType === 'text' || !params.mediaUrl) {
+        // Text message
+        payload.type = 'text';
+        payload.text = {
+          body: params.text || params.caption || ''
+        };
+      } else if (messageType === 'image') {
+        // Image message
+        payload.type = 'image';
+        payload.image = {
+          link: params.mediaUrl
+        };
+        if (params.caption) {
+          payload.image.caption = params.caption;
+        }
+      } else if (messageType === 'video') {
+        // Video message
+        payload.type = 'video';
+        payload.video = {
+          link: params.mediaUrl
+        };
+        if (params.caption) {
+          payload.video.caption = params.caption;
+        }
+      } else if (messageType === 'document') {
+        // Document message
+        payload.type = 'document';
+        payload.document = {
+          link: params.mediaUrl
+        };
+        if (params.caption) {
+          payload.document.caption = params.caption;
+        }
+      } else if (messageType === 'audio') {
+        // Audio message
+        payload.type = 'audio';
+        payload.audio = {
+          link: params.mediaUrl
+        };
+      } else {
+        // Default to text
+        payload.type = 'text';
+        payload.text = {
+          body: params.text || params.caption || ''
+        };
+      }
 
       const response = await axios.post<WappinMessageResponse>(
         `${this.apiUrl}/messages`,

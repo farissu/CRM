@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { Agent } from '../types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -9,7 +10,6 @@ const api = axios.create({
   },
 });
 
-// Add token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -18,16 +18,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export type { Agent };
+
 export interface LoginCredentials {
   email: string;
   password: string;
-}
-
-export interface Agent {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
 }
 
 export interface LoginResponse {
@@ -48,13 +43,10 @@ export const authApi = {
 
   logout: async () => {
     try {
-      // Call backend logout to clear Wappin token
       await api.post('/auth/logout');
     } catch (error) {
-      console.error('Backend logout failed:', error);
-      // Continue with local logout even if backend fails
+      console.error('Logout failed:', error);
     } finally {
-      // Always clear local storage
       localStorage.removeItem('token');
       localStorage.removeItem('agent');
     }

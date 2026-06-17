@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { labelApi } from '@/lib/api';
 
-type StatusFilter = 'served' | 'resolved' | 'all';
+type StatusFilter = 'served' | 'unread' | 'resolved' | 'all';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -54,8 +54,9 @@ export default function ConversationSidebar({
   // Filter conversations based on status and search
   const filteredConversations = conversations.filter(conv => {
     // Status filter
-    if (statusFilter === 'served' && conv.status !== 'open') return false;
-    if (statusFilter === 'resolved' && conv.status !== 'resolved') return false;
+    if (statusFilter === 'served' && conv.status !== 'OPEN') return false;
+    if (statusFilter === 'unread' && (conv.unreadCount === 0 || conv.status !== 'OPEN')) return false;
+    if (statusFilter === 'resolved' && conv.status !== 'RESOLVED') return false;
     
     // Label filter
     if (selectedLabelId) {
@@ -75,9 +76,9 @@ export default function ConversationSidebar({
     return true;
   });
 
-  const servedCount = conversations.filter(c => c.status === 'open').length;
-  const servedUnreadCount = conversations.filter(c => c.status === 'open' && c.unreadCount > 0).length;
-  const resolvedCount = conversations.filter(c => c.status === 'resolved').length;
+  const servedCount = conversations.filter(c => c.status === 'OPEN').length;
+  const unreadCount = conversations.filter(c => c.status === 'OPEN' && c.unreadCount > 0).length;
+  const resolvedCount = conversations.filter(c => c.status === 'RESOLVED').length;
 
   if (loading) {
     return (
@@ -234,10 +235,16 @@ export default function ConversationSidebar({
         <FilterTab
           label="Served"
           count={servedCount}
-          unreadCount={servedUnreadCount}
           active={statusFilter === 'served'}
           onClick={() => setStatusFilter('served')}
           color="blue"
+        />
+        <FilterTab
+          label="Belum Dibaca"
+          count={unreadCount}
+          active={statusFilter === 'unread'}
+          onClick={() => setStatusFilter('unread')}
+          color="red"
         />
         <FilterTab
           label="Resolved"
@@ -270,6 +277,7 @@ export default function ConversationSidebar({
               <div className="text-gray-500">
                 {statusFilter === 'all' && 'No conversations yet'}
                 {statusFilter === 'served' && 'No served conversations'}
+                {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
                 {statusFilter === 'resolved' && 'No resolved conversations'}
               </div>
             )}
@@ -292,18 +300,13 @@ export default function ConversationSidebar({
 interface FilterTabProps {
   label: string;
   count: number;
-  unreadCount?: number;
   active: boolean;
   onClick: () => void;
   color?: 'red' | 'blue' | 'gray';
 }
 
-function FilterTab({ label, count, unreadCount, active, onClick, color }: FilterTabProps) {
-  // Format badge text
-  let badgeText = count.toString();
-  if (unreadCount !== undefined && unreadCount > 0) {
-    badgeText = `${unreadCount}/${count}`;
-  }
+function FilterTab({ label, count, active, onClick, color }: FilterTabProps) {
+  const badgeText = count.toString();
 
   return (
     <button

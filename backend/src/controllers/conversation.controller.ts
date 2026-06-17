@@ -17,11 +17,10 @@ export class ConversationController {
       );
 
       res.json(result);
-    } catch (error: any) {
-      console.error('Get conversations error:', error);
+    } catch (err: unknown) {
       res.status(500).json({
         error: 'Failed to fetch conversations',
-        message: error.message
+        message: err instanceof Error ? err.message : 'Unknown error'
       });
     }
   }
@@ -35,11 +34,10 @@ export class ConversationController {
       const conversation = await conversationService.getConversationById(id);
 
       res.json(conversation);
-    } catch (error: any) {
-      console.error('Get conversation error:', error);
+    } catch (err: unknown) {
       res.status(404).json({
         error: 'Conversation not found',
-        message: error.message
+        message: err instanceof Error ? err.message : 'Unknown error'
       });
     }
   }
@@ -59,11 +57,10 @@ export class ConversationController {
       const conversation = await conversationService.assignAgent(id, agentId);
 
       res.json(conversation);
-    } catch (error: any) {
-      console.error('Assign agent error:', error);
+    } catch (err: unknown) {
       res.status(500).json({
         error: 'Failed to assign agent',
-        message: error.message
+        message: err instanceof Error ? err.message : 'Unknown error'
       });
     }
   }
@@ -77,11 +74,10 @@ export class ConversationController {
       const conversation = await conversationService.resolveConversation(id);
 
       res.json(conversation);
-    } catch (error: any) {
-      console.error('Resolve conversation error:', error);
+    } catch (err: unknown) {
       res.status(500).json({
         error: 'Failed to resolve conversation',
-        message: error.message
+        message: err instanceof Error ? err.message : 'Unknown error'
       });
     }
   }
@@ -95,11 +91,10 @@ export class ConversationController {
       const conversation = await conversationService.markAsRead(id);
 
       res.json(conversation);
-    } catch (error: any) {
-      console.error('Mark as read error:', error);
+    } catch (err: unknown) {
       res.status(500).json({
         error: 'Failed to mark as read',
-        message: error.message
+        message: err instanceof Error ? err.message : 'Unknown error'
       });
     }
   }

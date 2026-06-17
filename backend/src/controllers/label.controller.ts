@@ -17,8 +17,7 @@ export const labelController = {
         }
       });
       res.json({ labels });
-    } catch (error) {
-      console.error('Error fetching labels:', error);
+    } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to fetch labels' });
     }
   },
@@ -37,9 +36,8 @@ export const labelController = {
       });
 
       res.status(201).json({ label });
-    } catch (error: any) {
-      console.error('Error creating label:', error);
-      if (error.code === 'P2002') {
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2002') {
         return res.status(400).json({ error: 'Label name already exists' });
       }
       res.status(500).json({ error: 'Failed to create label' });
@@ -58,12 +56,11 @@ export const labelController = {
       });
 
       res.json({ label });
-    } catch (error: any) {
-      console.error('Error updating label:', error);
-      if (error.code === 'P2025') {
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') {
         return res.status(404).json({ error: 'Label not found' });
       }
-      if (error.code === 'P2002') {
+      if ((err as { code?: string }).code === 'P2002') {
         return res.status(400).json({ error: 'Label name already exists' });
       }
       res.status(500).json({ error: 'Failed to update label' });
@@ -80,9 +77,8 @@ export const labelController = {
       });
 
       res.json({ message: 'Label deleted successfully' });
-    } catch (error: any) {
-      console.error('Error deleting label:', error);
-      if (error.code === 'P2025') {
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') {
         return res.status(404).json({ error: 'Label not found' });
       }
       res.status(500).json({ error: 'Failed to delete label' });
@@ -150,9 +146,8 @@ export const labelController = {
       });
 
       res.json({ contact });
-    } catch (error: any) {
-      console.error('Error assigning label:', error);
-      if (error.code === 'P2002') {
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2002') {
         return res.status(400).json({ error: 'Label already assigned to this contact' });
       }
       res.status(500).json({ error: 'Failed to assign label' });
@@ -225,9 +220,8 @@ export const labelController = {
       });
 
       res.json({ contact });
-    } catch (error: any) {
-      console.error('Error removing label:', error);
-      if (error.code === 'P2025') {
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') {
         return res.status(404).json({ error: 'Label assignment not found' });
       }
       res.status(500).json({ error: 'Failed to remove label' });
@@ -256,8 +250,7 @@ export const labelController = {
 
       const labels = contact.labels.map((cl) => cl.label);
       res.json({ labels });
-    } catch (error) {
-      console.error('Error fetching contact labels:', error);
+    } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to fetch contact labels' });
     }
   },

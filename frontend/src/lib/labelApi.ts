@@ -1,4 +1,4 @@
-import { apiClient } from './api';
+import apiClient from './api';
 import type { Label } from '@/types';
 
 interface CreateLabelRequest {

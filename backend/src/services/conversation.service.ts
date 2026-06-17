@@ -1,3 +1,4 @@
+import { Prisma, ConversationStatus } from '@prisma/client';
 import prisma from '../config/database';
 import { io } from '../index';
 
@@ -8,12 +9,12 @@ export class ConversationService {
   async getConversations(agentId?: string, status?: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
     
-    const where: any = {};
+    const where: Prisma.ConversationWhereInput = {};
     if (agentId) {
       where.assignedAgentId = agentId;
     }
     if (status) {
-      where.status = status;
+      where.status = status as ConversationStatus;
     }
 
     const [conversations, total] = await Promise.all([
@@ -144,7 +145,7 @@ export class ConversationService {
     let conversation = await prisma.conversation.findFirst({
       where: {
         contactId: contact.id,
-        status: 'open'
+        status: ConversationStatus.OPEN,
       },
       include: {
         contact: true,
@@ -163,7 +164,7 @@ export class ConversationService {
       conversation = await prisma.conversation.create({
         data: {
           contactId: contact.id,
-          status: 'open',
+          status: ConversationStatus.OPEN,
           unreadCount: 0
         },
         include: {
@@ -225,7 +226,7 @@ export class ConversationService {
     const conversation = await prisma.conversation.update({
       where: { id: conversationId },
       data: {
-        status: 'resolved'
+        status: ConversationStatus.RESOLVED
       },
       include: {
         contact: true,

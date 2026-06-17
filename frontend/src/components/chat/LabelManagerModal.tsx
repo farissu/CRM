@@ -40,7 +40,7 @@ export default function LabelManagerModal({ contact, onClose, onUpdate }: LabelM
       
       if (isAssigned) {
         // Remove label
-        await labelApi.removeLabel(contact.id, label.id);
+        await labelApi.removeLabelFromContact(contact.id, label.id);
         setAssignedLabelIds(prev => {
           const newSet = new Set(prev);
           newSet.delete(label.id);
@@ -52,7 +52,7 @@ export default function LabelManagerModal({ contact, onClose, onUpdate }: LabelM
         onUpdate({ ...contact, labels: updatedLabels });
       } else {
         // Assign label
-        await labelApi.assignLabel(contact.id, label.id);
+        await labelApi.assignLabelToContact(contact.id, label.id);
         setAssignedLabelIds(prev => new Set(prev).add(label.id));
         
         // Update contact

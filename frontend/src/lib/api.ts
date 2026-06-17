@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -91,12 +91,12 @@ export const labelApi = {
     return response.data;
   },
 
-  assignLabelToContact: async (contactId: string, labelId: string): Promise<{ contact: any }> => {
+  assignLabelToContact: async (contactId: string, labelId: string): Promise<{ contact: Contact }> => {
     const response = await api.post('/labels/assign', { contactId, labelId });
     return response.data;
   },
 
-  removeLabelFromContact: async (contactId: string, labelId: string): Promise<{ contact: any }> => {
+  removeLabelFromContact: async (contactId: string, labelId: string): Promise<{ contact: Contact }> => {
     const response = await api.post('/labels/remove', { contactId, labelId });
     return response.data;
   },
@@ -108,12 +108,12 @@ export const labelApi = {
 };
 
 export const agentApi = {
-  updateProfile: async (data: { 
-    name?: string; 
-    email?: string; 
-    phone?: string; 
+  updateProfile: async (data: {
+    name?: string;
+    email?: string;
+    phone?: string;
     avatar?: string;
-  }): Promise<{ agent: any }> => {
+  }): Promise<{ agent: Agent }> => {
     const response = await api.put('/agents/profile', data);
     return response.data;
   },
@@ -126,7 +126,7 @@ export const agentApi = {
     return response.data;
   },
 
-  getAllAgents: async (): Promise<{ agents: any[] }> => {
+  getAllAgents: async (): Promise<{ agents: Agent[] }> => {
     const response = await api.get('/agents/all');
     return response.data;
   },
@@ -139,7 +139,7 @@ export const agentApi = {
     companyId?: string;
     phone?: string;
     avatar?: string;
-  }): Promise<{ agent: any }> => {
+  }): Promise<{ agent: Agent }> => {
     const response = await api.post('/agents', data);
     return response.data;
   },
@@ -152,12 +152,12 @@ export const agentApi = {
     role?: string;
     companyId?: string;
     isActive?: boolean;
-  }): Promise<{ agent: any }> => {
+  }): Promise<{ agent: Agent }> => {
     const response = await api.put(`/agents/${agentId}`, data);
     return response.data;
   },
 
-  updateAgentRole: async (agentId: string, role: string): Promise<{ agent: any }> => {
+  updateAgentRole: async (agentId: string, role: string): Promise<{ agent: Agent }> => {
     const response = await api.put(`/agents/${agentId}/role`, { role });
     return response.data;
   },
@@ -169,12 +169,12 @@ export const agentApi = {
 };
 
 export const companyApi = {
-  getAllCompanies: async (): Promise<{ companies: any[] }> => {
+  getAllCompanies: async (): Promise<{ companies: Company[] }> => {
     const response = await api.get('/companies');
     return response.data;
   },
 
-  getCompanyById: async (companyId: string): Promise<{ company: any }> => {
+  getCompanyById: async (companyId: string): Promise<{ company: Company }> => {
     const response = await api.get(`/companies/${companyId}`);
     return response.data;
   },
@@ -184,7 +184,7 @@ export const companyApi = {
     email?: string;
     phone?: string;
     logo?: string;
-  }): Promise<{ company: any }> => {
+  }): Promise<{ company: Company }> => {
     const response = await api.post('/companies', data);
     return response.data;
   },
@@ -195,7 +195,9 @@ export const companyApi = {
     phone?: string;
     logo?: string;
     isActive?: boolean;
-  }): Promise<{ company: any }> => {
+    webhookUrl?: string;
+    webhookCallbackUrl?: string;
+  }): Promise<{ company: Company }> => {
     const response = await api.put(`/companies/${companyId}`, data);
     return response.data;
   },

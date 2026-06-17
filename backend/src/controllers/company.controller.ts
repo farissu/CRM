@@ -29,8 +29,7 @@ export const getAllCompanies = async (req: Request, res: Response) => {
     });
 
     return res.json({ companies });
-  } catch (error) {
-    console.error('Get companies error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to get companies' });
   }
 };
@@ -63,8 +62,7 @@ export const getCompanyById = async (req: Request, res: Response) => {
     }
 
     return res.json({ company });
-  } catch (error) {
-    console.error('Get company error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to get company' });
   }
 };
@@ -92,8 +90,7 @@ export const createCompany = async (req: Request, res: Response) => {
     });
 
     return res.status(201).json({ company });
-  } catch (error) {
-    console.error('Create company error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to create company' });
   }
 };
@@ -122,8 +119,7 @@ export const updateCompany = async (req: Request, res: Response) => {
     });
 
     return res.json({ company });
-  } catch (error) {
-    console.error('Update company error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to update company' });
   }
 };
@@ -156,8 +152,7 @@ export const deleteCompany = async (req: Request, res: Response) => {
     });
 
     return res.json({ message: 'Company deleted successfully' });
-  } catch (error) {
-    console.error('Delete company error:', error);
+  } catch (err: unknown) {
     return res.status(500).json({ error: 'Failed to delete company' });
   }
 };

@@ -1,10 +1,14 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 import prisma from '../config/database';
 import { wappinAuthService } from '../services/wappin-auth.service';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 export class AuthController {
   /**
@@ -52,12 +56,12 @@ export class AuthController {
       let wappinToken: string | null = null;
       try {
         wappinToken = await wappinAuthService.loginForAgent(agent.id);
-        console.log(`✓ Wappin authentication successful for agent ${agent.id}`);
-      } catch (wappinError: any) {
-        console.error('Wappin login failed:', wappinError.message);
-        // Continue with CRM login even if Wappin fails
-        // This allows agents to still access the CRM if Wappin is down
+      } catch {
+        // Continue with CRM login even if Wappin is unavailable
       }
+
+      // Record login time
+      await prisma.agent.update({ where: { id: agent.id }, data: { lastLoginAt: new Date() } });
 
       // Generate JWT token
       const token = jwt.sign(
@@ -85,12 +89,8 @@ export class AuthController {
         },
         wappinAuthenticated: !!wappinToken
       });
-    } catch (error: any) {
-      console.error('Login error:', error);
-      res.status(500).json({
-        error: 'Login failed',
-        message: error.message
-      });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Login failed', message: err instanceof Error ? err.message : 'Unknown error' });
     }
   }
 
@@ -105,7 +105,7 @@ export class AuthController {
         return res.status(401).json({ error: 'No token provided' });
       }
 
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: string };
 
       const agent = await prisma.agent.findUnique({
         where: { id: decoded.id },
@@ -125,8 +125,7 @@ export class AuthController {
       }
 
       res.json({ agent });
-    } catch (error: any) {
-      console.error('Auth verification error:', error);
+    } catch {
       res.status(401).json({ error: 'Invalid token' });
     }
   }
@@ -142,27 +141,49 @@ export class AuthController {
         return res.status(401).json({ error: 'No token provided' });
       }
 
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: string };
 
-      // Logout from Wappin (delete token from Redis)
       try {
         await wappinAuthService.logoutAgent(decoded.id);
-        console.log(`✓ Agent ${decoded.id} logged out from Wappin`);
-      } catch (wappinError: any) {
-        console.error('Failed to logout from Wappin:', wappinError.message);
+      } catch {
         // Continue even if Wappin logout fails
       }
 
-      res.json({ 
-        message: 'Logged out successfully',
-        agentId: decoded.id
-      });
-    } catch (error: any) {
-      console.error('Logout error:', error);
-      res.status(500).json({
-        error: 'Logout failed',
-        message: error.message
-      });
+      res.json({ message: 'Logged out successfully', agentId: decoded.id });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Logout failed', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+  async saveWhatsAppToken(req: Request, res: Response) {
+    const { accessToken } = req.body as { accessToken: string };
+    if (!accessToken) {
+      res.status(400).json({ error: 'accessToken required' });
+      return;
+    }
+
+    const appId = process.env.WHATSAPP_APP_ID;
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
+    if (!appId || !appSecret) {
+      res.status(500).json({ error: 'WhatsApp app credentials not configured' });
+      return;
+    }
+
+    try {
+      const longRes = await axios.get<{ access_token: string }>(
+        'https://graph.facebook.com/v19.0/oauth/access_token',
+        { params: { grant_type: 'fb_exchange_token', client_id: appId, client_secret: appSecret, fb_exchange_token: accessToken } }
+      );
+      const longToken = longRes.data.access_token;
+
+      const envPath = path.join(__dirname, '../../.env');
+      const envContent = fs.readFileSync(envPath, 'utf8')
+        .replace(/WHATSAPP_ACCESS_TOKEN=.*/, `WHATSAPP_ACCESS_TOKEN=${longToken}`);
+      fs.writeFileSync(envPath, envContent);
+      process.env.WHATSAPP_ACCESS_TOKEN = longToken;
+
+      res.json({ success: true });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to exchange token' });
     }
   }
 }

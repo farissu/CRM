@@ -38,9 +38,6 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/whatsapp_crm
       REDIS_URL: redis://redis:6379
-      WAPPIN_USERNAME: ${WAPPIN_USERNAME}
-      WAPPIN_PASSWORD: ${WAPPIN_PASSWORD}
-      WAPPIN_API_URL: https://api.chat.wappin.app/v1
       JWT_SECRET: ${JWT_SECRET:-your-secret-key}
     depends_on:
       postgres:

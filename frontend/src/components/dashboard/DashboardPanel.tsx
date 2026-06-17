@@ -50,8 +50,8 @@ export default function DashboardPanel() {
       setLabels(labelsResponse.labels);
 
       // Calculate stats
-      const openConvs = convResponse.conversations.filter(c => c.status === 'open').length;
-      const resolvedConvs = convResponse.conversations.filter(c => c.status === 'resolved').length;
+      const openConvs = convResponse.conversations.filter(c => c.status === 'OPEN').length;
+      const resolvedConvs = convResponse.conversations.filter(c => c.status === 'RESOLVED').length;
       
       // Load messages from all conversations
       let totalMessages = 0;
@@ -102,7 +102,7 @@ export default function DashboardPanel() {
       const peakData = hourSlots.map(slot => {
         const slotMessages = allMessages.filter(m => {
           const hour = new Date(m.timestamp).getHours();
-          return hour >= slot.start && hour < slot.end && m.direction === 'inbound';
+          return hour >= slot.start && hour < slot.end && m.direction === 'INBOUND';
         });
         return { hour: slot.hour, messages: slotMessages.length };
       });
@@ -274,7 +274,7 @@ export default function DashboardPanel() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                    label={(props) => `${props.name ?? ''}: ${props.value} (${(((props.percent as number) ?? 0) * 100).toFixed(0)}%)`}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
@@ -327,10 +327,10 @@ export default function DashboardPanel() {
                 <div key={conv.id} className="flex items-center justify-between p-4 bg-saas-bg rounded-2xl hover:shadow-soft-sm transition-shadow">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      conv.status === 'open' ? 'bg-blue-100' : 'bg-green-100'
+                      conv.status === 'OPEN' ? 'bg-blue-100' : 'bg-green-100'
                     }`}>
                       <Users className={`w-6 h-6 ${
-                        conv.status === 'open' ? 'text-blue-600' : 'text-green-600'
+                        conv.status === 'OPEN' ? 'text-blue-600' : 'text-green-600'
                       }`} />
                     </div>
                     <div>
@@ -344,7 +344,7 @@ export default function DashboardPanel() {
                   </div>
                   <div className="text-right">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      conv.status === 'open' 
+                      conv.status === 'OPEN' 
                         ? 'bg-blue-100 text-blue-700' 
                         : 'bg-green-100 text-green-700'
                     }`}>

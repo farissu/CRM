@@ -1,19 +1,46 @@
+import { MessageDirection, MessageType, MessageStatus } from '@prisma/client';
 import prisma from '../config/database';
-import { wappinService } from './wappin.service';
+import { whatsAppService } from './whatsapp.service';
 import { conversationService } from './conversation.service';
 import { io } from '../index';
 
+const WEBHOOK_TYPE_MAP: Record<string, MessageType> = {
+  text:     MessageType.TEXT,
+  image:    MessageType.IMAGE,
+  video:    MessageType.VIDEO,
+  document: MessageType.DOCUMENT,
+  audio:    MessageType.AUDIO,
+  sticker:  MessageType.STICKER,
+};
+
+function toMessageType(s?: string): MessageType {
+  return (s ? WEBHOOK_TYPE_MAP[s] : undefined) ?? MessageType.TEXT;
+}
+
 interface SendMessageParams {
   conversationId: string;
-  text: string;
+  text?: string;
   senderId: string;
+  messageType?: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  fileSize?: number;
+  caption?: string;
 }
 
 interface ReceiveMessageParams {
   phoneNumber: string;
-  text: string;
+  text?: string;
   contactName?: string;
   timestamp?: Date;
+  messageType?: string;
+  externalId?: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  fileSize?: number;
+  caption?: string;
 }
 
 export class MessageService {
@@ -56,7 +83,7 @@ export class MessageService {
    * Send outbound message
    */
   async sendMessage(params: SendMessageParams) {
-    const { conversationId, text, senderId } = params;
+    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption } = params;
 
     // Get conversation with contact info
     const conversation = await conversationService.getConversationById(conversationId);
@@ -65,11 +92,16 @@ export class MessageService {
     const message = await prisma.message.create({
       data: {
         conversationId,
-        direction: 'outbound',
-        text,
-        messageType: 'text',
-        status: 'sending',
-        senderId
+        direction: MessageDirection.OUTBOUND,
+        text: text || caption,
+        messageType: toMessageType(messageType),
+        status: MessageStatus.SENDING,
+        senderId,
+        mediaUrl,
+        mediaType,
+        fileName,
+        fileSize,
+        caption
       },
       include: {
         sender: {
@@ -82,20 +114,22 @@ export class MessageService {
       }
     });
 
-    // Send via Wappin API
+    // Send via WhatsApp Cloud API
     try {
-      const wappinMessageId = await wappinService.sendMessage({
+      const waMessageId = await whatsAppService.sendMessage({
         to: conversation.contact.phoneNumber,
-        text,
-        agentId: senderId
+        text: text || caption,
+        messageType: messageType || 'text',
+        mediaUrl,
+        caption
       });
 
       // Update message status
       const updatedMessage = await prisma.message.update({
         where: { id: message.id },
         data: {
-          status: 'sent',
-          metadata: { wappinMessageId }
+          status: MessageStatus.SENT,
+          metadata: { waMessageId }
         },
         include: {
           sender: {
@@ -109,7 +143,7 @@ export class MessageService {
       });
 
       // Update conversation last message
-      await conversationService.updateLastMessage(conversationId, text);
+      await conversationService.updateLastMessage(conversationId, text ?? '');
 
       // Emit socket event
       io.emit('message_received', {
@@ -123,7 +157,7 @@ export class MessageService {
       await prisma.message.update({
         where: { id: message.id },
         data: {
-          status: 'failed'
+          status: MessageStatus.FAILED
         }
       });
 
@@ -135,28 +169,42 @@ export class MessageService {
    * Receive inbound message (from webhook)
    */
   async receiveMessage(params: ReceiveMessageParams) {
-    const { phoneNumber, text, contactName, timestamp } = params;
+    const { phoneNumber, text, contactName, timestamp, messageType, externalId, mediaUrl, mediaType, fileName, fileSize, caption } = params;
+
+    // Deduplication: skip if we already processed this WhatsApp message
+    if (externalId) {
+      const existing = await prisma.message.findUnique({ where: { externalId } });
+      if (existing) return existing;
+    }
 
     // Get or create conversation
-    const conversation = await conversationService.getOrCreateConversation(
-      phoneNumber,
-      contactName
-    );
+    const conversation = await conversationService.getOrCreateConversation(phoneNumber, contactName);
+
+    const resolvedType = toMessageType(messageType);
 
     // Create message record
     const message = await prisma.message.create({
       data: {
         conversationId: conversation.id,
-        direction: 'inbound',
-        text,
-        messageType: 'text',
-        status: 'received',
-        timestamp: timestamp || new Date()
+        externalId,
+        direction: MessageDirection.INBOUND,
+        text: text || caption,
+        messageType: resolvedType,
+        status: MessageStatus.RECEIVED,
+        timestamp: timestamp ?? new Date(),
+        mediaUrl,
+        mediaType,
+        fileName,
+        fileSize,
+        caption
       }
     });
 
     // Update conversation
-    await conversationService.updateLastMessage(conversation.id, text);
+    const lastMessageText = resolvedType !== MessageType.TEXT
+      ? `📎 ${messageType}`
+      : (text || caption || '');
+    await conversationService.updateLastMessage(conversation.id, lastMessageText);
     await conversationService.incrementUnreadCount(conversation.id);
 
     // Emit socket event
@@ -171,7 +219,7 @@ export class MessageService {
   /**
    * Update message status
    */
-  async updateMessageStatus(messageId: string, status: string) {
+  async updateMessageStatus(messageId: string, status: MessageStatus) {
     const message = await prisma.message.update({
       where: { id: messageId },
       data: { status }

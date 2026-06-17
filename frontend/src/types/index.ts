@@ -50,11 +50,16 @@ export interface Contact {
   labels?: Label[];
 }
 
+export type ConversationStatus = 'OPEN' | 'RESOLVED' | 'PENDING';
+export type MessageDirection = 'INBOUND' | 'OUTBOUND';
+export type MessageType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'AUDIO' | 'STICKER';
+export type MessageStatus = 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'RECEIVED';
+
 export interface Conversation {
   id: string;
   contactId: string;
   assignedAgentId?: string;
-  status: 'open' | 'resolved';
+  status: ConversationStatus;
   unreadCount: number;
   lastMessageAt: string;
   lastMessageText?: string;
@@ -68,14 +73,21 @@ export interface Conversation {
 export interface Message {
   id: string;
   conversationId: string;
-  direction: 'inbound' | 'outbound';
-  text: string;
-  messageType: string;
-  status?: string;
+  externalId?: string | null;
+  direction: MessageDirection;
+  text: string | null;
+  messageType: MessageType;
+  status?: MessageStatus | null;
   senderId?: string;
   timestamp: string;
   createdAt: string;
+  updatedAt: string;
   sender?: Agent;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  caption?: string | null;
 }
 
 export interface ConversationsResponse {
