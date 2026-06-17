@@ -78,8 +78,10 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     if (!activeConversation) return;
     try {
       await messageApi.sendMessage({ conversationId: activeConversation.id, text, senderId: agentId });
-    } catch {
-      alert('Failed to send message');
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
+      const msg = detail?.message || detail?.error || (err instanceof Error ? err.message : 'Unknown error');
+      alert(`Gagal kirim pesan:\n${msg}`);
     }
   };
 

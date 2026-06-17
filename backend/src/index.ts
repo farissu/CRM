@@ -8,7 +8,6 @@ import { rateLimit } from 'express-rate-limit';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import { connectDatabase } from './config/database';
-import { connectRedis } from './config/redis';
 import routes from './routes';
 
 // Load environment variables
@@ -97,7 +96,6 @@ async function start() {
   try {
     // Connect to databases
     await connectDatabase();
-    await connectRedis();
 
     // Start server
     const PORT = process.env.PORT || 3001;

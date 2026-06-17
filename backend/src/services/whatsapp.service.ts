@@ -17,39 +17,44 @@ interface MetaMessageResponse {
 }
 
 export class WhatsAppService {
-  private phoneNumberId: string;
-  private accessToken: string;
+  private get phoneNumberId(): string {
+    return process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  }
 
-  constructor() {
-    this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
-    this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN || '';
-
-    if (!this.phoneNumberId || !this.accessToken) {
-      console.warn('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
-    }
+  private get accessToken(): string {
+    return process.env.WHATSAPP_ACCESS_TOKEN || '';
   }
 
   async sendMessage(params: SendMessageParams): Promise<string> {
     const { to, text, messageType = 'text', mediaUrl, caption } = params;
 
-    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption);
-
-    const response = await axios.post<MetaMessageResponse>(
-      `${GRAPH_API_URL}/${this.phoneNumberId}/messages`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (!response.data.messages?.length) {
-      throw new Error('No message ID returned from WhatsApp API');
+    if (!this.phoneNumberId || !this.accessToken) {
+      throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
     }
 
-    return response.data.messages[0].id;
+    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption);
+
+    try {
+      const response = await axios.post<MetaMessageResponse>(
+        `${GRAPH_API_URL}/${this.phoneNumberId}/messages`,
+        payload,
+        { headers: { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' } }
+      );
+
+      if (!response.data.messages?.length) {
+        throw new Error('No message ID returned from WhatsApp API');
+      }
+
+      return response.data.messages[0].id;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const metaError = err.response.data?.error;
+        throw new Error(
+          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
+        );
+      }
+      throw err;
+    }
   }
 
   private buildPayload(
