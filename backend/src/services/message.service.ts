@@ -1,4 +1,5 @@
 import { MessageDirection, MessageType, MessageStatus } from '@prisma/client';
+import axios from 'axios';
 import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
 import { conversationService } from './conversation.service';
@@ -160,6 +161,12 @@ export class MessageService {
           status: MessageStatus.FAILED
         }
       });
+
+      if (axios.isAxiosError(error)) {
+        console.error('[WhatsApp] Send failed:', JSON.stringify(error.response?.data ?? error.message));
+      } else {
+        console.error('[WhatsApp] Send failed:', error);
+      }
 
       throw error;
     }

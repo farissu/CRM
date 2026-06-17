@@ -57,6 +57,8 @@ function DateSeparator({ date }: { date: string }) {
   );
 }
 
+const CUSTOMER_SERVICE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 interface ChatPanelProps {
   conversation: Conversation | null;
   messages: Message[];
@@ -66,6 +68,7 @@ interface ChatPanelProps {
   onTypingStop: () => void;
   onResolveConversation?: () => void;
   onConversationUpdate?: () => void;
+  onSendBroadcast?: () => void;
   typingIndicator?: { agentName: string } | null;
 }
 
@@ -78,6 +81,7 @@ export default function ChatPanel({
   onTypingStop,
   onResolveConversation,
   onConversationUpdate,
+  onSendBroadcast,
   typingIndicator,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -136,6 +140,11 @@ export default function ChatPanel({
   }
 
   const contactName = conversation.contact.name || conversation.contact.phoneNumber;
+
+  const lastInboundMessage = [...messages].reverse().find(m => m.direction === 'INBOUND');
+  const isWindowExpired = lastInboundMessage
+    ? Date.now() - new Date(lastInboundMessage.timestamp).getTime() > CUSTOMER_SERVICE_WINDOW_MS
+    : messages.length > 0;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-saas-bg">
@@ -280,12 +289,35 @@ export default function ChatPanel({
       )}
 
       {/* Message Input */}
-      <MessageInput
-        onSendMessage={onSendMessage}
-        onTypingStart={onTypingStart}
-        onTypingStop={onTypingStop}
-        disabled={conversation.status === 'RESOLVED'}
-      />
+      {isWindowExpired && conversation.status !== 'RESOLVED' ? (
+        <div className="px-6 py-4 bg-white border-t border-saas-border flex items-center justify-between gap-4">
+          <p className="text-sm text-gray-500">
+            The{' '}
+            <a
+              href="https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/send-messages#customer-service-window"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-saas-primary-blue underline"
+            >
+              customer service window
+            </a>{' '}
+            has expired. You can send a broadcast to start the conversation.
+          </p>
+          <button
+            onClick={onSendBroadcast}
+            className="shrink-0 bg-[#2d9c8f] hover:bg-[#258577] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all"
+          >
+            Send Broadcast
+          </button>
+        </div>
+      ) : (
+        <MessageInput
+          onSendMessage={onSendMessage}
+          onTypingStart={onTypingStart}
+          onTypingStop={onTypingStop}
+          disabled={conversation.status === 'RESOLVED'}
+        />
+      )}
 
       {/* Manage Labels Modal */}
       <ManageLabelsModal
