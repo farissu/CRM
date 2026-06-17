@@ -69,3 +69,22 @@ build: ## Build all services
 
 rebuild: ## Rebuild all services from scratch
 	docker-compose build --no-cache
+
+prod-up: ## Start all services in production
+	docker-compose -f docker-compose.prod.yml up -d
+
+prod-down: ## Stop all production services
+	docker-compose -f docker-compose.prod.yml down
+
+prod-build: ## Build all services for production
+	docker-compose -f docker-compose.prod.yml build
+
+prod-logs: ## View production logs
+	docker-compose -f docker-compose.prod.yml logs -f
+
+prod-migrate: ## Run database migrations in production
+	docker-compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+
+prod-seed: ## Seed the database in production
+	docker-compose -f docker-compose.prod.yml exec backend npm run seed
+
