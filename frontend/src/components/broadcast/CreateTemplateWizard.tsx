@@ -223,7 +223,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
           {step === 'header' && (
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Header <span className="font-normal text-gray-400">Optional</span></h3>
-              <p className="text-sm text-gray-500 mb-4">Add a title or choose which type of media you'll use for this header.</p>
+              <p className="text-sm text-gray-500 mb-4">Add a title or choose which type of media you&apos;ll use for this header.</p>
               <select value={form.headerType} onChange={e => setForm(p => ({ ...p, headerType: e.target.value as FormState['headerType'] }))} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm mb-3">
                 <option value="NONE">None</option>
                 <option value="TEXT">Text</option>
@@ -237,7 +237,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
           {step === 'body' && (
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Body</h3>
-              <p className="text-sm text-gray-500 mb-4">Enter the text for your message in the language you've selected.</p>
+              <p className="text-sm text-gray-500 mb-4">Enter the text for your message in the language you&apos;ve selected.</p>
               <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:border-[#2d9c8f] transition-colors">
                 <textarea
                   ref={bodyRef}
