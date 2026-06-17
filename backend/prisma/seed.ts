@@ -80,7 +80,7 @@ async function main() {
     create: {
       contactId: contact1.id,
       assignedAgentId: agent.id,
-      status: 'open',
+      status: 'OPEN',
       unreadCount: 2,
       lastMessageText: 'Hello, I need help with my order',
       lastMessageAt: new Date(),
@@ -91,10 +91,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation1.id,
-      direction: 'inbound',
+      direction: 'INBOUND',
       text: 'Hello, I need help with my order',
-      messageType: 'text',
-      status: 'received',
+      messageType: 'TEXT',
+      status: 'RECEIVED',
       timestamp: new Date(Date.now() - 3600000), // 1 hour ago
     },
   });
@@ -102,10 +102,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation1.id,
-      direction: 'outbound',
+      direction: 'OUTBOUND',
       text: 'Hi! I\'d be happy to help. What\'s your order number?',
-      messageType: 'text',
-      status: 'delivered',
+      messageType: 'TEXT',
+      status: 'DELIVERED',
       senderId: agent.id,
       timestamp: new Date(Date.now() - 3000000), // 50 minutes ago
     },
@@ -128,7 +128,7 @@ async function main() {
     create: {
       contactId: contact2.id,
       assignedAgentId: agent.id,
-      status: 'resolved',
+      status: 'RESOLVED',
       unreadCount: 0,
       lastMessageText: 'Thanks for your help!',
       lastMessageAt: new Date(Date.now() - 86400000), // 1 day ago
@@ -138,10 +138,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation2.id,
-      direction: 'inbound',
+      direction: 'INBOUND',
       text: 'Can I change my delivery address?',
-      messageType: 'text',
-      status: 'received',
+      messageType: 'TEXT',
+      status: 'RECEIVED',
       timestamp: new Date(Date.now() - 90000000), // ~25 hours ago
     },
   });
@@ -149,10 +149,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation2.id,
-      direction: 'outbound',
+      direction: 'OUTBOUND',
       text: 'Yes, I can help you with that. What\'s your new address?',
-      messageType: 'text',
-      status: 'delivered',
+      messageType: 'TEXT',
+      status: 'DELIVERED',
       senderId: agent.id,
       timestamp: new Date(Date.now() - 89000000),
     },
@@ -161,10 +161,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation2.id,
-      direction: 'inbound',
+      direction: 'INBOUND',
       text: '123 Main Street, Jakarta',
-      messageType: 'text',
-      status: 'received',
+      messageType: 'TEXT',
+      status: 'RECEIVED',
       timestamp: new Date(Date.now() - 88000000),
     },
   });
@@ -172,10 +172,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation2.id,
-      direction: 'outbound',
+      direction: 'OUTBOUND',
       text: 'Done! Your address has been updated.',
-      messageType: 'text',
-      status: 'delivered',
+      messageType: 'TEXT',
+      status: 'DELIVERED',
       senderId: agent.id,
       timestamp: new Date(Date.now() - 87000000),
     },
@@ -184,10 +184,10 @@ async function main() {
   await prisma.message.create({
     data: {
       conversationId: conversation2.id,
-      direction: 'inbound',
+      direction: 'INBOUND',
       text: 'Thanks for your help!',
-      messageType: 'text',
-      status: 'received',
+      messageType: 'TEXT',
+      status: 'RECEIVED',
       timestamp: new Date(Date.now() - 86400000),
     },
   });
@@ -206,7 +206,7 @@ async function main() {
     update: {},
     create: {
       contactId: contact3.id,
-      status: 'resolved',
+      status: 'RESOLVED',
       unreadCount: 0,
       lastMessageText: 'Perfect, thank you!',
       lastMessageAt: new Date(Date.now() - 172800000), // 2 days ago
@@ -215,7 +215,7 @@ async function main() {
 
   console.log('Database seeded successfully!');
   console.log('\nDefault credentials:');
-  console.log('Email: admin@example.com');
+  console.log('Email: admin@waku.com');
   console.log('Password: admin123');
   console.log('\nCreated:');
   console.log('- 3 contacts');
