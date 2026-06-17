@@ -119,14 +119,33 @@ export class TemplateService {
       }
     );
 
-    const updates = response.data.data.map(metaTemplate =>
-      prisma.messageTemplate.updateMany({
-        where: { companyId, metaTemplateId: metaTemplate.id },
-        data: { status: metaTemplate.status as TemplateStatus },
+    const upserts = response.data.data.map(metaTemplate =>
+      prisma.messageTemplate.upsert({
+        where: {
+          companyId_name_language: {
+            companyId,
+            name: metaTemplate.name,
+            language: metaTemplate.language,
+          },
+        },
+        update: {
+          status: metaTemplate.status as TemplateStatus,
+          metaTemplateId: metaTemplate.id,
+          components: metaTemplate.components as object[],
+        },
+        create: {
+          companyId,
+          name: metaTemplate.name,
+          language: metaTemplate.language,
+          category: metaTemplate.category as TemplateCategory,
+          status: metaTemplate.status as TemplateStatus,
+          metaTemplateId: metaTemplate.id,
+          components: metaTemplate.components as object[],
+        },
       })
     );
 
-    await Promise.all(updates);
+    await Promise.all(upserts);
 
     return prisma.messageTemplate.findMany({
       where: { companyId },
