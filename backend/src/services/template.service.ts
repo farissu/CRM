@@ -1,0 +1,187 @@
+import axios from 'axios';
+import { PrismaClient, TemplateCategory, TemplateStatus } from '@prisma/client';
+
+const prisma = new PrismaClient();
+const GRAPH_API_URL = 'https://graph.facebook.com/v19.0';
+
+export interface TemplateComponent {
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  text?: string;
+  buttons?: Array<{
+    type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+    text: string;
+    url?: string;
+    phone_number?: string;
+  }>;
+}
+
+export interface CreateTemplateDto {
+  companyId: string;
+  name: string;
+  language: string;
+  category: TemplateCategory;
+  components: TemplateComponent[];
+}
+
+interface MetaTemplateResponse {
+  id: string;
+  status: string;
+}
+
+interface MetaTemplatesListResponse {
+  data: Array<{
+    id: string;
+    name: string;
+    language: string;
+    status: string;
+    category: string;
+    components: TemplateComponent[];
+  }>;
+}
+
+export class TemplateService {
+  private get wabaId(): string {
+    return process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '';
+  }
+
+  private get accessToken(): string {
+    return process.env.WHATSAPP_ACCESS_TOKEN || '';
+  }
+
+  async createTemplate(dto: CreateTemplateDto) {
+    if (!this.wabaId || !this.accessToken) {
+      throw new Error('WHATSAPP_BUSINESS_ACCOUNT_ID and WHATSAPP_ACCESS_TOKEN must be configured');
+    }
+
+    const metaPayload = {
+      name: dto.name,
+      language: dto.language,
+      category: dto.category,
+      components: dto.components,
+    };
+
+    const metaResponse = await axios.post<MetaTemplateResponse>(
+      `${GRAPH_API_URL}/${this.wabaId}/message_templates`,
+      metaPayload,
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const template = await prisma.messageTemplate.create({
+      data: {
+        companyId: dto.companyId,
+        name: dto.name,
+        language: dto.language,
+        category: dto.category,
+        status: (metaResponse.data.status as TemplateStatus) || TemplateStatus.PENDING,
+        metaTemplateId: metaResponse.data.id,
+        components: dto.components as object[],
+      },
+    });
+
+    return template;
+  }
+
+  async getTemplates(companyId: string) {
+    const templates = await prisma.messageTemplate.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (this.wabaId && this.accessToken && templates.some(t => t.metaTemplateId)) {
+      await this.syncTemplateStatuses(
+        companyId,
+        templates.map(t => t.metaTemplateId).filter(Boolean) as string[]
+      );
+      return prisma.messageTemplate.findMany({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    return templates;
+  }
+
+  async syncFromMeta(companyId: string) {
+    if (!this.wabaId || !this.accessToken) {
+      throw new Error('WHATSAPP_BUSINESS_ACCOUNT_ID and WHATSAPP_ACCESS_TOKEN must be configured');
+    }
+
+    const response = await axios.get<MetaTemplatesListResponse>(
+      `${GRAPH_API_URL}/${this.wabaId}/message_templates`,
+      {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+      }
+    );
+
+    const updates = response.data.data.map(metaTemplate =>
+      prisma.messageTemplate.updateMany({
+        where: { companyId, metaTemplateId: metaTemplate.id },
+        data: { status: metaTemplate.status as TemplateStatus },
+      })
+    );
+
+    await Promise.all(updates);
+
+    return prisma.messageTemplate.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async deleteTemplate(id: string, companyId: string) {
+    const template = await prisma.messageTemplate.findFirst({
+      where: { id, companyId },
+    });
+
+    if (!template) {
+      throw new Error('Template not found');
+    }
+
+    if (template.metaTemplateId && this.wabaId && this.accessToken) {
+      await axios.delete(
+        `${GRAPH_API_URL}/${this.wabaId}/message_templates?name=${template.name}`,
+        {
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+        }
+      );
+    }
+
+    await prisma.messageTemplate.delete({ where: { id } });
+  }
+
+  private async syncTemplateStatuses(companyId: string, metaIds: string[]) {
+    if (!metaIds.length) return;
+
+    try {
+      const response = await axios.get<MetaTemplatesListResponse>(
+        `${GRAPH_API_URL}/${this.wabaId}/message_templates`,
+        {
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+        }
+      );
+
+      const metaMap = new Map(response.data.data.map(t => [t.id, t.status]));
+
+      const updates = metaIds
+        .filter(id => metaMap.has(id))
+        .map(id =>
+          prisma.messageTemplate.updateMany({
+            where: { companyId, metaTemplateId: id },
+            data: { status: metaMap.get(id) as TemplateStatus },
+          })
+        );
+
+      await Promise.all(updates);
+    } catch {
+      // Status sync is best-effort — don't fail the main request
+    }
+  }
+}
+
+export const templateService = new TemplateService();

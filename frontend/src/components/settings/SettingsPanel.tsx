@@ -7,7 +7,6 @@ import CompaniesTab from './tabs/CompaniesTab';
 import AgentsTab from './tabs/AgentsTab';
 import LabelsTab from './tabs/LabelsTab';
 import ApiIntegrationTab from './tabs/ApiIntegrationTab';
-
 type SettingsTab = 'profile' | 'companies' | 'agents' | 'labels' | 'api-integration' | 'notifications';
 
 interface SettingsPanelProps {

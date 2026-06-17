@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -213,6 +213,33 @@ export const companyApi = {
   deleteCompany: async (companyId: string): Promise<{ message: string }> => {
     const response = await api.delete(`/companies/${companyId}`);
     return response.data;
+  },
+};
+
+export const templateApi = {
+  getTemplates: async (): Promise<{ templates: MessageTemplate[] }> => {
+    const response = await api.get('/templates');
+    return response.data as { templates: MessageTemplate[] };
+  },
+
+  createTemplate: async (data: {
+    name: string;
+    language: string;
+    category: TemplateCategory;
+    components: TemplateComponent[];
+  }): Promise<{ template: MessageTemplate }> => {
+    const response = await api.post('/templates', data);
+    return response.data as { template: MessageTemplate };
+  },
+
+  syncTemplates: async (): Promise<{ templates: MessageTemplate[] }> => {
+    const response = await api.post('/templates/sync');
+    return response.data as { templates: MessageTemplate[] };
+  },
+
+  deleteTemplate: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/templates/${id}`);
+    return response.data as { message: string };
   },
 };
 

@@ -90,6 +90,36 @@ export interface Message {
   caption?: string | null;
 }
 
+export type TemplateCategory = 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+export type TemplateStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAUSED' | 'DISABLED';
+
+export interface TemplateButton {
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+  text: string;
+  url?: string;
+  phone_number?: string;
+}
+
+export interface TemplateComponent {
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  text?: string;
+  buttons?: TemplateButton[];
+}
+
+export interface MessageTemplate {
+  id: string;
+  companyId: string;
+  name: string;
+  language: string;
+  category: TemplateCategory;
+  status: TemplateStatus;
+  metaTemplateId?: string | null;
+  components: TemplateComponent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ConversationsResponse {
   conversations: Conversation[];
   total: number;
