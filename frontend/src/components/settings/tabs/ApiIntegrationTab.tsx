@@ -65,7 +65,7 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
       setWebhookLoading(true);
       setError(null);
       setWebhookSuccess(false);
-      await companyApi.updateCompany(agent.companyId, webhookData);
+      await companyApi.updateWebhook(agent.companyId, webhookData);
       setWebhookSuccess(true);
       setTimeout(() => setWebhookSuccess(false), 3000);
     } catch (err: unknown) {

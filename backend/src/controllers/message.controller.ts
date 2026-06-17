@@ -3,6 +3,7 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import { messageService } from '../services/message.service';
 import { mediaService } from '../services/media.service';
+import prisma from '../config/database';
 
 interface WhatsAppContact {
   wa_id: string;
@@ -113,6 +114,22 @@ async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsA
   });
 }
 
+async function forwardToWebhook(payload: unknown) {
+  try {
+    const companies = await prisma.company.findMany({
+      where: { webhookUrl: { not: null } },
+      select: { webhookUrl: true },
+    });
+    await Promise.allSettled(
+      companies
+        .filter(c => c.webhookUrl)
+        .map(c => axios.post(c.webhookUrl!, payload, { timeout: 5000 }))
+    );
+  } catch {
+    // forwarding failure must not affect the main flow
+  }
+}
+
 export class MessageController {
   async getMessages(req: Request, res: Response) {
     try {
@@ -183,6 +200,9 @@ export class MessageController {
           });
         }
       }
+
+      // Forward to company webhookUrl (e.g. n8n) if configured
+      void forwardToWebhook(body);
 
       res.status(200).json({ success: true });
     } catch (err: unknown) {

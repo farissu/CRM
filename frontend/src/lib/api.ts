@@ -202,6 +202,14 @@ export const companyApi = {
     return response.data;
   },
 
+  updateWebhook: async (companyId: string, data: {
+    webhookUrl?: string;
+    webhookCallbackUrl?: string;
+  }): Promise<{ company: Company }> => {
+    const response = await api.patch(`/companies/${companyId}/webhook`, data);
+    return response.data;
+  },
+
   deleteCompany: async (companyId: string): Promise<{ message: string }> => {
     const response = await api.delete(`/companies/${companyId}`);
     return response.data;

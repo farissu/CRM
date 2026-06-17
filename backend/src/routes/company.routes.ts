@@ -11,6 +11,9 @@ router.use(authenticate);
 router.get('/', companyController.getAllCompanies);
 router.get('/:companyId', companyController.getCompanyById);
 
+// Webhook config - Admin of own company or Super Admin
+router.patch('/:companyId/webhook', companyController.updateCompanyWebhook);
+
 // Company management - Super Admin only
 router.post('/', requireSuperAdmin, companyController.createCompany);
 router.put('/:companyId', requireSuperAdmin, companyController.updateCompany);

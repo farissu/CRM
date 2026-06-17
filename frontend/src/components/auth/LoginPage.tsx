@@ -41,7 +41,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-24 h-24 ">
             <img 
-              src="/Logo.svg" 
+              src="/logo.svg"
               alt="Logo" 
               className="w-full h-full object-cover"
             />

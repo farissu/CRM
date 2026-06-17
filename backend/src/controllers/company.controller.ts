@@ -124,6 +124,31 @@ export const updateCompany = async (req: Request, res: Response) => {
   }
 };
 
+// Update webhook config (Admin of own company, or Super Admin)
+export const updateCompanyWebhook = async (req: Request, res: Response) => {
+  try {
+    const { companyId } = req.params;
+    const { webhookUrl, webhookCallbackUrl } = req.body;
+
+    // Non-super-admin can only update their own company
+    if (req.user?.role !== 'SUPER_ADMIN' && req.user?.companyId !== companyId) {
+      return res.status(403).json({ error: 'Forbidden: Cannot update another company' });
+    }
+
+    const company = await prisma.company.update({
+      where: { id: companyId },
+      data: {
+        ...(webhookUrl !== undefined && { webhookUrl }),
+        ...(webhookCallbackUrl !== undefined && { webhookCallbackUrl }),
+      }
+    });
+
+    return res.json({ company });
+  } catch (err: unknown) {
+    return res.status(500).json({ error: 'Failed to update webhook configuration' });
+  }
+};
+
 // Delete company (Super Admin only)
 export const deleteCompany = async (req: Request, res: Response) => {
   try {
