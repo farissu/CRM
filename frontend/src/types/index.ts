@@ -30,6 +30,7 @@ export interface Agent {
   avatar?: string;
   phone?: string;
   isActive?: boolean;
+  mustChangePassword?: boolean;
   createdAt?: string;
 }
 

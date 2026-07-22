@@ -1,7 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
+
+function generateTempPassword(): string {
+  return crypto.randomBytes(12).toString('base64url');
+}
 
 async function main() {
   console.log('🌱 Starting database seed...');
@@ -25,202 +30,62 @@ async function main() {
 
   console.log('✅ Created Company:', company.name);
 
-  // Create a default super admin
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  
-  const agent = await prisma.agent.upsert({
-    where: { email: 'admin@waku.com' },
-    update: {},
-    create: {
-      email: 'admin@waku.com',
-      password: hashedPassword,
-      name: 'Super Admin',
-      role: 'SUPER_ADMIN',
-      companyId: company.id,
-      isActive: true,
-    },
-  });
+  // Create a default super admin with a random temporary password
+  // (only generated/printed when the account doesn't already exist —
+  // re-running the seed must not overwrite a password an admin already changed)
+  let superAdminTempPassword: string | null = null;
+  let agent = await prisma.agent.findUnique({ where: { email: 'admin@waku.com' } });
+  if (!agent) {
+    superAdminTempPassword = generateTempPassword();
+    agent = await prisma.agent.create({
+      data: {
+        email: 'admin@waku.com',
+        password: await bcrypt.hash(superAdminTempPassword, 10),
+        name: 'Super Admin',
+        role: 'SUPER_ADMIN',
+        companyId: company.id,
+        isActive: true,
+        mustChangePassword: true,
+      },
+    });
+  }
 
-  console.log('✅ Created Super Admin:', agent.email);
-  console.log('   Password: admin123');
-  
-  // Create sample agent user
-  const agentPassword = await bcrypt.hash('agent123', 10);
-  
-  const agentUser = await prisma.agent.upsert({
-    where: { email: 'agent@waku.com' },
-    update: {},
-    create: {
-      email: 'agent@waku.com',
-      password: agentPassword,
-      name: 'Agent User',
-      role: 'AGENT',
-      companyId: company.id,
-      isActive: true,
-    },
-  });
+  console.log('✅ Super Admin:', agent.email);
+
+  // Create sample agent user with a random temporary password
+  let agentTempPassword: string | null = null;
+  let agentUser = await prisma.agent.findUnique({ where: { email: 'agent@waku.com' } });
+  if (!agentUser) {
+    agentTempPassword = generateTempPassword();
+    agentUser = await prisma.agent.create({
+      data: {
+        email: 'agent@waku.com',
+        password: await bcrypt.hash(agentTempPassword, 10),
+        name: 'Agent User',
+        role: 'AGENT',
+        companyId: company.id,
+        isActive: true,
+        mustChangePassword: true,
+      },
+    });
+  }
 
   console.log('✅ Created Agent:', agentUser.email);
-  console.log('   Password: agent123');
 
-  // Create sample contacts and conversations
-  const contact1 = await prisma.contact.upsert({
-    where: { phoneNumber: '6281234567890' },
-    update: {},
-    create: {
-      phoneNumber: '6281234567890',
-      name: 'John Doe',
-      email: 'john@example.com',
-    },
-  });
+  console.log('\nDatabase seeded successfully!');
 
-  const conversation1 = await prisma.conversation.upsert({
-    where: { id: contact1.id },
-    update: {},
-    create: {
-      contactId: contact1.id,
-      assignedAgentId: agent.id,
-      status: 'OPEN',
-      unreadCount: 2,
-      lastMessageText: 'Hello, I need help with my order',
-      lastMessageAt: new Date(),
-    },
-  });
+  if (superAdminTempPassword || agentTempPassword) {
+    console.log('\n⚠️  Temporary passwords (shown once — save them now, both accounts must change on first login):');
+    if (superAdminTempPassword) console.log(`   Super Admin (${agent.email}): ${superAdminTempPassword}`);
+    if (agentTempPassword) console.log(`   Agent (${agentUser.email}): ${agentTempPassword}`);
+  } else {
+    console.log('\nAccounts already existed — no new passwords generated.');
+  }
 
-  // Create sample messages
-  await prisma.message.create({
-    data: {
-      conversationId: conversation1.id,
-      direction: 'INBOUND',
-      text: 'Hello, I need help with my order',
-      messageType: 'TEXT',
-      status: 'RECEIVED',
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-    },
-  });
-
-  await prisma.message.create({
-    data: {
-      conversationId: conversation1.id,
-      direction: 'OUTBOUND',
-      text: 'Hi! I\'d be happy to help. What\'s your order number?',
-      messageType: 'TEXT',
-      status: 'DELIVERED',
-      senderId: agent.id,
-      timestamp: new Date(Date.now() - 3000000), // 50 minutes ago
-    },
-  });
-
-  // Create more sample contacts and conversations
-  const contact2 = await prisma.contact.upsert({
-    where: { phoneNumber: '6281234567891' },
-    update: {},
-    create: {
-      phoneNumber: '6281234567891',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-    },
-  });
-
-  const conversation2 = await prisma.conversation.upsert({
-    where: { id: contact2.id },
-    update: {},
-    create: {
-      contactId: contact2.id,
-      assignedAgentId: agent.id,
-      status: 'RESOLVED',
-      unreadCount: 0,
-      lastMessageText: 'Thanks for your help!',
-      lastMessageAt: new Date(Date.now() - 86400000), // 1 day ago
-    },
-  });
-
-  await prisma.message.create({
-    data: {
-      conversationId: conversation2.id,
-      direction: 'INBOUND',
-      text: 'Can I change my delivery address?',
-      messageType: 'TEXT',
-      status: 'RECEIVED',
-      timestamp: new Date(Date.now() - 90000000), // ~25 hours ago
-    },
-  });
-
-  await prisma.message.create({
-    data: {
-      conversationId: conversation2.id,
-      direction: 'OUTBOUND',
-      text: 'Yes, I can help you with that. What\'s your new address?',
-      messageType: 'TEXT',
-      status: 'DELIVERED',
-      senderId: agent.id,
-      timestamp: new Date(Date.now() - 89000000),
-    },
-  });
-
-  await prisma.message.create({
-    data: {
-      conversationId: conversation2.id,
-      direction: 'INBOUND',
-      text: '123 Main Street, Jakarta',
-      messageType: 'TEXT',
-      status: 'RECEIVED',
-      timestamp: new Date(Date.now() - 88000000),
-    },
-  });
-
-  await prisma.message.create({
-    data: {
-      conversationId: conversation2.id,
-      direction: 'OUTBOUND',
-      text: 'Done! Your address has been updated.',
-      messageType: 'TEXT',
-      status: 'DELIVERED',
-      senderId: agent.id,
-      timestamp: new Date(Date.now() - 87000000),
-    },
-  });
-
-  await prisma.message.create({
-    data: {
-      conversationId: conversation2.id,
-      direction: 'INBOUND',
-      text: 'Thanks for your help!',
-      messageType: 'TEXT',
-      status: 'RECEIVED',
-      timestamp: new Date(Date.now() - 86400000),
-    },
-  });
-
-  const contact3 = await prisma.contact.upsert({
-    where: { phoneNumber: '6281234567892' },
-    update: {},
-    create: {
-      phoneNumber: '6281234567892',
-      name: 'Bob Johnson',
-    },
-  });
-
-  await prisma.conversation.upsert({
-    where: { id: contact3.id },
-    update: {},
-    create: {
-      contactId: contact3.id,
-      status: 'RESOLVED',
-      unreadCount: 0,
-      lastMessageText: 'Perfect, thank you!',
-      lastMessageAt: new Date(Date.now() - 172800000), // 2 days ago
-    },
-  });
-
-  console.log('Database seeded successfully!');
-  console.log('\nDefault credentials:');
-  console.log('Email: admin@waku.com');
-  console.log('Password: admin123');
   console.log('\nCreated:');
-  console.log('- 3 contacts');
-  console.log('- 3 conversations (1 open, 2 resolved)');
-  console.log('- Multiple messages');
+  console.log('- 1 company');
+  console.log('- 2 agent accounts (super admin + agent)');
+  console.log('- No contacts or conversations (clean start)');
 }
 
 main()

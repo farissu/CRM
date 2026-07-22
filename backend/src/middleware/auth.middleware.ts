@@ -15,7 +15,9 @@ declare global {
         name: string;
         role: string;
         companyId: string;
+        mustChangePassword: boolean;
       };
+      rawBody?: Buffer;
     }
   }
 }
@@ -43,7 +45,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         name: true,
         role: true,
         companyId: true,
-        isActive: true
+        isActive: true,
+        mustChangePassword: true
       }
     });
 
@@ -57,7 +60,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       email: agent.email,
       name: agent.name,
       role: agent.role,
-      companyId: agent.companyId
+      companyId: agent.companyId,
+      mustChangePassword: agent.mustChangePassword
     };
 
     next();

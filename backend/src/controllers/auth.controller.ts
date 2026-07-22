@@ -16,7 +16,7 @@ export class AuthController {
 
       const agent = await prisma.agent.findUnique({
         where: { email },
-        select: { id: true, email: true, password: true, name: true, role: true, phone: true, companyId: true, isActive: true }
+        select: { id: true, email: true, password: true, name: true, role: true, phone: true, companyId: true, isActive: true, mustChangePassword: true }
       });
 
       if (!agent) return res.status(401).json({ error: 'Invalid credentials' });
@@ -35,7 +35,10 @@ export class AuthController {
 
       res.json({
         token,
-        agent: { id: agent.id, email: agent.email, name: agent.name, role: agent.role, phone: agent.phone, companyId: agent.companyId }
+        agent: {
+          id: agent.id, email: agent.email, name: agent.name, role: agent.role,
+          phone: agent.phone, companyId: agent.companyId, mustChangePassword: agent.mustChangePassword
+        }
       });
     } catch (err: unknown) {
       res.status(500).json({ error: 'Login failed', message: err instanceof Error ? err.message : 'Unknown error' });
@@ -43,33 +46,12 @@ export class AuthController {
   }
 
   async me(req: Request, res: Response) {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) return res.status(401).json({ error: 'No token provided' });
-
-      const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: string };
-      const agent = await prisma.agent.findUnique({
-        where: { id: decoded.id },
-        select: { id: true, email: true, name: true, role: true, phone: true, companyId: true, isActive: true }
-      });
-
-      if (!agent || !agent.isActive) return res.status(401).json({ error: 'Invalid token' });
-      res.json({ agent });
-    } catch {
-      res.status(401).json({ error: 'Invalid token' });
-    }
+    // req.user is populated by the `authenticate` middleware
+    res.json({ agent: req.user });
   }
 
   async logout(req: Request, res: Response) {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) return res.status(401).json({ error: 'No token provided' });
-
-      const decoded = jwt.verify(token, JWT_SECRET) as unknown as { id: string };
-      res.json({ message: 'Logged out successfully', agentId: decoded.id });
-    } catch (err: unknown) {
-      res.status(500).json({ error: 'Logout failed', message: err instanceof Error ? err.message : 'Unknown error' });
-    }
+    res.json({ message: 'Logged out successfully', agentId: req.user?.id });
   }
 
   async saveWhatsAppToken(req: Request, res: Response) {

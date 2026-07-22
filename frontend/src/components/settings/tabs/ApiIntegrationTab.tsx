@@ -3,47 +3,19 @@ import { Zap, Shield, Save, X } from 'lucide-react';
 import type { Agent, Company } from '@/types';
 import { companyApi } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 interface ApiIntegrationTabProps {
   agent?: Agent;
 }
-
-type FBWindow = Window & {
-  FB?: {
-    init: (opts: Record<string, unknown>) => void;
-    login: (
-      cb: (r: { authResponse?: { accessToken: string } }) => void,
-      opts: Record<string, unknown>
-    ) => void;
-  };
-};
 
 export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
   const [webhookData, setWebhookData] = useState({ webhookUrl: '', webhookCallbackUrl: '' });
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookSuccess, setWebhookSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [waConnecting, setWaConnecting] = useState(false);
-  const [waConnected, setWaConnected] = useState(false);
 
   useEffect(() => {
     void loadWebhookData();
   }, [agent?.companyId]);
-
-  useEffect(() => {
-    if (document.getElementById('facebook-sdk')) return;
-    const script = document.createElement('script');
-    script.id = 'facebook-sdk';
-    script.src = 'https://connect.facebook.net/en_US/sdk.js';
-    script.async = true;
-    script.defer = true;
-    script.crossOrigin = 'anonymous';
-    script.onload = () => {
-      (window as FBWindow).FB?.init({ appId: '1029573899538240', autoLogAppEvents: true, xfbml: true, version: 'v19.0' });
-    };
-    document.body.appendChild(script);
-  }, []);
 
   const loadWebhookData = async () => {
     if (!agent?.companyId) return;
@@ -76,36 +48,6 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
     }
   };
 
-  const saveWhatsAppToken = async (accessToken: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/auth/whatsapp/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessToken }),
-      });
-      const data = await res.json() as { success?: boolean; error?: string };
-      if (data.success) setWaConnected(true);
-      else setError(data.error || 'Gagal connect WhatsApp');
-    } catch {
-      setError('Gagal connect ke server');
-    } finally {
-      setWaConnecting(false);
-    }
-  };
-
-  const handleConnectWhatsApp = () => {
-    const FB = (window as FBWindow).FB;
-    if (!FB) { setError('Facebook SDK not loaded yet, coba lagi dalam 2 detik.'); return; }
-    setWaConnecting(true);
-    FB.login((response) => {
-      if (!response.authResponse) { setWaConnecting(false); return; }
-      void saveWhatsAppToken(response.authResponse.accessToken);
-    }, {
-      scope: 'whatsapp_business_messaging,whatsapp_business_management',
-      extras: { setup: {}, featureType: 'only_waba_sharing', sessionInfoVersion: '3' },
-    });
-  };
-
   return (
     <div className="max-w-3xl">
       <h2 className="text-2xl font-bold text-saas-text-primary mb-2">API Integration</h2>
@@ -125,24 +67,6 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
           <p className="text-green-800 font-semibold">Webhook configuration saved successfully!</p>
         </div>
       )}
-
-      <div className="bg-white rounded-2xl p-6 border border-saas-border mb-6">
-        <h3 className="text-lg font-bold text-saas-text-primary mb-2 flex items-center gap-2">
-          <Shield className="w-5 h-5 text-green-600" />
-          Connect WhatsApp Business Account
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">Hubungkan akun WhatsApp Business kamu ke CRM ini menggunakan Embedded Signup Meta.</p>
-        {waConnected ? (
-          <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-center gap-3">
-            <Shield className="w-5 h-5 text-green-600" />
-            <p className="text-green-800 font-semibold">WhatsApp Business berhasil terhubung!</p>
-          </div>
-        ) : (
-          <button onClick={handleConnectWhatsApp} disabled={waConnecting} className="flex items-center gap-2 bg-[#1877F2] hover:bg-[#166FE5] text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50">
-            {waConnecting ? 'Menghubungkan...' : 'Login dengan Facebook untuk Connect WhatsApp'}
-          </button>
-        )}
-      </div>
 
       <div className="bg-white rounded-2xl p-6 border border-saas-border space-y-6">
         <div>

@@ -90,7 +90,7 @@ export const changePassword = async (req: Request, res: Response) => {
     // Update password
     await prisma.agent.update({
       where: { id: agentId },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword, mustChangePassword: false }
     });
 
     return res.json({ message: 'Password updated successfully' });

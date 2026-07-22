@@ -5,6 +5,7 @@ import MainNavigation from '@/components/layout/MainNavigation';
 import ConversationSidebar from '@/components/sidebar/ConversationSidebar';
 import ChatPanel from '@/components/chat/ChatPanel';
 import LoginPage from '@/components/auth/LoginPage';
+import ForceChangePasswordPage from '@/components/auth/ForceChangePasswordPage';
 import SettingsPanel from '@/components/settings/SettingsPanel';
 import DashboardPanel from '@/components/dashboard/DashboardPanel';
 import BroadcastPanel from '@/components/broadcast/BroadcastPanel';
@@ -35,6 +36,10 @@ export default function HomePage() {
 
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (agent?.mustChangePassword) {
+    return <ForceChangePasswordPage onPasswordChanged={refreshAgentData} />;
   }
 
   return (
