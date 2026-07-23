@@ -175,6 +175,7 @@ export class MessageController {
         for (const entry of body.entry) {
           for (const change of entry.changes ?? []) {
             const value = change.value;
+            if (value?.metadata?.phone_number_id !== process.env.WHATSAPP_PHONE_NUMBER_ID) continue;
             for (const message of value.messages ?? []) {
               await processWhatsAppMessage(message as WhatsAppMessage, value.contacts);
             }
