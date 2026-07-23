@@ -16,6 +16,10 @@ export function verifyMetaSignature(req: Request, res: Response, next: NextFunct
 
   const signatureHeader = req.headers['x-hub-signature-256'];
   if (typeof signatureHeader !== 'string' || !req.rawBody) {
+    console.warn('Webhook signature check: missing header or rawBody', {
+      hasHeader: typeof signatureHeader === 'string',
+      hasRawBody: !!req.rawBody,
+    });
     return res.status(401).json({ error: 'Missing webhook signature' });
   }
 
@@ -24,6 +28,11 @@ export function verifyMetaSignature(req: Request, res: Response, next: NextFunct
   const actual = Buffer.from(signatureHeader, 'utf8');
 
   if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+    console.warn('Webhook signature mismatch', {
+      expectedPrefix: expectedSignature.slice(0, 15),
+      actualPrefix: signatureHeader.slice(0, 15),
+      rawBodyLength: req.rawBody.length,
+    });
     return res.status(401).json({ error: 'Invalid webhook signature' });
   }
 
