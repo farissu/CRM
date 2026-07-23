@@ -17,7 +17,6 @@ declare global {
         companyId: string;
         mustChangePassword: boolean;
       };
-      rawBody?: Buffer;
     }
   }
 }

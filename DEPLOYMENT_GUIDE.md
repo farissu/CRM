@@ -98,12 +98,6 @@ dipecah jadi `database/docker-compose.yml`, `backend/docker-compose.yml`, dan
    WHATSAPP_ACCESS_TOKEN=EAAOoZAFqNT0AB... # Token panjang Meta klien ini
    WHATSAPP_BUSINESS_ACCOUNT_ID=your-waba-id
    WHATSAPP_WEBHOOK_VERIFY_TOKEN=tes_verify_token_kamu
-
-   # App Secret dari Meta App Dashboard → Settings → Basic
-   # WAJIB diisi — dipakai untuk verifikasi signature (X-Hub-Signature-256) di setiap
-   # webhook yang masuk. Tanpa ini, endpoint webhook menerima payload apapun tanpa
-   # memastikan itu benar-benar dari Meta.
-   WHATSAPP_APP_SECRET=your-meta-app-secret
    ```
 
    File `clients/*.env` sudah masuk `.gitignore` (kecuali template-nya) — jangan pernah commit

@@ -32,11 +32,7 @@ export const io = new Server(httpServer, {
 
 // Middleware
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    (req as express.Request).rawBody = buf;
-  }
-}));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
