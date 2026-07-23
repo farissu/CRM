@@ -29,6 +29,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 docker compose \
   -p "$CLIENT_NAME" \
+  --project-directory "$ROOT_DIR" \
   -f "$ROOT_DIR/database/docker-compose.yml" \
   -f "$ROOT_DIR/backend/docker-compose.yml" \
   -f "$ROOT_DIR/frontend/docker-compose.yml" \

@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.prod
     ports:
       - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
@@ -15,7 +15,6 @@ services:
       WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
       WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID}
       WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN}
-      WHATSAPP_APP_ID: ${WHATSAPP_APP_ID}
       WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
       FRONTEND_URL: ${FRONTEND_URL}
     depends_on:
