@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
 import prisma from '../config/database';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -52,33 +49,6 @@ export class AuthController {
 
   async logout(req: Request, res: Response) {
     res.json({ message: 'Logged out successfully', agentId: req.user?.id });
-  }
-
-  async saveWhatsAppToken(req: Request, res: Response) {
-    const { accessToken } = req.body as { accessToken: string };
-    if (!accessToken) { res.status(400).json({ error: 'accessToken required' }); return; }
-
-    const appId = process.env.WHATSAPP_APP_ID;
-    const appSecret = process.env.WHATSAPP_APP_SECRET;
-    if (!appId || !appSecret) { res.status(500).json({ error: 'WhatsApp app credentials not configured' }); return; }
-
-    try {
-      const longRes = await axios.get<{ access_token: string }>(
-        'https://graph.facebook.com/v19.0/oauth/access_token',
-        { params: { grant_type: 'fb_exchange_token', client_id: appId, client_secret: appSecret, fb_exchange_token: accessToken } }
-      );
-      const longToken = longRes.data.access_token;
-
-      const envPath = path.join(__dirname, '../../.env');
-      const envContent = fs.readFileSync(envPath, 'utf8')
-        .replace(/WHATSAPP_ACCESS_TOKEN=.*/, `WHATSAPP_ACCESS_TOKEN=${longToken}`);
-      fs.writeFileSync(envPath, envContent);
-      process.env.WHATSAPP_ACCESS_TOKEN = longToken;
-
-      res.json({ success: true });
-    } catch (err: unknown) {
-      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to exchange token' });
-    }
   }
 }
 

@@ -80,12 +80,3 @@ export const requireSuperAdmin = (req: Request, res: Response, next: NextFunctio
   next();
 };
 
-/**
- * Middleware to check if user is Admin or Super Admin
- */
-export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
-    return res.status(403).json({ error: 'Forbidden: Admin access required' });
-  }
-  next();
-};
