@@ -81,13 +81,32 @@ export class MessageService {
   }
 
   /**
-   * Send outbound message
+   * Send outbound message from a dashboard agent (existing conversation, JWT-authenticated)
    */
   async sendMessage(params: SendMessageParams) {
-    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption } = params;
+    const conversation = await conversationService.getConversationById(params.conversationId);
+    return this.sendToConversation(conversation, params);
+  }
 
-    // Get conversation with contact info
-    const conversation = await conversationService.getConversationById(conversationId);
+  /**
+   * Send outbound message from an external integration (API key auth), identified by
+   * phone number instead of an existing conversationId — finds or creates the
+   * conversation/contact so the message shows up in the dashboard like any other.
+   */
+  async sendMessageByPhone(params: { phoneNumber: string; text: string; contactName?: string }) {
+    const conversation = await conversationService.getOrCreateConversation(params.phoneNumber, params.contactName);
+    return this.sendToConversation(conversation, {
+      conversationId: conversation.id,
+      text: params.text,
+      senderId: undefined as unknown as string,
+    });
+  }
+
+  private async sendToConversation(
+    conversation: { id: string; contact: { phoneNumber: string } },
+    params: SendMessageParams
+  ) {
+    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption } = params;
 
     // Create message record
     const message = await prisma.message.create({

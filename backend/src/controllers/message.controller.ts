@@ -156,6 +156,16 @@ export class MessageController {
     }
   }
 
+  async sendExternalMessage(req: Request, res: Response) {
+    try {
+      const { to, text, contactName } = req.body as { to: string; text: string; contactName?: string };
+      const message = await messageService.sendMessageByPhone({ phoneNumber: to, text, contactName });
+      res.status(201).json(message);
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to send message', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+
   verifyWebhook(req: Request, res: Response) {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];

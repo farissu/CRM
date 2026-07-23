@@ -11,6 +11,12 @@ export const sendMessageSchema = z.object({
   senderId: z.string().min(1, 'senderId is required'),
 });
 
+export const sendExternalMessageSchema = z.object({
+  to: z.string().min(1, 'to is required'),
+  text: z.string().min(1, 'text is required'),
+  contactName: z.string().optional(),
+});
+
 export const createLabelSchema = z.object({
   name: z.string().min(1).max(50),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'color must be a hex value e.g. #FF0000'),
