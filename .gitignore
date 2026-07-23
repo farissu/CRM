@@ -7,3 +7,7 @@ build
 *.log
 coverage
 .DS_Store
+
+# Per-client production secrets (see clients/client.env.example for the template)
+clients/*.env
+!clients/client.env.example

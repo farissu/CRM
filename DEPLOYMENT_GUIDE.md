@@ -50,7 +50,13 @@ sudo ufw --force enable
 
 ---
 
-## Langkah 2: Clone Project & Konfigurasi File `.env`
+## Langkah 2: Clone Project & Konfigurasi Env per Klien
+
+Repo ini adalah monorepo multi-tenant: **setiap klien punya container backend, frontend, dan
+database sendiri-sendiri** (terisolasi penuh), dijalankan dari kode yang sama lewat
+`scripts/compose.sh`. Deployment tidak lagi pakai 1 `docker-compose.prod.yml` di root — sekarang
+dipecah jadi `database/docker-compose.yml`, `backend/docker-compose.yml`, dan
+`frontend/docker-compose.yml`, digabung otomatis oleh script tersebut.
 
 1. Clone repository kode Anda ke VPS (misalnya di folder `/var/www/whatsapp-crm`):
    ```bash
@@ -58,31 +64,39 @@ sudo ufw --force enable
    cd /var/www/whatsapp-crm
    ```
 
-2. Buat file `.env` untuk production:
+2. Untuk setiap klien baru, copy template env dan beri nama sesuai klien:
    ```bash
-   nano .env
+   cp clients/client.env.example clients/nama-klien.env
+   nano clients/nama-klien.env
    ```
 
-3. Copy dan sesuaikan isi `.env` di bawah ini (ganti domain, password, dan token Anda):
+3. Isi `clients/nama-klien.env` (ganti domain, password, port, dan token milik klien ini):
 
    ```env
-   # JWT Secret (Gunakan random string panjang demi keamanan)
+   # JWT Secret (Gunakan random string panjang demi keamanan, beda per klien)
    JWT_SECRET=GANTI_DENGAN_RANDOM_STRING_YANG_SANGAT_PANJANG_DAN_AMAN
-   
-   # Konfigurasi Database PostgreSQL
+
+   # Konfigurasi Database PostgreSQL milik klien ini
    DB_USER=postgres
    DB_PASSWORD=PasswordDatabaseYangSangatKuat123!
-   DB_NAME=whatsapp_crm
-   
+   DB_NAME=whatsapp_crm_nama_klien
+
+   # Port host — WAJIB unik per klien kalau berbagi 1 VPS dengan klien lain
+   DB_PORT=5432
+   REDIS_PORT=6379
+   BACKEND_PORT=3001
+   FRONTEND_PORT=3000
+
    # URL Frontend & Backend untuk CORS dan Client-side Next.js
-   # Ubah crm.domainkamu.com dengan domain/subdomain riil Anda
-   FRONTEND_URL=https://crm.domainkamu.com
-   NEXT_PUBLIC_API_URL=https://crm.domainkamu.com
-   NEXT_PUBLIC_WS_URL=wss://crm.domainkamu.com
-   
-   # Token Integrasi WhatsApp (Wappin / Meta API)
+   # Ubah nama-klien.domainkamu.com dengan domain/subdomain riil klien ini
+   FRONTEND_URL=https://nama-klien.domainkamu.com
+   NEXT_PUBLIC_API_URL=https://nama-klien.domainkamu.com
+   NEXT_PUBLIC_WS_URL=wss://nama-klien.domainkamu.com
+
+   # Token Integrasi WhatsApp (Meta Cloud API) milik klien ini
    WHATSAPP_PHONE_NUMBER_ID=1747983816359565
-   WHATSAPP_ACCESS_TOKEN=EAAOoZAFqNT0AB... # Token panjang Meta Anda
+   WHATSAPP_ACCESS_TOKEN=EAAOoZAFqNT0AB... # Token panjang Meta klien ini
+   WHATSAPP_BUSINESS_ACCOUNT_ID=your-waba-id
    WHATSAPP_WEBHOOK_VERIFY_TOKEN=tes_verify_token_kamu
 
    # App ID & App Secret dari Meta App Dashboard → Settings → Basic
@@ -93,27 +107,34 @@ sudo ufw --force enable
    WHATSAPP_APP_SECRET=your-meta-app-secret
    ```
 
+   File `clients/*.env` sudah masuk `.gitignore` (kecuali template-nya) — jangan pernah commit
+   file env klien asli karena isinya secret.
+
 ---
 
-## Langkah 3: Build & Jalankan Docker Container
+## Langkah 3: Build & Jalankan Docker Container per Klien
 
-Jalankan Docker Compose untuk mendownload base image, membuild backend & frontend Next.js untuk production mode, dan menjalankan container secara background (`-d`):
+Jalankan `scripts/compose.sh` dengan format `<nama-klien> <file-env> <perintah-docker-compose>`.
+Nama klien dipakai sebagai nama project Docker Compose, jadi container/volume/network klien A
+tidak akan pernah tabrakan dengan klien B walau host-nya sama:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+chmod +x scripts/compose.sh   # sekali saja
+./scripts/compose.sh nama-klien clients/nama-klien.env up -d --build
 ```
 
 ### Inisialisasi Database (Prisma Migration & Seed)
-Setelah container menyala, jalankan perintah berikut untuk membuat tabel database PostgreSQL, melakukan generate Prisma client, dan memasukkan data default (seeding):
+Setelah container menyala, jalankan perintah berikut untuk membuat tabel database PostgreSQL,
+melakukan generate Prisma client, dan memasukkan data default (seeding) — khusus untuk klien ini:
 
 ```bash
 # Tunggu beberapa detik agar PostgreSQL siap menerima koneksi, lalu jalankan:
 
 # 1. Jalankan migrasi schema database
-docker compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+./scripts/compose.sh nama-klien clients/nama-klien.env exec backend npx prisma migrate deploy
 
 # 2. Seed database untuk admin default
-docker compose -f docker-compose.prod.yml exec backend npm run seed
+./scripts/compose.sh nama-klien clients/nama-klien.env exec backend npm run seed
 ```
 
 *Akun setelah seeding:*
@@ -126,19 +147,24 @@ docker compose -f docker-compose.prod.yml exec backend npm run seed
 
 Kita akan menggunakan Nginx di VPS untuk menangani koneksi SSL (HTTPS) dan mengarahkan trafik dari browser/WhatsApp ke container Docker yang berjalan di background.
 
-1. Buat file konfigurasi Nginx baru:
+Karena setiap klien punya `BACKEND_PORT`/`FRONTEND_PORT` sendiri (lihat `clients/nama-klien.env`),
+**buat 1 file konfigurasi Nginx per klien**, dengan `server_name` dan port yang sesuai klien
+tersebut.
+
+1. Buat file konfigurasi Nginx baru (nama file mengikuti nama klien):
    ```bash
-   sudo nano /etc/nginx/sites-available/whatsapp-crm
+   sudo nano /etc/nginx/sites-available/whatsapp-crm-nama-klien
    ```
 
-2. Paste konfigurasi Nginx berikut (Ganti `crm.domainkamu.com` dengan domain Anda):
+2. Paste konfigurasi Nginx berikut (ganti `nama-klien.domainkamu.com` dengan domain klien ini,
+   dan `3000`/`3001` dengan `FRONTEND_PORT`/`BACKEND_PORT` yang diisi di `clients/nama-klien.env`):
 
    ```nginx
    server {
        listen 80;
-       server_name crm.domainkamu.com;
+       server_name nama-klien.domainkamu.com;
 
-       # Frontend Next.js (Port 3000)
+       # Frontend Next.js (ganti dengan FRONTEND_PORT klien ini)
        location / {
            proxy_pass http://127.0.0.1:3000;
            proxy_http_version 1.1;
@@ -148,7 +174,7 @@ Kita akan menggunakan Nginx di VPS untuk menangani koneksi SSL (HTTPS) dan menga
            proxy_cache_bypass $http_upgrade;
        }
 
-       # Backend Express API (Port 3001)
+       # Backend Express API (ganti dengan BACKEND_PORT klien ini)
        location /api {
            proxy_pass http://127.0.0.1:3001;
            proxy_http_version 1.1;
@@ -161,7 +187,7 @@ Kita akan menggunakan Nginx di VPS untuk menangani koneksi SSL (HTTPS) dan menga
            proxy_set_header X-Forwarded-Proto $scheme;
        }
 
-       # WebSocket real-time (Port 3001)
+       # WebSocket real-time (port sama dengan Backend di atas)
        location /socket.io/ {
            proxy_pass http://127.0.0.1:3001/socket.io/;
            proxy_http_version 1.1;
@@ -176,9 +202,9 @@ Kita akan menggunakan Nginx di VPS untuk menangani koneksi SSL (HTTPS) dan menga
    }
    ```
 
-3. Aktifkan konfigurasi Nginx dengan membuat symbolic link:
+3. Aktifkan konfigurasi Nginx dengan membuat symbolic link (ulangi Langkah 1-3 ini untuk setiap klien baru):
    ```bash
-   sudo ln -s /etc/nginx/sites-available/whatsapp-crm /etc/nginx/sites-enabled/
+   sudo ln -s /etc/nginx/sites-available/whatsapp-crm-nama-klien /etc/nginx/sites-enabled/
    ```
 
 4. Hapus konfigurasi default Nginx agar tidak konflik:
@@ -196,10 +222,10 @@ Kita akan menggunakan Nginx di VPS untuk menangani koneksi SSL (HTTPS) dan menga
 
 ## Langkah 5: Install SSL HTTPS Gratis dari Let's Encrypt
 
-Jalankan Certbot untuk mendapatkan SSL gratis dan mengonfigurasi auto-redirect dari HTTP ke HTTPS secara otomatis pada file konfigurasi Nginx:
+Jalankan Certbot untuk mendapatkan SSL gratis dan mengonfigurasi auto-redirect dari HTTP ke HTTPS secara otomatis pada file konfigurasi Nginx (ulangi untuk setiap domain klien):
 
 ```bash
-sudo certbot --nginx -d crm.domainkamu.com
+sudo certbot --nginx -d nama-klien.domainkamu.com
 ```
 
 - Certbot akan menanyakan alamat email Anda (untuk notifikasi perpanjangan SSL).
@@ -212,16 +238,17 @@ Setelah selesai, Certbot akan secara otomatis mengedit konfigurasi Nginx Anda un
 
 ## Langkah 6: Verifikasi Hasil Deployment
 
-Buka browser Anda dan akses domain Anda:
-- `https://crm.domainkamu.com` -> Harus memuat halaman login aplikasi WhatsApp CRM.
+Buka browser Anda dan akses domain klien tersebut:
+- `https://nama-klien.domainkamu.com` -> Harus memuat halaman login aplikasi WhatsApp CRM.
 - Login menggunakan email `admin@waku.com` dan password acak yang dicatat dari output seed (lihat Langkah 3) — Anda akan langsung diminta membuat password baru saat login pertama.
-- Buka Inspect Element (F12) -> Console, dan pastikan tidak ada error koneksi WebSocket (koneksi websocket harus sukses terhubung ke `wss://crm.domainkamu.com`).
+- Buka Inspect Element (F12) -> Console, dan pastikan tidak ada error koneksi WebSocket (koneksi websocket harus sukses terhubung ke `wss://nama-klien.domainkamu.com`).
 
 ---
 
-## Lampiran: Cara Update Kode di Masa Mendatang
+## Lampiran A: Cara Update Kode di Masa Mendatang
 
-Jika Anda melakukan perubahan kode di local computer dan ingin memposting perubahan tersebut ke VPS:
+Jika Anda melakukan perubahan kode di local computer dan ingin memposting perubahan tersebut ke VPS
+untuk **semua klien** (kode monorepo-nya sama untuk semua):
 
 1. Push perubahan Anda ke repository Git (GitHub/GitLab).
 2. Hubungi VPS via SSH:
@@ -233,12 +260,29 @@ Jika Anda melakukan perubahan kode di local computer dan ingin memposting peruba
    ```bash
    git pull origin main
    ```
-4. Rebuild container tanpa merusak data database:
+4. Rebuild container tiap klien satu per satu (tanpa merusak data database, karena volume
+   `postgres_data`/`redis_data` terpisah per nama project dan tidak ikut ke-rebuild):
    ```bash
-   docker compose -f docker-compose.prod.yml up -d --build
+   ./scripts/compose.sh nama-klien-1 clients/nama-klien-1.env up -d --build
+   ./scripts/compose.sh nama-klien-2 clients/nama-klien-2.env up -d --build
+   # ...ulangi untuk setiap klien yang aktif
    ```
-5. Jalankan migrasi database jika ada perubahan schema Prisma:
+5. Jalankan migrasi database tiap klien jika ada perubahan schema Prisma:
    ```bash
-   docker compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+   ./scripts/compose.sh nama-klien-1 clients/nama-klien-1.env exec backend npx prisma migrate deploy
    ```
-6. Aplikasi Anda selesai diperbarui secara aman!
+6. Aplikasi semua klien selesai diperbarui secara aman!
+
+---
+
+## Lampiran B: Onboarding Klien Baru
+
+Karena setiap klien terisolasi penuh (kode sama, container & database beda), langkah daftar klien
+baru cukup:
+
+1. `cp clients/client.env.example clients/nama-klien-baru.env` lalu isi domain, password, port,
+   dan token WhatsApp klien baru (pastikan port tidak bentrok dengan klien lain di VPS yang sama).
+2. `./scripts/compose.sh nama-klien-baru clients/nama-klien-baru.env up -d --build`
+3. `./scripts/compose.sh nama-klien-baru clients/nama-klien-baru.env exec backend npx prisma migrate deploy`
+4. `./scripts/compose.sh nama-klien-baru clients/nama-klien-baru.env exec backend npm run seed`
+5. Buat konfigurasi Nginx + SSL baru untuk domain klien ini (lihat Langkah 4 & 5 di atas).
