@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { conversationApi, messageApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
 import type { Conversation, Message } from '@/types';
+
+const CONVERSATIONS_PAGE_SIZE = 30;
 
 interface UseConversationsParams {
   isAuthenticated: boolean;
@@ -16,6 +18,8 @@ interface UseConversationsReturn {
   activeConversation: Conversation | null;
   messages: Message[];
   loadingConversations: boolean;
+  loadingMoreConversations: boolean;
+  hasMoreConversations: boolean;
   loadingMessages: boolean;
   typingIndicator: { agentName: string } | null;
   handleSelectConversation: (conversation: Conversation) => Promise<void>;
@@ -25,6 +29,7 @@ interface UseConversationsReturn {
   handleTypingStop: () => void;
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
   loadConversations: () => Promise<void>;
+  loadMoreConversations: () => Promise<void>;
 }
 
 export function useConversations({ isAuthenticated, agentId, agentName }: UseConversationsParams): UseConversationsReturn {
@@ -32,18 +37,45 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [typingIndicator, setTypingIndicator] = useState<{ agentName: string } | null>(null);
+
+  const pageRef = useRef(1);
+  const isFetchingMoreRef = useRef(false);
 
   const loadConversations = useCallback(async () => {
     try {
       setLoadingConversations(true);
-      const response = await conversationApi.getConversations({ limit: 100 });
+      const response = await conversationApi.getConversations({ page: 1, limit: CONVERSATIONS_PAGE_SIZE });
       setConversations(response.conversations);
+      pageRef.current = 1;
+      setHasMoreConversations(response.page < response.totalPages);
     } finally {
       setLoadingConversations(false);
     }
   }, []);
+
+  const loadMoreConversations = useCallback(async () => {
+    if (isFetchingMoreRef.current || !hasMoreConversations) return;
+    isFetchingMoreRef.current = true;
+    setLoadingMoreConversations(true);
+    try {
+      const nextPage = pageRef.current + 1;
+      const response = await conversationApi.getConversations({ page: nextPage, limit: CONVERSATIONS_PAGE_SIZE });
+      setConversations(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const newOnes = response.conversations.filter(c => !existingIds.has(c.id));
+        return [...prev, ...newOnes];
+      });
+      pageRef.current = nextPage;
+      setHasMoreConversations(nextPage < response.totalPages);
+    } finally {
+      setLoadingMoreConversations(false);
+      isFetchingMoreRef.current = false;
+    }
+  }, [hasMoreConversations]);
 
   useEffect(() => {
     if (isAuthenticated) loadConversations();
@@ -135,8 +167,9 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   }, [isAuthenticated, activeConversation?.id, loadConversations]);
 
   return {
-    conversations, activeConversation, messages, loadingConversations, loadingMessages,
-    typingIndicator, handleSelectConversation, handleSendMessage, handleResolveConversation,
-    handleTypingStart, handleTypingStop, setConversations, loadConversations,
+    conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
+    hasMoreConversations, loadingMessages, typingIndicator, handleSelectConversation,
+    handleSendMessage, handleResolveConversation, handleTypingStart, handleTypingStop,
+    setConversations, loadConversations, loadMoreConversations,
   };
 }

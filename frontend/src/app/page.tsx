@@ -18,9 +18,10 @@ export default function HomePage() {
   const { isAuthenticated, agent, agentId, agentName, checkingAuth, handleLoginSuccess, handleLogout, refreshAgentData } = useAuth();
 
   const {
-    conversations, activeConversation, messages, loadingConversations, loadingMessages,
-    typingIndicator, handleSelectConversation, handleSendMessage, handleResolveConversation,
-    handleTypingStart, handleTypingStop, loadConversations,
+    conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
+    hasMoreConversations, loadingMessages, typingIndicator, handleSelectConversation,
+    handleSendMessage, handleResolveConversation, handleTypingStart, handleTypingStop,
+    loadConversations, loadMoreConversations,
   } = useConversations({ isAuthenticated, agentId, agentName });
 
   if (checkingAuth) {
@@ -53,6 +54,9 @@ export default function HomePage() {
             activeConversationId={activeConversation?.id}
             onSelectConversation={handleSelectConversation}
             loading={loadingConversations}
+            hasMore={hasMoreConversations}
+            loadingMore={loadingMoreConversations}
+            onLoadMore={loadMoreConversations}
             agentName={agentName}
             onLogout={handleLogout}
           />

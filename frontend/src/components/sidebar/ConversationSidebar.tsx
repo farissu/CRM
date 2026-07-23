@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Conversation, Label } from '@/types';
 import clsx from 'clsx';
@@ -12,6 +12,9 @@ interface ConversationSidebarProps {
   activeConversationId?: string;
   onSelectConversation: (conversation: Conversation) => void;
   loading?: boolean;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   agentName?: string;
   onLogout?: () => void;
 }
@@ -21,6 +24,9 @@ export default function ConversationSidebar({
   activeConversationId,
   onSelectConversation,
   loading,
+  hasMore,
+  loadingMore,
+  onLoadMore,
   agentName,
   onLogout,
 }: ConversationSidebarProps) {
@@ -50,6 +56,30 @@ export default function ConversationSidebar({
       setSearchQuery('');
     }
   }, [showSearch]);
+
+  // Infinite scroll: observe a sentinel at the bottom of the list instead of
+  // listening to scroll events, so no work happens until the sentinel is near view.
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!onLoadMore || !hasMore) return;
+    const sentinel = sentinelRef.current;
+    const root = listContainerRef.current;
+    if (!sentinel || !root) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { root, rootMargin: '200px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [onLoadMore, hasMore, loadingMore]);
 
   // Filter conversations based on status and search
   const filteredConversations = conversations.filter(conv => {
@@ -262,7 +292,7 @@ export default function ConversationSidebar({
       </div>
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto bg-saas-bg">
+      <div ref={listContainerRef} className="flex-1 overflow-y-auto bg-saas-bg">
         {filteredConversations.length === 0 ? (
           <div className="p-8 text-center">
             {searchQuery.trim() ? (
@@ -283,14 +313,22 @@ export default function ConversationSidebar({
             )}
           </div>
         ) : (
-          filteredConversations.map((conversation) => (
-            <ConversationItem
-              key={conversation.id}
-              conversation={conversation}
-              isActive={conversation.id === activeConversationId}
-              onClick={() => onSelectConversation(conversation)}
-            />
-          ))
+          <>
+            {filteredConversations.map((conversation) => (
+              <ConversationItem
+                key={conversation.id}
+                conversation={conversation}
+                isActive={conversation.id === activeConversationId}
+                onClick={() => onSelectConversation(conversation)}
+              />
+            ))}
+            {hasMore && <div ref={sentinelRef} className="h-1" />}
+            {loadingMore && (
+              <div className="py-4 flex justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
