@@ -15,7 +15,3 @@ export async function connectDatabase() {
     throw error;
   }
 }
-
-export async function disconnectDatabase() {
-  await prisma.$disconnect();
-}

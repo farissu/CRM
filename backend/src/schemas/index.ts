@@ -11,10 +11,6 @@ export const sendMessageSchema = z.object({
   senderId: z.string().min(1, 'senderId is required'),
 });
 
-export const assignAgentSchema = z.object({
-  agentId: z.string().min(1, 'agentId is required'),
-});
-
 export const createLabelSchema = z.object({
   name: z.string().min(1).max(50),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'color must be a hex value e.g. #FF0000'),

@@ -242,5 +242,3 @@ export const templateApi = {
     return response.data as { message: string };
   },
 };
-
-export default api;

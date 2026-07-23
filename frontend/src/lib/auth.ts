@@ -66,5 +66,3 @@ export const authApi = {
     localStorage.setItem('agent', JSON.stringify(agent));
   },
 };
-
-export default api;
