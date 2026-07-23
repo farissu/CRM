@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'WhatsApp CRM Platform',
-  description: 'Manage WhatsApp conversations with Wappin integration',
+  title: 'Waku',
+  description: 'Waku - Manage WhatsApp conversations with Wappin integration',
 };
 
 export default function RootLayout({

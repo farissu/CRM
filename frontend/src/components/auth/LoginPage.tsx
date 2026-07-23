@@ -46,7 +46,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-4xl font-bold text-saas-text-primary mb-2">WhatsApp CRM</h1>
+          <h1 className="text-4xl font-bold text-saas-text-primary mb-2">Waku</h1>
           <p className="text-gray-600 font-semibold">Agent Login</p>
         </div>
 
