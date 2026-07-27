@@ -157,12 +157,18 @@ export class MessageController {
 
   async sendMessage(req: Request, res: Response) {
     try {
-      const { conversationId, text, senderId } = req.body;
-      if (!conversationId || !text || !senderId) {
-        res.status(400).json({ error: 'conversationId, text, and senderId are required' });
-        return;
-      }
-      const message = await messageService.sendMessage({ conversationId, text, senderId });
+      const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption } = req.body;
+      const message = await messageService.sendMessage({
+        conversationId,
+        text,
+        senderId,
+        messageType,
+        mediaUrl,
+        mediaType,
+        fileName,
+        fileSize,
+        caption,
+      });
       res.status(201).json(message);
     } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to send message', message: err instanceof Error ? err.message : 'Unknown error' });
