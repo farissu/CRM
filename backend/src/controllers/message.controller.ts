@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import { MessageStatus } from '@prisma/client';
 import { messageService } from '../services/message.service';
 import { mediaService } from '../services/media.service';
 import { storageService } from '../services/storage.service';
@@ -107,6 +108,30 @@ async function extractMediaContent(message: WhatsAppMessage): Promise<{
   return { text: '' };
 }
 
+interface WhatsAppStatus {
+  id: string;
+  status: string;
+  errors?: Array<{ code: number; title: string; message?: string; error_data?: { details?: string } }>;
+}
+
+const WA_STATUS_MAP: Record<string, MessageStatus> = {
+  sent: MessageStatus.SENT,
+  delivered: MessageStatus.DELIVERED,
+  read: MessageStatus.READ,
+  failed: MessageStatus.FAILED,
+};
+
+async function processWhatsAppStatus(status: WhatsAppStatus) {
+  if (status.errors?.length) {
+    console.error(`[WhatsApp] Delivery failed for message ${status.id}:`, JSON.stringify(status.errors));
+  }
+
+  const mapped = WA_STATUS_MAP[status.status];
+  if (!mapped) return;
+
+  await messageService.updateMessageStatusByWaId(status.id, mapped);
+}
+
 async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsAppContact[] | undefined) {
   if (!message.from) return;
   const timestamp = message.timestamp ? parseInt(message.timestamp) * 1000 : Date.now();
@@ -206,6 +231,9 @@ export class MessageController {
             const value = change.value;
             for (const message of value.messages ?? []) {
               await processWhatsAppMessage(message as WhatsAppMessage, value.contacts);
+            }
+            for (const status of value.statuses ?? []) {
+              await processWhatsAppStatus(status as WhatsAppStatus);
             }
           }
         }

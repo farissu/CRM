@@ -267,6 +267,17 @@ export class MessageService {
 
     return message;
   }
+
+  /**
+   * Update message status by WhatsApp message ID (from a delivery status webhook)
+   */
+  async updateMessageStatusByWaId(waMessageId: string, status: MessageStatus) {
+    const message = await prisma.message.findFirst({
+      where: { metadata: { path: ['waMessageId'], equals: waMessageId } },
+    });
+    if (!message) return null;
+    return this.updateMessageStatus(message.id, status);
+  }
 }
 
 export const messageService = new MessageService();
