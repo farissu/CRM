@@ -1,28 +1,5 @@
 import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
-import { pipeline } from 'stream/promises';
-
-const UPLOADS_DIR = path.join(__dirname, '../../uploads');
-
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'video/mp4': 'mp4',
-  'video/quicktime': 'mov',
-  'audio/ogg': 'ogg',
-  'audio/mpeg': 'mp3',
-  'audio/aac': 'aac',
-  'application/pdf': 'pdf',
-  'application/msword': 'doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-};
+import { storageService } from './storage.service';
 
 export class MediaService {
   async downloadAndSave(mediaId: string, mimeType?: string): Promise<string> {
@@ -34,20 +11,14 @@ export class MediaService {
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const { url, mime_type } = metaRes.data;
-
     const resolvedMime = mimeType || mime_type;
-    const ext = MIME_TO_EXT[resolvedMime] ?? 'bin';
-    const filename = `${mediaId}.${ext}`;
-    const filepath = path.join(UPLOADS_DIR, filename);
 
-    const fileRes = await axios.get<NodeJS.ReadableStream>(url, {
+    const fileRes = await axios.get<ArrayBuffer>(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
-      responseType: 'stream',
+      responseType: 'arraybuffer',
     });
 
-    await pipeline(fileRes.data, fs.createWriteStream(filepath));
-
-    return `/uploads/${filename}`;
+    return storageService.uploadBuffer(Buffer.from(fileRes.data), resolvedMime);
   }
 }
 

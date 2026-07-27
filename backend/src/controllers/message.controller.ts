@@ -3,7 +3,20 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import { messageService } from '../services/message.service';
 import { mediaService } from '../services/media.service';
+import { storageService } from '../services/storage.service';
+import { GCS_FOLDER_PREFIX } from '../config/storage';
 import prisma from '../config/database';
+
+const MESSAGE_TYPE_BY_MIME_PREFIX: Array<[string, string]> = [
+  ['image/', 'image'],
+  ['video/', 'video'],
+  ['audio/', 'audio'],
+];
+
+function resolveMessageTypeFromMime(mimeType: string): string {
+  const match = MESSAGE_TYPE_BY_MIME_PREFIX.find(([prefix]) => mimeType.startsWith(prefix));
+  return match?.[1] ?? 'document';
+}
 
 interface WhatsAppContact {
   wa_id: string;
@@ -217,6 +230,50 @@ export class MessageController {
       res.status(200).json({ success: true });
     } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to process webhook', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+
+  async uploadMedia(req: Request, res: Response) {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: 'file is required' });
+      return;
+    }
+
+    try {
+      const objectPath = await storageService.uploadBuffer(file.buffer, file.mimetype);
+      res.status(201).json({
+        mediaUrl: objectPath,
+        mediaType: file.mimetype,
+        messageType: resolveMessageTypeFromMime(file.mimetype),
+        fileName: file.originalname,
+        fileSize: file.size,
+      });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to upload media', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+
+  async getGcsMedia(req: Request, res: Response) {
+    const token = (req.query.token as string | undefined) ?? req.headers.authorization?.replace('Bearer ', '');
+    if (!token) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    try {
+      jwt.verify(token, process.env.JWT_SECRET!);
+    } catch {
+      res.status(401).json({ error: 'Invalid token' }); return;
+    }
+
+    const objectPath = req.params.objectPath;
+    if (!objectPath || !objectPath.startsWith(GCS_FOLDER_PREFIX)) {
+      res.status(400).json({ error: 'Invalid media path' }); return;
+    }
+
+    try {
+      const signedUrl = await storageService.getSignedUrl(objectPath);
+      res.redirect(signedUrl);
+    } catch {
+      res.status(404).json({ error: 'Media not found or expired' });
     }
   }
 

@@ -81,6 +81,7 @@ function resolveMediaUrl(mediaUrl: string): string {
   const token = typeof window !== 'undefined' ? encodeURIComponent(localStorage.getItem('token') ?? '') : '';
   if (mediaUrl.startsWith('/uploads/')) return `${API_URL}${mediaUrl}?token=${token}`;
   if (mediaUrl.startsWith('http')) return mediaUrl;
+  if (mediaUrl.includes('/')) return `${API_URL}/api/messages/gcs-media/${mediaUrl}?token=${token}`;
   return `${API_URL}/api/messages/media/${mediaUrl}?token=${token}`;
 }
 

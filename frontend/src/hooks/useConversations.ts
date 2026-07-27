@@ -23,7 +23,7 @@ interface UseConversationsReturn {
   loadingMessages: boolean;
   typingIndicator: { agentName: string } | null;
   handleSelectConversation: (conversation: Conversation) => Promise<void>;
-  handleSendMessage: (text: string) => Promise<void>;
+  handleSendMessage: (text: string, file?: File) => Promise<void>;
   handleResolveConversation: () => Promise<void>;
   handleTypingStart: () => void;
   handleTypingStop: () => void;
@@ -106,10 +106,24 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     socketClient.joinConversation(conversation.id);
   };
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, file?: File) => {
     if (!activeConversation) return;
     try {
-      await messageApi.sendMessage({ conversationId: activeConversation.id, text, senderId: agentId });
+      if (file) {
+        const uploaded = await messageApi.uploadMedia(file);
+        await messageApi.sendMessage({
+          conversationId: activeConversation.id,
+          senderId: agentId,
+          messageType: uploaded.messageType,
+          mediaUrl: uploaded.mediaUrl,
+          mediaType: uploaded.mediaType,
+          fileName: uploaded.fileName,
+          fileSize: uploaded.fileSize,
+          caption: text || undefined,
+        });
+      } else {
+        await messageApi.sendMessage({ conversationId: activeConversation.id, text, senderId: agentId });
+      }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
       const msg = detail?.message || detail?.error || (err instanceof Error ? err.message : 'Unknown error');

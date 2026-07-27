@@ -63,7 +63,7 @@ interface ChatPanelProps {
   conversation: Conversation | null;
   messages: Message[];
   loading?: boolean;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, file?: File) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
   onResolveConversation?: () => void;

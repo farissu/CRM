@@ -3,7 +3,14 @@ import axios from 'axios';
 import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
 import { conversationService } from './conversation.service';
+import { storageService } from './storage.service';
 import { io } from '../index';
+
+function resolveOutboundMediaUrl(mediaUrl?: string): Promise<string | undefined> {
+  if (!mediaUrl) return Promise.resolve(undefined);
+  if (mediaUrl.startsWith('http')) return Promise.resolve(mediaUrl);
+  return storageService.getSignedUrl(mediaUrl);
+}
 
 const WEBHOOK_TYPE_MAP: Record<string, MessageType> = {
   text:     MessageType.TEXT,
@@ -136,11 +143,12 @@ export class MessageService {
 
     // Send via WhatsApp Cloud API
     try {
+      const outboundMediaUrl = await resolveOutboundMediaUrl(mediaUrl);
       const waMessageId = await whatsAppService.sendMessage({
         to: conversation.contact.phoneNumber,
         text: text || caption,
         messageType: messageType || 'text',
-        mediaUrl,
+        mediaUrl: outboundMediaUrl,
         caption
       });
 

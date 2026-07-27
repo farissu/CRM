@@ -5,11 +5,22 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export const sendMessageSchema = z.object({
-  conversationId: z.string().min(1, 'conversationId is required'),
-  text: z.string().min(1, 'text is required'),
-  senderId: z.string().min(1, 'senderId is required'),
-});
+export const sendMessageSchema = z
+  .object({
+    conversationId: z.string().min(1, 'conversationId is required'),
+    text: z.string().optional(),
+    senderId: z.string().min(1, 'senderId is required'),
+    messageType: z.enum(['text', 'image', 'video', 'document', 'audio']).optional(),
+    mediaUrl: z.string().min(1).optional(),
+    mediaType: z.string().optional(),
+    fileName: z.string().optional(),
+    fileSize: z.number().int().nonnegative().optional(),
+    caption: z.string().optional(),
+  })
+  .refine((data) => Boolean(data.text?.trim()) || Boolean(data.mediaUrl), {
+    message: 'text or mediaUrl is required',
+    path: ['text'],
+  });
 
 export const sendExternalMessageSchema = z.object({
   to: z.string().min(1, 'to is required'),

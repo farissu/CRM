@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, X, Image, FileText, Video, Music } from 'lucide-react';
 
 interface MessageInputProps {
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, file?: File) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
   disabled?: boolean;
@@ -46,14 +46,8 @@ export default function MessageInput({
 
   const handleSend = () => {
     if ((message.trim() || selectedFile) && !disabled) {
-      // TODO: Handle file upload
-      if (selectedFile) {
-        alert(`File upload coming soon!\nFile: ${selectedFile.name}\nCaption: ${message}`);
-        // Future: Upload file and send message with media
-      } else {
-        onSendMessage(message.trim());
-      }
-      
+      onSendMessage(message.trim(), selectedFile ?? undefined);
+
       setMessage('');
       setSelectedFile(null);
       setFilePreview(null);

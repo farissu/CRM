@@ -62,10 +62,31 @@ export const messageApi = {
 
   sendMessage: async (data: {
     conversationId: string;
-    text: string;
+    text?: string;
     senderId: string;
+    messageType?: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    fileName?: string;
+    fileSize?: number;
+    caption?: string;
   }): Promise<Message> => {
     const response = await api.post('/messages', data);
+    return response.data;
+  },
+
+  uploadMedia: async (file: File): Promise<{
+    mediaUrl: string;
+    mediaType: string;
+    messageType: string;
+    fileName: string;
+    fileSize: number;
+  }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/messages/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 };
