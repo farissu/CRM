@@ -17,6 +17,12 @@ services:
       WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN}
       INTEGRATION_API_KEY: ${INTEGRATION_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL}
+      GCS_ACCESS_KEY_ID: ${GCS_ACCESS_KEY_ID}
+      GCS_SECRET_ACCESS_KEY: ${GCS_SECRET_ACCESS_KEY}
+      GCS_REGION: ${GCS_REGION:-auto}
+      GCS_BUCKET: ${GCS_BUCKET}
+      GCS_ENDPOINT: ${GCS_ENDPOINT:-https://storage.googleapis.com}
+      GCS_FOLDER_PREFIX: ${GCS_FOLDER_PREFIX:-Waku/messages}
     depends_on:
       postgres:
         condition: service_healthy
