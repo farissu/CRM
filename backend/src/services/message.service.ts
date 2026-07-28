@@ -172,7 +172,10 @@ export class MessageService {
       });
 
       // Update conversation last message
-      await conversationService.updateLastMessage(conversationId, text ?? '');
+      const lastMessageText = messageType && messageType !== 'text'
+        ? (caption || text || `📎 ${messageType}`)
+        : (text || caption || '');
+      await conversationService.updateLastMessage(conversationId, lastMessageText);
 
       // Emit socket event
       io.emit('message_received', {

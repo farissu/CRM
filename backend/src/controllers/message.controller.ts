@@ -310,7 +310,8 @@ export class MessageController {
     }
 
     try {
-      const signedUrl = await storageService.getSignedUrl(objectPath);
+      const filename = req.query.filename as string | undefined;
+      const signedUrl = await storageService.getSignedUrl(objectPath, filename);
       res.redirect(signedUrl);
     } catch {
       res.status(404).json({ error: 'Media not found or expired' });

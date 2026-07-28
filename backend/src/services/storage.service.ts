@@ -35,10 +35,16 @@ export class StorageService {
     return objectPath;
   }
 
-  async getSignedUrl(objectPath: string): Promise<string> {
+  async getSignedUrl(objectPath: string, downloadFileName?: string): Promise<string> {
     return getS3SignedUrl(
       s3Client,
-      new GetObjectCommand({ Bucket: GCS_BUCKET, Key: objectPath }),
+      new GetObjectCommand({
+        Bucket: GCS_BUCKET,
+        Key: objectPath,
+        ...(downloadFileName && {
+          ResponseContentDisposition: `attachment; filename="${downloadFileName}"`,
+        }),
+      }),
       { expiresIn: SIGNED_URL_TTL_SECONDS }
     );
   }

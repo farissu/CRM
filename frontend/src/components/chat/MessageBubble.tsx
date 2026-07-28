@@ -78,12 +78,13 @@ interface MediaContentProps {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-function resolveMediaUrl(mediaUrl: string): string {
+function resolveMediaUrl(mediaUrl: string, downloadFileName?: string): string {
   const token = typeof window !== 'undefined' ? encodeURIComponent(localStorage.getItem('token') ?? '') : '';
-  if (mediaUrl.startsWith('/uploads/')) return `${API_URL}${mediaUrl}?token=${token}`;
+  const filenameParam = downloadFileName ? `&filename=${encodeURIComponent(downloadFileName)}` : '';
+  if (mediaUrl.startsWith('/uploads/')) return `${API_URL}${mediaUrl}?token=${token}${filenameParam}`;
   if (mediaUrl.startsWith('http')) return mediaUrl;
-  if (mediaUrl.includes('/')) return `${API_URL}/api/messages/gcs-media/${mediaUrl}?token=${token}`;
-  return `${API_URL}/api/messages/media/${mediaUrl}?token=${token}`;
+  if (mediaUrl.includes('/')) return `${API_URL}/api/messages/gcs-media/${mediaUrl}?token=${token}${filenameParam}`;
+  return `${API_URL}/api/messages/media/${mediaUrl}?token=${token}${filenameParam}`;
 }
 
 interface ImageLightboxProps {
@@ -198,7 +199,7 @@ function MediaContent({ message }: MediaContentProps) {
             </p>
           </div>
           <a
-            href={src}
+            href={resolveMediaUrl(mediaUrl, message.fileName || 'document')}
             download={message.fileName || 'document'}
             className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
           >
