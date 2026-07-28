@@ -149,7 +149,8 @@ export class MessageService {
         text: text || caption,
         messageType: messageType || 'text',
         mediaUrl: outboundMediaUrl,
-        caption
+        caption,
+        fileName
       });
 
       // Update message status

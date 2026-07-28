@@ -8,6 +8,7 @@ interface SendMessageParams {
   messageType?: string;
   mediaUrl?: string;
   caption?: string;
+  fileName?: string;
 }
 
 interface MetaMessageResponse {
@@ -26,13 +27,13 @@ export class WhatsAppService {
   }
 
   async sendMessage(params: SendMessageParams): Promise<string> {
-    const { to, text, messageType = 'text', mediaUrl, caption } = params;
+    const { to, text, messageType = 'text', mediaUrl, caption, fileName } = params;
 
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
     }
 
-    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption);
+    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName);
 
     try {
       const response = await axios.post<MetaMessageResponse>(
@@ -62,7 +63,8 @@ export class WhatsAppService {
     messageType: string,
     text?: string,
     mediaUrl?: string,
-    caption?: string
+    caption?: string,
+    fileName?: string
   ): Record<string, unknown> {
     const base = {
       messaging_product: 'whatsapp',
@@ -79,7 +81,11 @@ export class WhatsAppService {
     }
 
     if (messageType === 'document' && mediaUrl) {
-      return { ...base, type: 'document', document: { link: mediaUrl, ...(caption && { caption }) } };
+      return {
+        ...base,
+        type: 'document',
+        document: { link: mediaUrl, ...(caption && { caption }), ...(fileName && { filename: fileName }) },
+      };
     }
 
     if (messageType === 'audio' && mediaUrl) {

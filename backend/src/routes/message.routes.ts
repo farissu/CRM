@@ -8,7 +8,7 @@ import { sendMessageSchema, sendExternalMessageSchema } from '../schemas';
 
 const router = Router();
 
-const MAX_UPLOAD_SIZE_BYTES = 16 * 1024 * 1024;
+const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024; // WhatsApp's document size limit
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_SIZE_BYTES },
