@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download } from 'lucide-react';
+import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download, X } from 'lucide-react';
 import type { Message } from '@/types';
 import clsx from 'clsx';
 
@@ -85,6 +86,44 @@ function resolveMediaUrl(mediaUrl: string): string {
   return `${API_URL}/api/messages/media/${mediaUrl}?token=${token}`;
 }
 
+interface ImageLightboxProps {
+  src: string;
+  alt: string;
+  onClose: () => void;
+}
+
+function ImageLightbox({ src, alt, onClose }: ImageLightboxProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+        aria-label="Close"
+      >
+        <X className="w-6 h-6" />
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-full max-h-full object-contain rounded-lg cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>,
+    document.body
+  );
+}
+
 function MediaUnavailable({ icon }: { icon: React.ReactNode }) {
   return (
     <div className="flex items-center justify-center h-32 bg-gradient-to-br from-gray-100 to-gray-200">
@@ -99,6 +138,7 @@ function MediaUnavailable({ icon }: { icon: React.ReactNode }) {
 function MediaContent({ message }: MediaContentProps) {
   const { messageType, mediaUrl } = message;
   const [failed, setFailed] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   if (!mediaUrl) return null;
 
@@ -113,9 +153,13 @@ function MediaContent({ message }: MediaContentProps) {
           <img
             src={src}
             alt={message.caption || 'Image'}
-            className="max-w-full max-h-80 object-contain block"
+            className="max-w-full max-h-80 object-contain block cursor-zoom-in"
             onError={() => setFailed(true)}
+            onClick={() => setIsLightboxOpen(true)}
           />
+        )}
+        {isLightboxOpen && (
+          <ImageLightbox src={src} alt={message.caption || 'Image'} onClose={() => setIsLightboxOpen(false)} />
         )}
       </div>
     );
