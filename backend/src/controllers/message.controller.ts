@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import sharp from 'sharp';
 import { MessageStatus } from '@prisma/client';
 import { messageService } from '../services/message.service';
 import { mediaService } from '../services/media.service';
@@ -275,13 +276,18 @@ export class MessageController {
     }
 
     try {
-      const objectPath = await storageService.uploadBuffer(file.buffer, file.mimetype);
+      // WhatsApp Cloud API rejects WebP for regular image messages, so convert to JPEG.
+      const isWebp = file.mimetype === 'image/webp';
+      const buffer = isWebp ? await sharp(file.buffer).jpeg().toBuffer() : file.buffer;
+      const mimeType = isWebp ? 'image/jpeg' : file.mimetype;
+
+      const objectPath = await storageService.uploadBuffer(buffer, mimeType);
       res.status(201).json({
         mediaUrl: objectPath,
-        mediaType: file.mimetype,
-        messageType: resolveMessageTypeFromMime(file.mimetype),
+        mediaType: mimeType,
+        messageType: resolveMessageTypeFromMime(mimeType),
         fileName: file.originalname,
-        fileSize: file.size,
+        fileSize: buffer.length,
       });
     } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to upload media', message: err instanceof Error ? err.message : 'Unknown error' });
