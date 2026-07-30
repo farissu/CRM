@@ -35,6 +35,8 @@ interface SendMessageParams {
   fileName?: string;
   fileSize?: number;
   caption?: string;
+  buttonText?: string;
+  buttonUrl?: string;
 }
 
 interface ReceiveMessageParams {
@@ -100,12 +102,22 @@ export class MessageService {
    * phone number instead of an existing conversationId — finds or creates the
    * conversation/contact so the message shows up in the dashboard like any other.
    */
-  async sendMessageByPhone(params: { phoneNumber: string; text: string; contactName?: string }) {
+  async sendMessageByPhone(params: {
+    phoneNumber: string;
+    text: string;
+    contactName?: string;
+    messageType?: string;
+    buttonText?: string;
+    buttonUrl?: string;
+  }) {
     const conversation = await conversationService.getOrCreateConversation(params.phoneNumber, params.contactName);
     return this.sendToConversation(conversation, {
       conversationId: conversation.id,
       text: params.text,
       senderId: undefined as unknown as string,
+      messageType: params.messageType,
+      buttonText: params.buttonText,
+      buttonUrl: params.buttonUrl,
     });
   }
 
@@ -113,7 +125,7 @@ export class MessageService {
     conversation: { id: string; contact: { phoneNumber: string } },
     params: SendMessageParams
   ) {
-    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption } = params;
+    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption, buttonText, buttonUrl } = params;
 
     // Create message record
     const message = await prisma.message.create({
@@ -150,7 +162,9 @@ export class MessageService {
         messageType: messageType || 'text',
         mediaUrl: outboundMediaUrl,
         caption,
-        fileName
+        fileName,
+        buttonText,
+        buttonUrl
       });
 
       // Update message status
@@ -158,7 +172,10 @@ export class MessageService {
         where: { id: message.id },
         data: {
           status: MessageStatus.SENT,
-          metadata: { waMessageId }
+          metadata: {
+            waMessageId,
+            ...(buttonUrl && { interactive: { type: 'cta_url', buttonText, buttonUrl } })
+          }
         },
         include: {
           sender: {

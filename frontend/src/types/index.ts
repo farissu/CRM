@@ -121,6 +121,11 @@ export interface MessageTemplate {
   updatedAt: string;
 }
 
+export interface Complaint {
+  type: string;
+  url: string;
+}
+
 export interface ConversationsResponse {
   conversations: Conversation[];
   total: number;

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -233,6 +233,13 @@ export const companyApi = {
 
   deleteCompany: async (companyId: string): Promise<{ message: string }> => {
     const response = await api.delete(`/companies/${companyId}`);
+    return response.data;
+  },
+};
+
+export const complaintApi = {
+  createForConversation: async (conversationId: string, type: string = 'penilaian_konfirmasi'): Promise<Complaint> => {
+    const response = await api.post('/complaints', { conversationId, type });
     return response.data;
   },
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { conversationApi, messageApi } from '@/lib/api';
+import { conversationApi, messageApi, complaintApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
 import type { Conversation, Message } from '@/types';
 
@@ -25,6 +25,7 @@ interface UseConversationsReturn {
   handleSelectConversation: (conversation: Conversation) => Promise<void>;
   handleSendMessage: (text: string, file?: File) => Promise<void>;
   handleResolveConversation: () => Promise<void>;
+  handleSendCsat: () => Promise<void>;
   handleTypingStart: () => void;
   handleTypingStop: () => void;
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
@@ -143,6 +144,15 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     }
   };
 
+  const handleSendCsat = async () => {
+    if (!activeConversation) return;
+    try {
+      await complaintApi.createForConversation(activeConversation.id);
+    } catch {
+      alert('Gagal mengirim link penilaian');
+    }
+  };
+
   const handleTypingStart = () => { if (activeConversation) socketClient.sendTypingStart(activeConversation.id, agentName); };
   const handleTypingStop = () => { if (activeConversation) socketClient.sendTypingStop(activeConversation.id); };
 
@@ -183,7 +193,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   return {
     conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, typingIndicator, handleSelectConversation,
-    handleSendMessage, handleResolveConversation, handleTypingStart, handleTypingStop,
+    handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
     setConversations, loadConversations, loadMoreConversations,
   };
 }

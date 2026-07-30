@@ -64,3 +64,14 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8, 'New password must be at least 8 characters'),
 });
+
+export const createComplaintSchema = z.object({
+  conversationId: z.string().min(1, 'conversationId is required'),
+  type: z.string().min(1, 'type is required'),
+});
+
+export const createComplaintExternalSchema = z.object({
+  phoneNumber: z.string().min(1, 'phoneNumber is required'),
+  name: z.string().optional(),
+  type: z.string().min(1, 'type is required'),
+});

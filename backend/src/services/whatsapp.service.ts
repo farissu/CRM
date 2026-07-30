@@ -9,6 +9,8 @@ interface SendMessageParams {
   mediaUrl?: string;
   caption?: string;
   fileName?: string;
+  buttonText?: string;
+  buttonUrl?: string;
 }
 
 interface MetaMessageResponse {
@@ -27,13 +29,13 @@ export class WhatsAppService {
   }
 
   async sendMessage(params: SendMessageParams): Promise<string> {
-    const { to, text, messageType = 'text', mediaUrl, caption, fileName } = params;
+    const { to, text, messageType = 'text', mediaUrl, caption, fileName, buttonText, buttonUrl } = params;
 
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
     }
 
-    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName);
+    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName, buttonText, buttonUrl);
 
     try {
       const response = await axios.post<MetaMessageResponse>(
@@ -64,13 +66,30 @@ export class WhatsAppService {
     text?: string,
     mediaUrl?: string,
     caption?: string,
-    fileName?: string
+    fileName?: string,
+    buttonText?: string,
+    buttonUrl?: string
   ): Record<string, unknown> {
     const base = {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
       to
     };
+
+    if (messageType === 'interactive' && buttonUrl) {
+      return {
+        ...base,
+        type: 'interactive',
+        interactive: {
+          type: 'cta_url',
+          body: { text: text || '' },
+          action: {
+            name: 'cta_url',
+            parameters: { display_text: buttonText || 'Buka', url: buttonUrl },
+          },
+        },
+      };
+    }
 
     if (messageType === 'image' && mediaUrl) {
       return { ...base, type: 'image', image: { link: mediaUrl, ...(caption && { caption }) } };

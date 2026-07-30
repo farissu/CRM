@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Tag } from 'lucide-react';
+import { MoreVertical, Tag, Star } from 'lucide-react';
 import type { Conversation, Message } from '@/types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -69,6 +69,7 @@ interface ChatPanelProps {
   onResolveConversation?: () => void;
   onConversationUpdate?: () => void;
   onSendBroadcast?: () => void;
+  onSendCsat?: () => Promise<void>;
   typingIndicator?: { agentName: string } | null;
 }
 
@@ -82,6 +83,7 @@ export default function ChatPanel({
   onResolveConversation,
   onConversationUpdate,
   onSendBroadcast,
+  onSendCsat,
   typingIndicator,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -89,6 +91,7 @@ export default function ChatPanel({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
+  const [sendingCsat, setSendingCsat] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -176,6 +179,24 @@ export default function ChatPanel({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {onSendCsat && (
+            <button
+              onClick={async () => {
+                if (!confirm('Kirim link penilaian ke pelanggan ini?')) return;
+                setSendingCsat(true);
+                try {
+                  await onSendCsat();
+                } finally {
+                  setSendingCsat(false);
+                }
+              }}
+              disabled={sendingCsat}
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Star className="w-4 h-4" />
+              {sendingCsat ? 'Mengirim...' : 'Kirim Penilaian'}
+            </button>
+          )}
           {conversation.status === 'OPEN' && onResolveConversation && (
             <button
               onClick={onResolveConversation}

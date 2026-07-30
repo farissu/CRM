@@ -20,7 +20,7 @@ export default function HomePage() {
   const {
     conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, typingIndicator, handleSelectConversation,
-    handleSendMessage, handleResolveConversation, handleTypingStart, handleTypingStop,
+    handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
     loadConversations, loadMoreConversations,
   } = useConversations({ isAuthenticated, agentId, agentName });
 
@@ -70,6 +70,7 @@ export default function HomePage() {
             onResolveConversation={handleResolveConversation}
             onConversationUpdate={loadConversations}
             onSendBroadcast={() => setActiveTab('broadcast')}
+            onSendCsat={handleSendCsat}
             typingIndicator={typingIndicator}
           />
         </>
