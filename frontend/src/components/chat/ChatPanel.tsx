@@ -96,13 +96,16 @@ export default function ChatPanel({
   const [showCsatConfirm, setShowCsatConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Jump instantly once the message list actually finishes rendering
+    // (right after `loading` flips to false) so opening a conversation
+    // always lands on the latest message, not wherever it happened to render.
+    if (!loading) scrollToBottom('auto');
+  }, [messages, loading]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -285,7 +288,7 @@ export default function ChatPanel({
       {/* Scroll to bottom button */}
       {showScrollButton && (
         <button
-          onClick={scrollToBottom}
+          onClick={() => scrollToBottom()}
           className="absolute bottom-28 right-8 bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white rounded-2xl p-4 shadow-soft hover:shadow-lg transition-all duration-200 hover:scale-105"
         >
           <svg
