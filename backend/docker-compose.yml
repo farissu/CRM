@@ -23,6 +23,7 @@ services:
       GCS_BUCKET: ${GCS_BUCKET}
       GCS_ENDPOINT: ${GCS_ENDPOINT:-https://storage.googleapis.com}
       GCS_FOLDER_PREFIX: ${GCS_FOLDER_PREFIX:-Waku/messages}
+      CSAT_LINK_PENILAIAN_KONFIRMASI_URL: ${CSAT_LINK_PENILAIAN_KONFIRMASI_URL}
     depends_on:
       postgres:
         condition: service_healthy
