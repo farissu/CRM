@@ -190,8 +190,9 @@ export default function ChatPanel({
                   setSendingCsat(false);
                 }
               }}
-              disabled={sendingCsat}
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={sendingCsat || isWindowExpired}
+              title={isWindowExpired ? 'Customer service window sudah lewat 24 jam, tidak bisa kirim pesan baru' : undefined}
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
             >
               <Star className="w-4 h-4" />
               {sendingCsat ? 'Mengirim...' : 'Kirim Penilaian'}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download, X } from 'lucide-react';
+import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download, X, ExternalLink } from 'lucide-react';
 import type { Message } from '@/types';
 import clsx from 'clsx';
 
@@ -46,6 +46,21 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             </div>
           );
         })()}
+
+        {/* Interactive cta_url button (e.g. CSAT/rating link) */}
+        {message.metadata?.interactive?.buttonUrl && (
+          <div className={hasMedia ? 'px-5 pb-3' : 'px-0'}>
+            <a
+              href={message.metadata.interactive.buttonUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-white/70 hover:bg-white border border-saas-primary-blue/30 px-4 py-2 text-sm font-semibold text-saas-primary-blue transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {message.metadata.interactive.buttonText || 'Buka Link'}
+            </a>
+          </div>
+        )}
 
         {/* Timestamp and Status */}
         <div

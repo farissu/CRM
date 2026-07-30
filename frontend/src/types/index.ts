@@ -89,6 +89,9 @@ export interface Message {
   fileName?: string | null;
   fileSize?: number | null;
   caption?: string | null;
+  metadata?: {
+    interactive?: { buttonText?: string; buttonUrl?: string };
+  } | null;
 }
 
 export type TemplateCategory = 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
