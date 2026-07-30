@@ -15,6 +15,9 @@ dotenv.config();
 
 // Create Express app
 const app = express();
+// Trust the first hop (Nginx reverse proxy) so req.ip / express-rate-limit see the
+// real client IP from X-Forwarded-For instead of lumping every visitor together.
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 const allowedOrigins = [
