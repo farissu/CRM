@@ -4,6 +4,7 @@ import type { Conversation, Message } from '@/types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ManageLabelsModal from './ManageLabelsModal';
+import ConfirmDialog from './ConfirmDialog';
 
 // Helper function to format date for separator
 function formatDateSeparator(date: Date): string {
@@ -92,6 +93,7 @@ export default function ChatPanel({
   const [showMenu, setShowMenu] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
   const [sendingCsat, setSendingCsat] = useState(false);
+  const [showCsatConfirm, setShowCsatConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -181,15 +183,7 @@ export default function ChatPanel({
         <div className="flex items-center gap-2 flex-shrink-0">
           {onSendCsat && (
             <button
-              onClick={async () => {
-                if (!confirm('Kirim link penilaian ke pelanggan ini?')) return;
-                setSendingCsat(true);
-                try {
-                  await onSendCsat();
-                } finally {
-                  setSendingCsat(false);
-                }
-              }}
+              onClick={() => setShowCsatConfirm(true)}
               disabled={sendingCsat || isWindowExpired}
               title={isWindowExpired ? 'Customer service window sudah lewat 24 jam, tidak bisa kirim pesan baru' : undefined}
               className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
@@ -349,6 +343,25 @@ export default function ChatPanel({
         onLabelsUpdated={() => {
           if (onConversationUpdate) {
             onConversationUpdate();
+          }
+        }}
+      />
+
+      {/* Send CSAT link confirmation */}
+      <ConfirmDialog
+        isOpen={showCsatConfirm}
+        title="Kirim Penilaian"
+        message="Kirim link penilaian ke pelanggan ini?"
+        confirmText="Kirim"
+        onCancel={() => setShowCsatConfirm(false)}
+        onConfirm={async () => {
+          setShowCsatConfirm(false);
+          if (!onSendCsat) return;
+          setSendingCsat(true);
+          try {
+            await onSendCsat();
+          } finally {
+            setSendingCsat(false);
           }
         }}
       />
