@@ -29,7 +29,7 @@ export default function SettingsPanel({ agent, onProfileUpdate, defaultTab }: Se
       <div className="flex-1 flex overflow-hidden">
         <div className="w-64 bg-white border-r border-saas-border p-4">
           <nav className="space-y-1">
-            <TabButton icon={<User className="w-5 h-5" />} label="Profile" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+            <TabButton icon={<User className="w-5 h-5" />} label="Account Management" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
             <TabButton icon={<Building2 className="w-5 h-5" />} label="Companies" active={activeTab === 'companies'} onClick={() => setActiveTab('companies')} />
             <TabButton icon={<Users className="w-5 h-5" />} label="Agents" active={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
             <TabButton icon={<Tag className="w-5 h-5" />} label="Labels" active={activeTab === 'labels'} onClick={() => setActiveTab('labels')} />

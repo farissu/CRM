@@ -25,6 +25,8 @@ export default function ProfileTab({ agent, onProfileUpdate }: ProfileTabProps) 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
 
   useEffect(() => {
     if (agent) {
@@ -57,6 +59,8 @@ export default function ProfileTab({ agent, onProfileUpdate }: ProfileTabProps) 
   };
 
   const handleChangePassword = async () => {
+    setCurrentPasswordError(null);
+    setPasswordChangeSuccess(false);
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -75,10 +79,17 @@ export default function ProfileTab({ agent, onProfileUpdate }: ProfileTabProps) 
       });
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setSuccess(true);
+      setPasswordChangeSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => setPasswordChangeSuccess(false), 3000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to change password';
-      setError((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? msg);
+      const apiMessage = (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? msg;
+      if (apiMessage === 'Current password is incorrect') {
+        setCurrentPasswordError(apiMessage);
+      } else {
+        setError(apiMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -87,7 +98,7 @@ export default function ProfileTab({ agent, onProfileUpdate }: ProfileTabProps) 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-saas-text-primary">Profile Settings</h2>
+        <h2 className="text-2xl font-bold text-saas-text-primary">Account Management</h2>
         <p className="text-gray-600 mt-1">Manage your account information and preferences</p>
       </div>
 
@@ -205,10 +216,20 @@ export default function ProfileTab({ agent, onProfileUpdate }: ProfileTabProps) 
             <input
               type="password"
               value={passwordData.currentPassword}
-              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium"
+              onChange={(e) => {
+                setPasswordData({ ...passwordData, currentPassword: e.target.value });
+                setCurrentPasswordError(null);
+              }}
+              className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all duration-200 font-medium ${
+                currentPasswordError
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-saas-border focus:border-saas-primary-blue'
+              }`}
               placeholder="Enter current password"
             />
+            {currentPasswordError && (
+              <p className="mt-1.5 text-sm font-medium text-red-600">{currentPasswordError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
@@ -237,6 +258,9 @@ export default function ProfileTab({ agent, onProfileUpdate }: ProfileTabProps) 
           >
             {loading ? 'Updating...' : 'Update Password'}
           </button>
+          {passwordChangeSuccess && (
+            <p className="text-sm font-medium text-green-600">Password updated successfully!</p>
+          )}
         </div>
       </div>
     </div>
