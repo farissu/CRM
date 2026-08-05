@@ -5,6 +5,7 @@ import { Send, Layout, RefreshCw, Plus, Trash2, ChevronRight } from 'lucide-reac
 import type { MessageTemplate } from '@/types';
 import { templateApi } from '@/lib/api';
 import CreateTemplateWizard from './CreateTemplateWizard';
+import OutboundMessageList from './OutboundMessageList';
 
 type SubView = 'wa-broadcast' | 'wa-templates';
 
@@ -103,17 +104,7 @@ export default function BroadcastPanel() {
 
       <div className="flex-1 overflow-y-auto bg-[#f7f9fc]">
 
-        {activeView === 'wa-broadcast' && (
-          <div className="flex items-center justify-center h-full min-h-[400px]">
-            <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-[#2d9c8f]/10 flex items-center justify-center mx-auto mb-4">
-                <Send className="w-10 h-10 text-[#2d9c8f]" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">WhatsApp Broadcast</h3>
-              <p className="text-gray-500 text-sm">Broadcast feature coming soon.</p>
-            </div>
-          </div>
-        )}
+        {activeView === 'wa-broadcast' && <OutboundMessageList />}
 
         {activeView === 'wa-templates' && (
           <div className="p-8">

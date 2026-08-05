@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import type { TemplateCategory, TemplateComponent } from '@/types';
 import { templateApi } from '@/lib/api';
+import { CATEGORIES } from '@/lib/templateConstants';
 
 interface CreateTemplateWizardProps {
   onBack: () => void;
@@ -19,12 +20,6 @@ const STEPS: { key: Step; label: string }[] = [
   { key: 'footer', label: 'Footer' },
   { key: 'buttons', label: 'Buttons' },
   { key: 'summary', label: 'Summary' },
-];
-
-const CATEGORIES: { value: TemplateCategory; label: string; description: string }[] = [
-  { value: 'MARKETING', label: 'Marketing', description: 'Promote your products, services or business.' },
-  { value: 'UTILITY', label: 'Utility', description: 'Send account updates, order updates, alerts, and more.' },
-  { value: 'AUTHENTICATION', label: 'Authentication', description: 'Send codes that allow your customers to access their accounts.' },
 ];
 
 const LANGUAGES = [

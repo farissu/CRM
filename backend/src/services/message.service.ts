@@ -5,6 +5,7 @@ import { whatsAppService } from './whatsapp.service';
 import { conversationService } from './conversation.service';
 import { storageService } from './storage.service';
 import { io } from '../index';
+import { broadcastService } from './broadcast.service';
 
 function resolveOutboundMediaUrl(mediaUrl?: string): Promise<string | undefined> {
   if (!mediaUrl) return Promise.resolve(undefined);
@@ -297,7 +298,15 @@ export class MessageService {
       where: { metadata: { path: ['waMessageId'], equals: waMessageId } },
     });
     if (!message) return null;
-    return this.updateMessageStatus(message.id, status);
+    const updated = await this.updateMessageStatus(message.id, status);
+
+    try {
+      await broadcastService.onMessageStatusUpdated(message.id, status);
+    } catch (err: unknown) {
+      console.error('[Broadcast] Failed to update recipient status from webhook:', err);
+    }
+
+    return updated;
   }
 }
 

@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import { createServer } from 'http';
 import { connectDatabase } from './config/database';
 import routes from './routes';
+import './workers/broadcast.worker';
 
 // Load environment variables
 dotenv.config();

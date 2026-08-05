@@ -129,6 +129,59 @@ export interface Complaint {
   url: string;
 }
 
+export type BroadcastStatus =
+  | 'SCHEDULED'
+  | 'PREPARING'
+  | 'ON_QUEUE'
+  | 'SENDING'
+  | 'FINISHED'
+  | 'UNFINISHED'
+  | 'FAILED'
+  | 'CANCELED';
+
+export type BroadcastAudienceType = 'SINGLE_NUMBER' | 'CSV' | 'CONDITION';
+export type BroadcastRecipientStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+
+export interface BroadcastRecipient {
+  id: string;
+  broadcastId: string;
+  phoneNumber: string;
+  name?: string | null;
+  variables?: Record<string, string> | null;
+  status: BroadcastRecipientStatus;
+  messageId?: string | null;
+  error?: string | null;
+  sentAt?: string | null;
+  createdAt: string;
+}
+
+export interface Broadcast {
+  id: string;
+  companyId: string;
+  name: string;
+  label?: string | null;
+  templateId: string;
+  template?: { name: string; category: TemplateCategory };
+  audienceType: BroadcastAudienceType;
+  status: BroadcastStatus;
+  scheduledAt?: string | null;
+  totalRecipients: number;
+  sentCount: number;
+  deliveredCount: number;
+  readCount: number;
+  failedCount: number;
+  createdAt: string;
+  updatedAt: string;
+  recipients?: BroadcastRecipient[];
+}
+
+export interface BroadcastsResponse {
+  broadcasts: Broadcast[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export interface ConversationsResponse {
   conversations: Conversation[];
   total: number;

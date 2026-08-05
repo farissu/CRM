@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -268,5 +268,44 @@ export const templateApi = {
   deleteTemplate: async (id: string): Promise<{ message: string }> => {
     const response = await api.delete(`/templates/${id}`);
     return response.data as { message: string };
+  },
+};
+
+export const broadcastApi = {
+  getBroadcasts: async (params?: {
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<BroadcastsResponse> => {
+    const response = await api.get('/broadcasts', { params });
+    return response.data as BroadcastsResponse;
+  },
+
+  getBroadcast: async (id: string): Promise<{ broadcast: Broadcast }> => {
+    const response = await api.get(`/broadcasts/${id}`);
+    return response.data as { broadcast: Broadcast };
+  },
+
+  createBroadcast: async (formData: FormData): Promise<{ broadcast: Broadcast }> => {
+    const response = await api.post('/broadcasts', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as { broadcast: Broadcast };
+  },
+
+  sendTest: async (data: { templateId: string; to: string; bodyParams?: string[] }): Promise<{ waMessageId: string }> => {
+    const response = await api.post('/broadcasts/test', data);
+    return response.data as { waMessageId: string };
+  },
+
+  downloadCsvTemplate: async (templateId: string): Promise<Blob> => {
+    const response = await api.get(`/broadcasts/csv-template/${templateId}`, { responseType: 'blob' });
+    return response.data as Blob;
+  },
+
+  cancelBroadcast: async (id: string): Promise<{ broadcast: Broadcast }> => {
+    const response = await api.delete(`/broadcasts/${id}`);
+    return response.data as { broadcast: Broadcast };
   },
 };

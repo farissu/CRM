@@ -7,6 +7,7 @@ import agentRoutes from './agent.routes';
 import companyRoutes from './company.routes';
 import templateRoutes from './template.routes';
 import complaintRoutes from './complaint.routes';
+import broadcastRoutes from './broadcast.routes';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/agents', agentRoutes);
 router.use('/companies', companyRoutes);
 router.use('/templates', templateRoutes);
 router.use('/complaints', complaintRoutes);
+router.use('/broadcasts', broadcastRoutes);
 
 // Add messages routes under conversations for RESTful structure
 router.use('/conversations/:id/messages', (req, res, next) => {
