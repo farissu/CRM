@@ -156,9 +156,19 @@ export default function TemplateDetail({ template, onBack }: TemplateDetailProps
             {footer?.text && <p className="text-xs text-gray-400 mt-2">{footer.text}</p>}
             {buttons?.buttons && buttons.buttons.length > 0 && (
               <div className="border-t border-gray-100 mt-3 pt-2 space-y-1.5">
-                {buttons.buttons.map((b, i) => (
-                  <div key={i} className="text-center text-sm text-[#0093E9] font-medium">{b.text}</div>
-                ))}
+                {buttons.buttons.map((b, i) =>
+                  b.type === 'URL' && b.url ? (
+                    <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block text-center text-sm text-[#0093E9] font-medium hover:underline">
+                      {b.text}
+                    </a>
+                  ) : b.type === 'PHONE_NUMBER' && b.phone_number ? (
+                    <a key={i} href={`tel:${b.phone_number}`} className="block text-center text-sm text-[#0093E9] font-medium hover:underline">
+                      {b.text}
+                    </a>
+                  ) : (
+                    <div key={i} className="text-center text-sm text-[#0093E9] font-medium">{b.text}</div>
+                  )
+                )}
               </div>
             )}
           </div>

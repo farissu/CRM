@@ -272,6 +272,7 @@ export class TemplateService {
               status: t.status as TemplateStatus,
               qualityScore: t.quality_score?.score,
               rejectedReason: t.rejected_reason,
+              components: t.components as object[],
             },
           });
         });
