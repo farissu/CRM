@@ -50,6 +50,8 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   const [submitting, setSubmitting] = useState(false);
 
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [category, setCategory] = useState<TemplateCategory>('MARKETING');
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
@@ -72,8 +74,22 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   const [testSent, setTestSent] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
 
+  const loadTemplates = async () => {
+    try {
+      setTemplatesLoading(true);
+      setTemplatesError(null);
+      const res = await templateApi.getTemplates();
+      setTemplates(res.templates);
+    } catch (err: unknown) {
+      setTemplatesError(getErrorMessage(err, 'Failed to load templates'));
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    void templateApi.getTemplates().then(res => setTemplates(res.templates)).catch(() => setTemplates([]));
+    void loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const bodyVariableNumbers = useMemo(() => extractBodyVariableNumbers(selectedTemplate), [selectedTemplate]);
@@ -298,7 +314,11 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Template Name</label>
                 <button
                   type="button"
-                  onClick={() => setTemplateDropdownOpen(v => !v)}
+                  onClick={() => {
+                    const opening = !templateDropdownOpen;
+                    setTemplateDropdownOpen(opening);
+                    if (opening) void loadTemplates();
+                  }}
                   className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
                 >
                   <span className={selectedTemplate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
@@ -320,19 +340,32 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
                         />
                       </div>
-                      {filteredTemplates.map(t => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => { setSelectedTemplate(t); setVariables({}); setTemplateDropdownOpen(false); setTemplateSearch(''); }}
-                          className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
-                        >
-                          {t.name}
-                          {selectedTemplate?.id === t.id && <Check className="w-4 h-4 text-[#2d9c8f]" />}
-                        </button>
-                      ))}
-                      {filteredTemplates.length === 0 && (
-                        <p className="px-4 py-3 text-sm text-gray-400">No approved templates in this category</p>
+                      {templatesLoading ? (
+                        <p className="px-4 py-3 text-sm text-gray-400">Loading templates...</p>
+                      ) : templatesError ? (
+                        <div className="px-4 py-3">
+                          <p className="text-sm text-red-600 mb-1.5">{templatesError}</p>
+                          <button type="button" onClick={() => void loadTemplates()} className="text-xs font-semibold text-[#2d9c8f] hover:opacity-80">
+                            Retry
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          {filteredTemplates.map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => { setSelectedTemplate(t); setVariables({}); setTemplateDropdownOpen(false); setTemplateSearch(''); }}
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+                            >
+                              {t.name}
+                              {selectedTemplate?.id === t.id && <Check className="w-4 h-4 text-[#2d9c8f]" />}
+                            </button>
+                          ))}
+                          {filteredTemplates.length === 0 && (
+                            <p className="px-4 py-3 text-sm text-gray-400">No approved templates in this category</p>
+                          )}
+                        </>
                       )}
                     </div>
                   </>
