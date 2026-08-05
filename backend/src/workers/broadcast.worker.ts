@@ -51,7 +51,7 @@ function renderTemplateText(components: unknown, variables: Record<string, strin
 async function sendToRecipient(
   broadcast: { id: string; template: { name: string; language: string; components: unknown } },
   recipient: RecipientToSend,
-  uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string } | undefined
+  uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string; link: string } | undefined
 ) {
   const variables = (recipient.variables as Record<string, string> | null) ?? {};
   const bodyParams = Object.keys(variables)
@@ -78,7 +78,8 @@ async function sendToRecipient(
         conversationId: conversation.id,
         direction: MessageDirection.OUTBOUND,
         text: lastMessageText,
-        messageType: MessageType.TEXT,
+        messageType: uploadedHeaderMedia ? MessageType[uploadedHeaderMedia.format] : MessageType.TEXT,
+        mediaUrl: uploadedHeaderMedia?.link,
         status: MessageStatus.SENT,
         metadata: { waMessageId, broadcastId: broadcast.id },
       },
@@ -115,7 +116,7 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
 
   // Media headers are uploaded once per broadcast (not once per recipient) — WhatsApp
   // media ids are reusable across many outbound messages.
-  let uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string } | undefined;
+  let uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string; link: string } | undefined;
   if (hasMediaHeader(broadcast.template.components)) {
     const headerMedia = extractHeaderMedia(broadcast.template.components);
     if (!headerMedia) {
@@ -128,7 +129,7 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
 
     try {
       const mediaId = await whatsAppService.uploadMediaFromUrl(headerMedia.link);
-      uploadedHeaderMedia = { format: headerMedia.format, id: mediaId };
+      uploadedHeaderMedia = { format: headerMedia.format, id: mediaId, link: headerMedia.link };
     } catch (err: unknown) {
       const error = `Failed to upload header media: ${err instanceof Error ? err.message : 'Unknown error'}`;
       await Promise.all(recipients.map(r => broadcastService.markRecipientResult(r.id, { status: BroadcastRecipientStatus.FAILED, error })));
