@@ -10,6 +10,12 @@ import type { BroadcastJobData } from '../queues/broadcast.queue';
 import { extractHeaderMedia, hasMediaHeader } from '../utils/template-media.util';
 
 const SEND_CONCURRENCY = 5;
+const RATE_LIMIT_BATCH_SIZE = 250;
+const RATE_LIMIT_PAUSE_MS = 60_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 interface RecipientToSend {
   id: string;
@@ -144,6 +150,14 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
   for (let i = 0; i < recipients.length; i += SEND_CONCURRENCY) {
     const batch = recipients.slice(i, i + SEND_CONCURRENCY);
     await Promise.all(batch.map(recipient => sendToRecipient(broadcast, recipient, uploadedHeaderMedia)));
+
+    // Pause between every RATE_LIMIT_BATCH_SIZE recipients to avoid tripping
+    // WhatsApp's send-rate limits on large broadcasts (e.g. big CSV audiences).
+    const sentSoFar = i + batch.length;
+    const hasMoreRecipients = sentSoFar < recipients.length;
+    if (hasMoreRecipients && sentSoFar % RATE_LIMIT_BATCH_SIZE === 0) {
+      await sleep(RATE_LIMIT_PAUSE_MS);
+    }
   }
 
   await broadcastService.finalizeBroadcastStatus(broadcastId);
