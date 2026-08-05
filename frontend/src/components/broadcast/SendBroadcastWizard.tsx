@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronDown, Check, Info, Upload, Image as ImageIcon, Video as VideoIcon, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Check, Info, Upload, Image as ImageIcon, Video as VideoIcon, FileText, CheckCircle2 } from 'lucide-react';
 import type { MessageTemplate, TemplateCategory } from '@/types';
 import { templateApi, broadcastApi } from '@/lib/api';
 import { CATEGORIES } from '@/lib/templateConstants';
@@ -53,6 +53,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   const [editingName, setEditingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<'sent' | 'scheduled' | null>(null);
 
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
@@ -228,7 +229,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
       }
 
       await broadcastApi.createBroadcast(formData);
-      onSuccess();
+      setSubmitResult(scheduleMode === 'later' ? 'scheduled' : 'sent');
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to send broadcast'));
     } finally {
@@ -638,6 +639,33 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
           </div>
         </div>
       </div>
+
+      {submitResult && (
+        <>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-soft max-w-sm w-full p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-[#e8f5f3] flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-7 h-7 text-[#2d9c8f]" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1.5">
+                {submitResult === 'scheduled' ? 'Broadcast Scheduled' : 'Broadcast Queued'}
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                {submitResult === 'scheduled'
+                  ? 'Your broadcast has been scheduled and will be sent automatically at the chosen time.'
+                  : 'Your broadcast has been queued and is being sent now. Check the Outbound Message list to track its status.'}
+              </p>
+              <button
+                onClick={onSuccess}
+                className="w-full px-6 py-2.5 bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
