@@ -120,6 +120,8 @@ export interface MessageTemplate {
   category: TemplateCategory;
   status: TemplateStatus;
   metaTemplateId?: string | null;
+  qualityScore?: string | null;
+  rejectedReason?: string | null;
   components: TemplateComponent[];
   createdAt: string;
   updatedAt: string;

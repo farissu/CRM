@@ -6,6 +6,7 @@ import type { MessageTemplate } from '@/types';
 import { templateApi } from '@/lib/api';
 import CreateTemplateWizard from './CreateTemplateWizard';
 import OutboundMessageList from './OutboundMessageList';
+import TemplateDetail from './TemplateDetail';
 
 type SubView = 'wa-broadcast' | 'wa-templates';
 
@@ -28,6 +29,7 @@ const STATUS_DOT: Record<string, string> = {
 export default function BroadcastPanel() {
   const [activeView, setActiveView] = useState<SubView>('wa-templates');
   const [showWizard, setShowWizard] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -84,6 +86,7 @@ export default function BroadcastPanel() {
   const handleChangeView = (v: SubView) => {
     setActiveView(v);
     setShowWizard(false);
+    setSelectedTemplate(null);
   };
 
   if (showWizard) {
@@ -94,6 +97,17 @@ export default function BroadcastPanel() {
           onBack={() => setShowWizard(false)}
           onSuccess={() => { setShowWizard(false); void loadTemplates(); }}
         />
+      </div>
+    );
+  }
+
+  if (selectedTemplate) {
+    return (
+      <div className="flex-1 flex overflow-hidden">
+        <LeftNav activeView={activeView} onChangeView={handleChangeView} />
+        <div className="flex-1 overflow-y-auto bg-[#f7f9fc]">
+          <TemplateDetail template={selectedTemplate} onBack={() => setSelectedTemplate(null)} />
+        </div>
       </div>
     );
   }
@@ -174,7 +188,7 @@ export default function BroadcastPanel() {
                     {filtered.map(t => (
                       <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                         <td className="px-5 py-4">
-                          <span className="text-[#2d9c8f] font-semibold cursor-pointer hover:underline">{t.name}</span>
+                          <button onClick={() => setSelectedTemplate(t)} className="text-[#2d9c8f] font-semibold hover:underline">{t.name}</button>
                         </td>
                         <td className="px-5 py-4 text-gray-700">Sharing Happiness</td>
                         <td className="px-5 py-4 text-gray-700 font-medium">

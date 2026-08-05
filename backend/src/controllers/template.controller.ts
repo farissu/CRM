@@ -15,6 +15,11 @@ const VALID_HEADER_MEDIA_MIME_TYPES = new Set<string>([
 ]);
 
 export const templateController = {
+  async getWabaInfo(req: Request, res: Response) {
+    const namespace = await templateService.getWabaNamespace();
+    return res.json({ wabaId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || null, namespace });
+  },
+
   async uploadHeaderMedia(req: Request, res: Response) {
     try {
       const file = (req as UploadRequest).file;

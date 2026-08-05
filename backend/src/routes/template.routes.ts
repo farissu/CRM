@@ -14,6 +14,7 @@ const upload = multer({
 router.use(authenticate);
 
 router.get('/', templateController.getTemplates);
+router.get('/waba-info', templateController.getWabaInfo);
 router.post('/', templateController.createTemplate);
 router.post('/sync', templateController.syncTemplates);
 router.post('/upload-media', upload.single('file'), templateController.uploadHeaderMedia);

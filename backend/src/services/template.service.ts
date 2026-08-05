@@ -38,8 +38,12 @@ interface MetaTemplatesListResponse {
     status: string;
     category: string;
     components: TemplateComponent[];
+    quality_score?: { score: string };
+    rejected_reason?: string;
   }>;
 }
+
+const TEMPLATE_LIST_FIELDS = 'name,language,status,category,components,quality_score,rejected_reason';
 
 interface MetaUploadSessionResponse {
   id: string;
@@ -92,6 +96,26 @@ export class TemplateService {
     );
 
     return result.data.h;
+  }
+
+  /**
+   * Best-effort fetch of the WABA's message template namespace. Returns null (never
+   * throws) if not configured or Meta is unreachable — this is informational only.
+   */
+  async getWabaNamespace(): Promise<string | null> {
+    if (!this.wabaId || !this.accessToken) return null;
+    try {
+      const response = await axios.get<{ message_template_namespace?: string }>(
+        `${GRAPH_API_URL}/${this.wabaId}`,
+        {
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+          params: { fields: 'message_template_namespace' },
+        }
+      );
+      return response.data.message_template_namespace ?? null;
+    } catch {
+      return null;
+    }
   }
 
   async createTemplate(dto: CreateTemplateDto) {
@@ -161,6 +185,7 @@ export class TemplateService {
       `${GRAPH_API_URL}/${this.wabaId}/message_templates`,
       {
         headers: { Authorization: `Bearer ${this.accessToken}` },
+        params: { fields: TEMPLATE_LIST_FIELDS },
       }
     );
 
@@ -177,6 +202,8 @@ export class TemplateService {
           status: metaTemplate.status as TemplateStatus,
           metaTemplateId: metaTemplate.id,
           components: metaTemplate.components as object[],
+          qualityScore: metaTemplate.quality_score?.score,
+          rejectedReason: metaTemplate.rejected_reason,
         },
         create: {
           companyId,
@@ -186,6 +213,8 @@ export class TemplateService {
           status: metaTemplate.status as TemplateStatus,
           metaTemplateId: metaTemplate.id,
           components: metaTemplate.components as object[],
+          qualityScore: metaTemplate.quality_score?.score,
+          rejectedReason: metaTemplate.rejected_reason,
         },
       })
     );
@@ -227,19 +256,25 @@ export class TemplateService {
         `${GRAPH_API_URL}/${this.wabaId}/message_templates`,
         {
           headers: { Authorization: `Bearer ${this.accessToken}` },
+          params: { fields: TEMPLATE_LIST_FIELDS },
         }
       );
 
-      const metaMap = new Map(response.data.data.map(t => [t.id, t.status]));
+      const metaMap = new Map(response.data.data.map(t => [t.id, t]));
 
       const updates = metaIds
         .filter(id => metaMap.has(id))
-        .map(id =>
-          prisma.messageTemplate.updateMany({
+        .map(id => {
+          const t = metaMap.get(id)!;
+          return prisma.messageTemplate.updateMany({
             where: { companyId, metaTemplateId: id },
-            data: { status: metaMap.get(id) as TemplateStatus },
-          })
-        );
+            data: {
+              status: t.status as TemplateStatus,
+              qualityScore: t.quality_score?.score,
+              rejectedReason: t.rejected_reason,
+            },
+          });
+        });
 
       await Promise.all(updates);
     } catch {

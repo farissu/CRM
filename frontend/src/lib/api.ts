@@ -250,6 +250,11 @@ export const templateApi = {
     return response.data as { templates: MessageTemplate[] };
   },
 
+  getWabaInfo: async (): Promise<{ wabaId: string | null; namespace: string | null }> => {
+    const response = await api.get('/templates/waba-info');
+    return response.data as { wabaId: string | null; namespace: string | null };
+  },
+
   createTemplate: async (data: {
     name: string;
     language: string;
