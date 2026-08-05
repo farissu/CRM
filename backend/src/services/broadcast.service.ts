@@ -136,9 +136,14 @@ export class BroadcastService {
     });
     if (!template) throw new Error('Template not found');
 
-    const headerMedia = extractHeaderMedia(template.components);
-    if (hasMediaHeader(template.components) && !headerMedia) {
-      throw new Error('Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
+    let headerMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string } | undefined;
+    if (hasMediaHeader(template.components)) {
+      const resolved = extractHeaderMedia(template.components);
+      if (!resolved) {
+        throw new Error('Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
+      }
+      const mediaId = await whatsAppService.uploadMediaFromUrl(resolved.link);
+      headerMedia = { format: resolved.format, id: mediaId };
     }
 
     const waMessageId = await whatsAppService.sendTemplateMessage({

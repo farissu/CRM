@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v19.0';
 
@@ -24,7 +25,11 @@ interface SendTemplateMessageParams {
   templateName: string;
   language: string;
   bodyParams?: string[];
-  headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; link: string };
+  headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string };
+}
+
+interface MetaMediaUploadResponse {
+  id: string;
 }
 
 export class WhatsAppService {
@@ -68,6 +73,34 @@ export class WhatsAppService {
     }
   }
 
+  /**
+   * Downloads media from a URL and uploads it to WhatsApp's own Media API, returning
+   * a media id WhatsApp can attach to outbound messages. Required because WhatsApp's
+   * messaging pipeline cannot reliably re-fetch Meta's own signed template-preview CDN
+   * URLs (confirmed: those links 403 when WhatsApp itself tries to download them, even
+   * though they're fetchable by a normal HTTP client).
+   */
+  async uploadMediaFromUrl(url: string): Promise<string> {
+    if (!this.phoneNumberId || !this.accessToken) {
+      throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
+    }
+
+    const download = await axios.get<ArrayBuffer>(url, { responseType: 'arraybuffer' });
+    const mimeType = (download.headers['content-type'] as string | undefined) ?? 'application/octet-stream';
+
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('file', Buffer.from(download.data), { filename: 'media', contentType: mimeType });
+
+    const response = await axios.post<MetaMediaUploadResponse>(
+      `${GRAPH_API_URL}/${this.phoneNumberId}/media`,
+      form,
+      { headers: { Authorization: `Bearer ${this.accessToken}`, ...form.getHeaders() } }
+    );
+
+    return response.data.id;
+  }
+
   async sendTemplateMessage(params: SendTemplateMessageParams): Promise<string> {
     const { to, templateName, language, bodyParams = [], headerMedia } = params;
 
@@ -78,7 +111,7 @@ export class WhatsAppService {
     const components: Array<Record<string, unknown>> = [];
     if (headerMedia) {
       const mediaKey = headerMedia.format.toLowerCase();
-      components.push({ type: 'header', parameters: [{ type: mediaKey, [mediaKey]: { link: headerMedia.link } }] });
+      components.push({ type: 'header', parameters: [{ type: mediaKey, [mediaKey]: { id: headerMedia.id } }] });
     }
     if (bodyParams.length > 0) {
       components.push({ type: 'body', parameters: bodyParams.map(text => ({ type: 'text', text })) });

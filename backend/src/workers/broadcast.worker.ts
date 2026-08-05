@@ -50,7 +50,8 @@ function renderTemplateText(components: unknown, variables: Record<string, strin
 
 async function sendToRecipient(
   broadcast: { id: string; template: { name: string; language: string; components: unknown } },
-  recipient: RecipientToSend
+  recipient: RecipientToSend,
+  uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string } | undefined
 ) {
   const variables = (recipient.variables as Record<string, string> | null) ?? {};
   const bodyParams = Object.keys(variables)
@@ -58,17 +59,12 @@ async function sendToRecipient(
     .map(key => variables[key]);
 
   try {
-    const headerMedia = extractHeaderMedia(broadcast.template.components);
-    if (hasMediaHeader(broadcast.template.components) && !headerMedia) {
-      throw new Error('Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
-    }
-
     const waMessageId = await whatsAppService.sendTemplateMessage({
       to: recipient.phoneNumber,
       templateName: broadcast.template.name,
       language: broadcast.template.language,
       bodyParams,
-      headerMedia,
+      headerMedia: uploadedHeaderMedia,
     });
 
     const conversation = await conversationService.getOrCreateConversation(
@@ -117,11 +113,36 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
     where: { broadcastId, status: BroadcastRecipientStatus.PENDING },
   });
 
+  // Media headers are uploaded once per broadcast (not once per recipient) — WhatsApp
+  // media ids are reusable across many outbound messages.
+  let uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string } | undefined;
+  if (hasMediaHeader(broadcast.template.components)) {
+    const headerMedia = extractHeaderMedia(broadcast.template.components);
+    if (!headerMedia) {
+      const error = 'Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.';
+      await Promise.all(recipients.map(r => broadcastService.markRecipientResult(r.id, { status: BroadcastRecipientStatus.FAILED, error })));
+      await broadcastService.finalizeBroadcastStatus(broadcastId);
+      io.emit('broadcast_updated', { broadcastId });
+      return;
+    }
+
+    try {
+      const mediaId = await whatsAppService.uploadMediaFromUrl(headerMedia.link);
+      uploadedHeaderMedia = { format: headerMedia.format, id: mediaId };
+    } catch (err: unknown) {
+      const error = `Failed to upload header media: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      await Promise.all(recipients.map(r => broadcastService.markRecipientResult(r.id, { status: BroadcastRecipientStatus.FAILED, error })));
+      await broadcastService.finalizeBroadcastStatus(broadcastId);
+      io.emit('broadcast_updated', { broadcastId });
+      return;
+    }
+  }
+
   await prisma.broadcast.update({ where: { id: broadcastId }, data: { status: BroadcastStatus.SENDING } });
 
   for (let i = 0; i < recipients.length; i += SEND_CONCURRENCY) {
     const batch = recipients.slice(i, i + SEND_CONCURRENCY);
-    await Promise.all(batch.map(recipient => sendToRecipient(broadcast, recipient)));
+    await Promise.all(batch.map(recipient => sendToRecipient(broadcast, recipient, uploadedHeaderMedia)));
   }
 
   await broadcastService.finalizeBroadcastStatus(broadcastId);
