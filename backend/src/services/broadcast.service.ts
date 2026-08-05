@@ -19,6 +19,7 @@ export interface CreateBroadcastDto {
   templateId: string;
   audienceType: 'SINGLE_NUMBER' | 'CSV';
   phoneNumber?: string;
+  recipientName?: string;
   variables?: Record<string, string>;
   csvBuffer?: Buffer;
   csvSeparator?: string;
@@ -38,7 +39,7 @@ export class BroadcastService {
     let recipientInputs: BroadcastCsvRow[];
     if (dto.audienceType === 'SINGLE_NUMBER') {
       if (!dto.phoneNumber) throw new Error('phoneNumber is required for Single Number audience');
-      recipientInputs = [{ phoneNumber: dto.phoneNumber, variables: dto.variables ?? {} }];
+      recipientInputs = [{ phoneNumber: dto.phoneNumber, name: dto.recipientName, variables: dto.variables ?? {} }];
     } else if (dto.audienceType === 'CSV') {
       if (!dto.csvBuffer) throw new Error('CSV file is required for By CSV audience');
       const { rows, errors } = parseBroadcastCsv(dto.csvBuffer, dto.csvSeparator || ',', template);

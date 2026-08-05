@@ -65,6 +65,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
 
   const [audienceType, setAudienceType] = useState<AudienceType>('SINGLE_NUMBER');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [recipientName, setRecipientName] = useState('');
   const [variables, setVariables] = useState<Record<string, string>>({});
   const [csvSeparator, setCsvSeparator] = useState<',' | ';'>(',');
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -215,6 +216,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
 
       if (audienceType === 'SINGLE_NUMBER') {
         formData.append('phoneNumber', phoneNumber.trim());
+        if (recipientName.trim()) formData.append('recipientName', recipientName.trim());
         formData.append('variables', JSON.stringify(variables));
       } else if (audienceType === 'CSV' && csvFile) {
         formData.append('csvFile', csvFile);
@@ -413,6 +415,17 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                       placeholder="62812xxxxxxx"
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Recipient Name <span className="font-normal text-gray-400">Optional</span></label>
+                    <input
+                      type="text"
+                      value={recipientName}
+                      onChange={e => setRecipientName(e.target.value)}
+                      placeholder="e.g. Budi Santoso"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Shown as the contact name in Conversations instead of the phone number.</p>
                   </div>
                   {bodyVariableNumbers.length > 0 && (
                     <div>

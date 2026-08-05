@@ -53,13 +53,14 @@ export const broadcastController = {
       const companyId = authReq.user?.companyId;
       if (!companyId) return res.status(400).json({ error: 'Company ID required' });
 
-      const { name, label, templateId, audienceType, phoneNumber, variables, csvSeparator, scheduledAt } =
+      const { name, label, templateId, audienceType, phoneNumber, recipientName, variables, csvSeparator, scheduledAt } =
         req.body as {
           name?: string;
           label?: string;
           templateId?: string;
           audienceType?: string;
           phoneNumber?: string;
+          recipientName?: string;
           variables?: string;
           csvSeparator?: string;
           scheduledAt?: string;
@@ -81,6 +82,7 @@ export const broadcastController = {
         templateId,
         audienceType: audienceType as 'SINGLE_NUMBER' | 'CSV',
         phoneNumber,
+        recipientName,
         variables: variables ? (JSON.parse(variables) as Record<string, string>) : undefined,
         csvBuffer: authReq.file?.buffer,
         csvSeparator,

@@ -17,8 +17,37 @@ interface RecipientToSend {
   variables: unknown;
 }
 
+interface RenderableComponent {
+  type: string;
+  format?: string;
+  text?: string;
+}
+
+function substituteVariables(text: string, variables: Record<string, string>): string {
+  return text.replace(/\{\{(\d+)\}\}/g, (_, n: string) => variables[n] ?? `{{${n}}}`);
+}
+
+/**
+ * Renders the message text as the recipient actually received it on WhatsApp
+ * (header + body + footer, with {{n}} placeholders substituted), instead of a
+ * generic "[Broadcast] <template name>" placeholder.
+ */
+function renderTemplateText(components: unknown, variables: Record<string, string>): string {
+  const list = (components as RenderableComponent[] | null) ?? [];
+  const header = list.find(c => c.type === 'HEADER' && c.format === 'TEXT');
+  const body = list.find(c => c.type === 'BODY');
+  const footer = list.find(c => c.type === 'FOOTER');
+
+  const parts: string[] = [];
+  if (header?.text) parts.push(substituteVariables(header.text, variables));
+  if (body?.text) parts.push(substituteVariables(body.text, variables));
+  if (footer?.text) parts.push(footer.text);
+
+  return parts.join('\n\n');
+}
+
 async function sendToRecipient(
-  broadcast: { id: string; template: { name: string; language: string } },
+  broadcast: { id: string; template: { name: string; language: string; components: unknown } },
   recipient: RecipientToSend
 ) {
   const variables = (recipient.variables as Record<string, string> | null) ?? {};
@@ -39,7 +68,7 @@ async function sendToRecipient(
       recipient.name ?? undefined
     );
 
-    const lastMessageText = `[Broadcast] ${broadcast.template.name}`;
+    const lastMessageText = renderTemplateText(broadcast.template.components, variables) || `[Broadcast] ${broadcast.template.name}`;
     const message = await prisma.message.create({
       data: {
         conversationId: conversation.id,
