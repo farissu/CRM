@@ -7,6 +7,7 @@ import type { Broadcast, BroadcastStatus } from '@/types';
 import { broadcastApi } from '@/lib/api';
 import CreateBroadcastModal from './CreateBroadcastModal';
 import SendBroadcastWizard from './SendBroadcastWizard';
+import BroadcastDetail from './BroadcastDetail';
 
 const PAGE_SIZE = 10;
 
@@ -62,6 +63,7 @@ export default function OutboundMessageList() {
 
   const [showModal, setShowModal] = useState(false);
   const [wizardDraft, setWizardDraft] = useState<{ name: string; label: string } | null>(null);
+  const [selectedBroadcastId, setSelectedBroadcastId] = useState<string | null>(null);
 
   const loadBroadcasts = async () => {
     try {
@@ -99,6 +101,10 @@ export default function OutboundMessageList() {
         }}
       />
     );
+  }
+
+  if (selectedBroadcastId) {
+    return <BroadcastDetail broadcastId={selectedBroadcastId} onBack={() => setSelectedBroadcastId(null)} />;
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -198,8 +204,12 @@ export default function OutboundMessageList() {
             </thead>
             <tbody>
               {broadcasts.map(b => (
-                <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-4 text-gray-800 font-medium">{b.name}</td>
+                <tr
+                  key={b.id}
+                  onClick={() => setSelectedBroadcastId(b.id)}
+                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <td className="px-5 py-4 text-[#2d9c8f] font-semibold hover:underline">{b.name}</td>
                   <td className="px-5 py-4 text-gray-700">{b.template?.name ?? '-'}</td>
                   <td className="px-5 py-4 text-gray-700 font-medium">
                     {b.template ? b.template.category.charAt(0) + b.template.category.slice(1).toLowerCase() : '-'}

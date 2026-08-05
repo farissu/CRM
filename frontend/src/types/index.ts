@@ -150,6 +150,7 @@ export interface BroadcastRecipient {
   variables?: Record<string, string> | null;
   status: BroadcastRecipientStatus;
   messageId?: string | null;
+  message?: { metadata?: { waMessageId?: string } | null } | null;
   error?: string | null;
   sentAt?: string | null;
   createdAt: string;

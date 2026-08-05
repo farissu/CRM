@@ -37,6 +37,11 @@ function substituteVariables(text: string, variables: Record<string, string>): s
   return text.replace(/\{\{(\d+)\}\}/g, (_, n: string) => variables[n] || `{{${n}}}`);
 }
 
+function normalizePhoneInput(value: string): string {
+  const digitsOnly = value.replace(/\D/g, '');
+  return digitsOnly.startsWith('0') ? `62${digitsOnly.slice(1)}` : digitsOnly;
+}
+
 function getErrorMessage(err: unknown, fallback: string): string {
   const axiosErr = err as { response?: { data?: { error?: string } } };
   return axiosErr.response?.data?.error ?? (err instanceof Error ? err.message : fallback);
@@ -402,8 +407,9 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone Number</label>
                     <input
                       type="tel"
+                      inputMode="numeric"
                       value={phoneNumber}
-                      onChange={e => setPhoneNumber(e.target.value)}
+                      onChange={e => setPhoneNumber(normalizePhoneInput(e.target.value))}
                       placeholder="62812xxxxxxx"
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
                     />
@@ -544,8 +550,9 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
             <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
               <input
                 type="tel"
+                inputMode="numeric"
                 value={testPhone}
-                onChange={e => setTestPhone(e.target.value)}
+                onChange={e => setTestPhone(normalizePhoneInput(e.target.value))}
                 placeholder="62812xxxxxxx"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
               />

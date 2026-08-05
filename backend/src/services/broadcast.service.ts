@@ -109,7 +109,10 @@ export class BroadcastService {
   async getBroadcastById(id: string, companyId: string) {
     const broadcast = await prisma.broadcast.findFirst({
       where: { id, companyId },
-      include: { template: true, recipients: true },
+      include: {
+        template: true,
+        recipients: { include: { message: { select: { metadata: true } } } },
+      },
     });
     if (!broadcast) throw new Error('Broadcast not found');
     return broadcast;
