@@ -293,7 +293,7 @@ export class MessageService {
   /**
    * Update message status by WhatsApp message ID (from a delivery status webhook)
    */
-  async updateMessageStatusByWaId(waMessageId: string, status: MessageStatus) {
+  async updateMessageStatusByWaId(waMessageId: string, status: MessageStatus, errorReason?: string) {
     const message = await prisma.message.findFirst({
       where: { metadata: { path: ['waMessageId'], equals: waMessageId } },
     });
@@ -301,7 +301,7 @@ export class MessageService {
     const updated = await this.updateMessageStatus(message.id, status);
 
     try {
-      await broadcastService.onMessageStatusUpdated(message.id, status);
+      await broadcastService.onMessageStatusUpdated(message.id, status, errorReason);
     } catch (err: unknown) {
       console.error('[Broadcast] Failed to update recipient status from webhook:', err);
     }

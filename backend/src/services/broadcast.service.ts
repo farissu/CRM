@@ -198,9 +198,15 @@ export class BroadcastService {
    * broadcast's Delivered/Read counters reflect real Meta callbacks, not just send attempts.
    * No-op if the message isn't linked to a broadcast recipient.
    */
-  async onMessageStatusUpdated(messageId: string, status: MessageStatus) {
+  async onMessageStatusUpdated(messageId: string, status: MessageStatus, errorReason?: string) {
     const recipient = await prisma.broadcastRecipient.findUnique({ where: { messageId } });
     if (!recipient) return;
+
+    // Terminal states from an earlier webhook shouldn't be overwritten or double-counted
+    // by a later/duplicate one (e.g. a delayed FAILED arriving after READ already landed).
+    if (recipient.status === BroadcastRecipientStatus.FAILED || recipient.status === BroadcastRecipientStatus.READ) {
+      return;
+    }
 
     const recipientStatus =
       status === MessageStatus.DELIVERED
@@ -210,19 +216,26 @@ export class BroadcastService {
           : status === MessageStatus.FAILED
             ? BroadcastRecipientStatus.FAILED
             : undefined;
-    if (!recipientStatus) return;
+    if (!recipientStatus || recipientStatus === recipient.status) return;
 
-    await prisma.broadcastRecipient.update({ where: { id: recipient.id }, data: { status: recipientStatus } });
+    await prisma.broadcastRecipient.update({
+      where: { id: recipient.id },
+      data: { status: recipientStatus, error: recipientStatus === BroadcastRecipientStatus.FAILED ? errorReason : undefined },
+    });
 
-    const field =
-      recipientStatus === BroadcastRecipientStatus.DELIVERED
-        ? 'deliveredCount'
-        : recipientStatus === BroadcastRecipientStatus.READ
-          ? 'readCount'
-          : undefined;
-    if (field) {
-      await prisma.broadcast.update({ where: { id: recipient.broadcastId }, data: { [field]: { increment: 1 } } });
+    if (recipientStatus === BroadcastRecipientStatus.FAILED) {
+      // The worker already counted this recipient as sentCount when it got a WhatsApp
+      // message ID back — a later delivery-failure webhook means that send ultimately
+      // failed, so move it from sent to failed instead of leaving both counts stale.
+      await prisma.broadcast.update({
+        where: { id: recipient.broadcastId },
+        data: { sentCount: { decrement: 1 }, failedCount: { increment: 1 } },
+      });
+      return;
     }
+
+    const field = recipientStatus === BroadcastRecipientStatus.DELIVERED ? 'deliveredCount' : 'readCount';
+    await prisma.broadcast.update({ where: { id: recipient.broadcastId }, data: { [field]: { increment: 1 } } });
   }
 }
 

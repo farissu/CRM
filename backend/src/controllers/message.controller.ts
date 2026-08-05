@@ -123,14 +123,17 @@ const WA_STATUS_MAP: Record<string, MessageStatus> = {
 };
 
 async function processWhatsAppStatus(status: WhatsAppStatus) {
+  let errorReason: string | undefined;
   if (status.errors?.length) {
+    const err = status.errors[0];
+    errorReason = [err.title, err.message, err.error_data?.details].filter(Boolean).join(' — ');
     console.error(`[WhatsApp] Delivery failed for message ${status.id}:`, JSON.stringify(status.errors));
   }
 
   const mapped = WA_STATUS_MAP[status.status];
   if (!mapped) return;
 
-  await messageService.updateMessageStatusByWaId(status.id, mapped);
+  await messageService.updateMessageStatusByWaId(status.id, mapped, errorReason);
 }
 
 async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsAppContact[] | undefined) {
