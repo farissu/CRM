@@ -164,7 +164,13 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
       setError('Please upload media before proceeding to the next step');
       return;
     }
-    if (step === 'body' && !form.bodyText) { setError('Body text is required'); return; }
+    if (step === 'body') {
+      if (!form.bodyText) { setError('Body text is required'); return; }
+      if (bodyVariables.some(n => !form.bodySamples[n]?.trim())) {
+        setError('Please provide a sample value for each variable');
+        return;
+      }
+    }
     const next = STEPS[stepIndex + 1];
     if (next) setStep(next.key);
   };
@@ -188,7 +194,13 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
         example: { header_handle: [form.headerMediaHandle] },
       });
     }
-    components.push({ type: 'BODY', text: form.bodyText });
+    components.push({
+      type: 'BODY',
+      text: form.bodyText,
+      ...(bodyVariables.length > 0 && {
+        example: { body_text: [bodyVariables.map(n => form.bodySamples[n] ?? '')] },
+      }),
+    });
     if (form.footerText) {
       components.push({ type: 'FOOTER', text: form.footerText });
     }
