@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronDown, Check, Info, Upload } from 'lucide-react';
 import type { MessageTemplate, TemplateCategory } from '@/types';
 import { templateApi, broadcastApi } from '@/lib/api';
@@ -55,6 +55,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   const [category, setCategory] = useState<TemplateCategory>('MARKETING');
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const templateDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
 
   const [audienceType, setAudienceType] = useState<AudienceType>('SINGLE_NUMBER');
@@ -91,6 +92,12 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
     void loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (templateDropdownOpen) {
+      templateDropdownRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [templateDropdownOpen]);
 
   const bodyVariableNumbers = useMemo(() => extractBodyVariableNumbers(selectedTemplate), [selectedTemplate]);
 
@@ -330,7 +337,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                 {templateDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setTemplateDropdownOpen(false)} />
-                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                    <div ref={templateDropdownRef} className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
                       <div className="p-2 sticky top-0 bg-white border-b border-gray-100">
                         <input
                           autoFocus
