@@ -7,6 +7,7 @@ import { conversationService } from '../services/conversation.service';
 import { broadcastService } from '../services/broadcast.service';
 import { io } from '../index';
 import type { BroadcastJobData } from '../queues/broadcast.queue';
+import { extractHeaderMedia, hasMediaHeader } from '../utils/template-media.util';
 
 const SEND_CONCURRENCY = 5;
 
@@ -21,6 +22,7 @@ interface RenderableComponent {
   type: string;
   format?: string;
   text?: string;
+  example?: { header_handle?: string[] };
 }
 
 function substituteVariables(text: string, variables: Record<string, string>): string {
@@ -56,11 +58,17 @@ async function sendToRecipient(
     .map(key => variables[key]);
 
   try {
+    const headerMedia = extractHeaderMedia(broadcast.template.components);
+    if (hasMediaHeader(broadcast.template.components) && !headerMedia) {
+      throw new Error('Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
+    }
+
     const waMessageId = await whatsAppService.sendTemplateMessage({
       to: recipient.phoneNumber,
       templateName: broadcast.template.name,
       language: broadcast.template.language,
       bodyParams,
+      headerMedia,
     });
 
     const conversation = await conversationService.getOrCreateConversation(

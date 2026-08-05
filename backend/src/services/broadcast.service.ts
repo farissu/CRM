@@ -10,6 +10,7 @@ import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
 import { parseBroadcastCsv, buildCsvTemplate, type BroadcastCsvRow } from '../utils/csv.util';
 import { enqueueBroadcast, cancelBroadcastJob } from '../queues/broadcast.queue';
+import { extractHeaderMedia, hasMediaHeader } from '../utils/template-media.util';
 
 export interface CreateBroadcastDto {
   companyId: string;
@@ -135,11 +136,17 @@ export class BroadcastService {
     });
     if (!template) throw new Error('Template not found');
 
+    const headerMedia = extractHeaderMedia(template.components);
+    if (hasMediaHeader(template.components) && !headerMedia) {
+      throw new Error('Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
+    }
+
     const waMessageId = await whatsAppService.sendTemplateMessage({
       to: params.to,
       templateName: template.name,
       language: template.language,
       bodyParams: params.bodyParams ?? [],
+      headerMedia,
     });
 
     return { waMessageId };

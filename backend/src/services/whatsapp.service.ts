@@ -24,6 +24,7 @@ interface SendTemplateMessageParams {
   templateName: string;
   language: string;
   bodyParams?: string[];
+  headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; link: string };
 }
 
 export class WhatsAppService {
@@ -68,10 +69,19 @@ export class WhatsAppService {
   }
 
   async sendTemplateMessage(params: SendTemplateMessageParams): Promise<string> {
-    const { to, templateName, language, bodyParams = [] } = params;
+    const { to, templateName, language, bodyParams = [], headerMedia } = params;
 
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
+    }
+
+    const components: Array<Record<string, unknown>> = [];
+    if (headerMedia) {
+      const mediaKey = headerMedia.format.toLowerCase();
+      components.push({ type: 'header', parameters: [{ type: mediaKey, [mediaKey]: { link: headerMedia.link } }] });
+    }
+    if (bodyParams.length > 0) {
+      components.push({ type: 'body', parameters: bodyParams.map(text => ({ type: 'text', text })) });
     }
 
     const payload = {
@@ -82,14 +92,7 @@ export class WhatsAppService {
       template: {
         name: templateName,
         language: { code: language },
-        ...(bodyParams.length > 0 && {
-          components: [
-            {
-              type: 'body',
-              parameters: bodyParams.map(text => ({ type: 'text', text })),
-            },
-          ],
-        }),
+        ...(components.length > 0 && { components }),
       },
     };
 

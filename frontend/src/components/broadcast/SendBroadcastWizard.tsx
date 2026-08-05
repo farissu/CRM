@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronDown, Check, Info, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Check, Info, Upload, Image as ImageIcon, Video as VideoIcon, FileText } from 'lucide-react';
 import type { MessageTemplate, TemplateCategory } from '@/types';
 import { templateApi, broadcastApi } from '@/lib/api';
 import { CATEGORIES } from '@/lib/templateConstants';
@@ -591,9 +591,30 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                     const body = selectedTemplate.components.find(c => c.type === 'BODY');
                     const footer = selectedTemplate.components.find(c => c.type === 'FOOTER');
                     const buttons = selectedTemplate.components.find(c => c.type === 'BUTTONS');
+                    const headerMediaUrl =
+                      header?.format && header.format !== 'TEXT' ? header.example?.header_handle?.[0] : undefined;
+                    const isResolvableMediaUrl = Boolean(headerMediaUrl?.startsWith('http'));
                     return (
                       <>
-                        {header?.text && <p className="font-bold text-gray-900 text-sm mb-1">{header.text}</p>}
+                        {header?.format && header.format !== 'TEXT' && (
+                          <div className="mb-2">
+                            {isResolvableMediaUrl && header.format === 'IMAGE' && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={headerMediaUrl} alt="" className="w-full rounded-lg max-h-40 object-cover" />
+                            )}
+                            {isResolvableMediaUrl && header.format === 'VIDEO' && (
+                              <video src={headerMediaUrl} className="w-full rounded-lg max-h-40" controls />
+                            )}
+                            {(!isResolvableMediaUrl || header.format === 'DOCUMENT') && (
+                              <div className="flex items-center justify-center bg-gray-100 rounded-lg h-24 text-gray-300">
+                                {header.format === 'IMAGE' && <ImageIcon className="w-6 h-6" />}
+                                {header.format === 'VIDEO' && <VideoIcon className="w-6 h-6" />}
+                                {header.format === 'DOCUMENT' && <FileText className="w-6 h-6" />}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {header?.format === 'TEXT' && header.text && <p className="font-bold text-gray-900 text-sm mb-1">{header.text}</p>}
                         <p className="text-sm text-gray-800 whitespace-pre-wrap">
                           {body?.text ? substituteVariables(body.text, variables) : ''}
                         </p>
