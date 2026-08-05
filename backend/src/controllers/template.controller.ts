@@ -6,8 +6,34 @@ const VALID_CATEGORIES = new Set<string>(['MARKETING', 'UTILITY', 'AUTHENTICATIO
 const VALID_COMPONENT_TYPES = new Set<string>(['HEADER', 'BODY', 'FOOTER', 'BUTTONS']);
 
 type AuthRequest = Request & { user?: { companyId?: string } };
+type UploadRequest = Request & { file?: { buffer: Buffer; mimetype: string } };
+
+const VALID_HEADER_MEDIA_MIME_TYPES = new Set<string>([
+  'image/jpeg', 'image/png',
+  'video/mp4', 'video/3gpp',
+  'application/pdf',
+]);
 
 export const templateController = {
+  async uploadHeaderMedia(req: Request, res: Response) {
+    try {
+      const file = (req as UploadRequest).file;
+      if (!file) return res.status(400).json({ error: 'file is required' });
+
+      if (!VALID_HEADER_MEDIA_MIME_TYPES.has(file.mimetype)) {
+        return res.status(400).json({ error: `Unsupported file type: ${file.mimetype}` });
+      }
+
+      const handle = await templateService.uploadHeaderMedia(file.buffer, file.mimetype);
+      return res.json({ handle });
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { error?: { message?: string } } } };
+      const metaMessage = axiosError.response?.data?.error?.message;
+      const message = metaMessage ?? (error instanceof Error ? error.message : 'Failed to upload media');
+      return res.status(500).json({ error: message });
+    }
+  },
+
   async getTemplates(req: Request, res: Response) {
     try {
       const companyId = (req as AuthRequest).user?.companyId;

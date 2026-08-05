@@ -269,6 +269,15 @@ export const templateApi = {
     const response = await api.delete(`/templates/${id}`);
     return response.data as { message: string };
   },
+
+  uploadHeaderMedia: async (file: File): Promise<{ handle: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/templates/upload-media', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as { handle: string };
+  },
 };
 
 export const broadcastApi = {

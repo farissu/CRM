@@ -8,6 +8,7 @@ export interface TemplateComponent {
   type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
   format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   text?: string;
+  example?: { header_handle?: string[] };
   buttons?: Array<{
     type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
     text: string;
@@ -40,6 +41,14 @@ interface MetaTemplatesListResponse {
   }>;
 }
 
+interface MetaUploadSessionResponse {
+  id: string;
+}
+
+interface MetaUploadResultResponse {
+  h: string;
+}
+
 export class TemplateService {
   private get wabaId(): string {
     return process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '';
@@ -47,6 +56,42 @@ export class TemplateService {
 
   private get accessToken(): string {
     return process.env.WHATSAPP_ACCESS_TOKEN || '';
+  }
+
+  private get appId(): string {
+    return process.env.WHATSAPP_APP_ID || '';
+  }
+
+  /**
+   * Uploads header media (image/video/document) via Meta's resumable Upload API and
+   * returns a file handle usable as a template's HEADER component.example.header_handle.
+   */
+  async uploadHeaderMedia(buffer: Buffer, mimeType: string): Promise<string> {
+    if (!this.appId || !this.accessToken) {
+      throw new Error('WHATSAPP_APP_ID and WHATSAPP_ACCESS_TOKEN must be configured');
+    }
+
+    const session = await axios.post<MetaUploadSessionResponse>(
+      `${GRAPH_API_URL}/${this.appId}/uploads`,
+      null,
+      {
+        params: { file_length: buffer.length, file_type: mimeType, access_token: this.accessToken },
+      }
+    );
+
+    const result = await axios.post<MetaUploadResultResponse>(
+      `${GRAPH_API_URL}/${session.data.id}`,
+      buffer,
+      {
+        headers: {
+          Authorization: `OAuth ${this.accessToken}`,
+          file_offset: '0',
+          'Content-Type': 'application/octet-stream',
+        },
+      }
+    );
+
+    return result.data.h;
   }
 
   async createTemplate(dto: CreateTemplateDto) {
