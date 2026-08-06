@@ -170,11 +170,13 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
           loadConversations();
           return prev;
         }
+        const isActive = data.conversationId === activeConversation?.id;
+        const shouldCountUnread = !isActive && message.direction === 'INBOUND';
         return prev.map(c => c.id === data.conversationId ? {
           ...c,
           lastMessageText: message.text ?? c.lastMessageText,
           lastMessageAt: message.timestamp as string,
-          unreadCount: data.conversationId === activeConversation?.id ? 0 : c.unreadCount + 1,
+          unreadCount: isActive ? 0 : (shouldCountUnread ? c.unreadCount + 1 : c.unreadCount),
         } as Conversation : c);
       });
     });
