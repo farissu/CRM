@@ -3,6 +3,7 @@ import { Plus, X, Tag } from 'lucide-react';
 import type { Label } from '@/types';
 import { labelApi } from '@/lib/api';
 import { PREDEFINED_COLORS } from '../settingsUtils';
+import ConfirmDialog from '../../chat/ConfirmDialog';
 
 export default function LabelsTab() {
   const [labels, setLabels] = useState<Label[]>([]);
@@ -11,6 +12,7 @@ export default function LabelsTab() {
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [labelToDelete, setLabelToDelete] = useState<Label | null>(null);
 
   useEffect(() => {
     void loadLabels();
@@ -58,6 +60,7 @@ export default function LabelsTab() {
       setError((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? msg);
     } finally {
       setLoading(false);
+      setLabelToDelete(null);
     }
   };
 
@@ -164,7 +167,7 @@ export default function LabelsTab() {
                 </div>
               </div>
               <button
-                onClick={() => void handleDeleteLabel(label.id)}
+                onClick={() => setLabelToDelete(label)}
                 className="p-2 hover:bg-red-50 rounded-xl transition-all duration-200 text-red-500 hover:text-red-600"
               >
                 <X className="w-5 h-5" />
@@ -173,6 +176,16 @@ export default function LabelsTab() {
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={labelToDelete !== null}
+        title="Hapus Label"
+        message={`Yakin ingin menghapus label "${labelToDelete?.name}"? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus"
+        cancelText="Batal"
+        onConfirm={() => labelToDelete && void handleDeleteLabel(labelToDelete.id)}
+        onCancel={() => setLabelToDelete(null)}
+      />
     </div>
   );
 }

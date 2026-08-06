@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { io } from '../index';
+import { emitContactLabelUpdate, getContactWithLabels } from '../services/label.service';
 
 const prisma = new PrismaClient();
 
@@ -98,52 +98,8 @@ export const labelController = {
         data: { contactId, labelId },
       });
 
-      // Get updated contact with labels
-      const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
-        include: {
-          labels: {
-            include: {
-              label: true,
-            },
-          },
-        },
-      });
-
-      // Get conversations for this contact and emit updates
-      const conversations = await prisma.conversation.findMany({
-        where: { contactId },
-        include: {
-          contact: {
-            include: {
-              labels: {
-                include: {
-                  label: true,
-                },
-              },
-            },
-          },
-          assignedAgent: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      // Emit socket event for each conversation
-      conversations.forEach((conv) => {
-        const transformedConv = {
-          ...conv,
-          contact: {
-            ...conv.contact,
-            labels: conv.contact.labels.map(cl => cl.label),
-          },
-        };
-        io.emit('conversation_updated', transformedConv);
-      });
+      const contact = await getContactWithLabels(contactId);
+      await emitContactLabelUpdate(contactId);
 
       res.json({ contact });
     } catch (err: unknown) {
@@ -172,52 +128,8 @@ export const labelController = {
         },
       });
 
-      // Get updated contact with labels
-      const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
-        include: {
-          labels: {
-            include: {
-              label: true,
-            },
-          },
-        },
-      });
-
-      // Get conversations for this contact and emit updates
-      const conversations = await prisma.conversation.findMany({
-        where: { contactId },
-        include: {
-          contact: {
-            include: {
-              labels: {
-                include: {
-                  label: true,
-                },
-              },
-            },
-          },
-          assignedAgent: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      // Emit socket event for each conversation
-      conversations.forEach((conv) => {
-        const transformedConv = {
-          ...conv,
-          contact: {
-            ...conv.contact,
-            labels: conv.contact.labels.map(cl => cl.label),
-          },
-        };
-        io.emit('conversation_updated', transformedConv);
-      });
+      const contact = await getContactWithLabels(contactId);
+      await emitContactLabelUpdate(contactId);
 
       res.json({ contact });
     } catch (err: unknown) {
@@ -233,8 +145,91 @@ export const labelController = {
     try {
       const { contactId } = req.params;
 
+      const contact = await getContactWithLabels(contactId);
+
+      if (!contact) {
+        return res.status(404).json({ error: 'Contact not found' });
+      }
+
+      const labels = contact.labels.map((cl) => cl.label);
+      res.json({ labels });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to fetch contact labels' });
+    }
+  },
+
+  // Assign label to contact, looked up by WhatsApp phone number (for external integrations like n8n)
+  async assignLabelToContactByPhone(req: Request, res: Response) {
+    try {
+      const { phoneNumber, labelId } = req.body;
+
+      if (!phoneNumber || !labelId) {
+        return res.status(400).json({ error: 'phoneNumber and labelId are required' });
+      }
+
+      const existingContact = await prisma.contact.findUnique({ where: { phoneNumber } });
+      if (!existingContact) {
+        return res.status(404).json({ error: 'Contact not found for this phoneNumber' });
+      }
+
+      await prisma.contactLabel.create({
+        data: { contactId: existingContact.id, labelId },
+      });
+
+      const contact = await getContactWithLabels(existingContact.id);
+      await emitContactLabelUpdate(existingContact.id);
+
+      res.json({ contact });
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2002') {
+        return res.status(400).json({ error: 'Label already assigned to this contact' });
+      }
+      res.status(500).json({ error: 'Failed to assign label' });
+    }
+  },
+
+  // Remove label from contact, looked up by WhatsApp phone number (for external integrations like n8n)
+  async removeLabelFromContactByPhone(req: Request, res: Response) {
+    try {
+      const { phoneNumber, labelId } = req.body;
+
+      if (!phoneNumber || !labelId) {
+        return res.status(400).json({ error: 'phoneNumber and labelId are required' });
+      }
+
+      const existingContact = await prisma.contact.findUnique({ where: { phoneNumber } });
+      if (!existingContact) {
+        return res.status(404).json({ error: 'Contact not found for this phoneNumber' });
+      }
+
+      await prisma.contactLabel.delete({
+        where: {
+          contactId_labelId: {
+            contactId: existingContact.id,
+            labelId,
+          },
+        },
+      });
+
+      const contact = await getContactWithLabels(existingContact.id);
+      await emitContactLabelUpdate(existingContact.id);
+
+      res.json({ contact });
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') {
+        return res.status(404).json({ error: 'Label assignment not found' });
+      }
+      res.status(500).json({ error: 'Failed to remove label' });
+    }
+  },
+
+  // Get labels for a contact, looked up by WhatsApp phone number (for external integrations like n8n)
+  async getContactLabelsByPhone(req: Request, res: Response) {
+    try {
+      const { phoneNumber } = req.params;
+
       const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
+        where: { phoneNumber },
         include: {
           labels: {
             include: {
@@ -245,7 +240,7 @@ export const labelController = {
       });
 
       if (!contact) {
-        return res.status(404).json({ error: 'Contact not found' });
+        return res.status(404).json({ error: 'Contact not found for this phoneNumber' });
       }
 
       const labels = contact.labels.map((cl) => cl.label);

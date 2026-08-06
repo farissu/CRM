@@ -5,6 +5,7 @@ import prisma from '../config/database';
 import { whatsAppService } from '../services/whatsapp.service';
 import { conversationService } from '../services/conversation.service';
 import { broadcastService } from '../services/broadcast.service';
+import { applyDefaultOutboundLabel } from '../services/label.service';
 import { io } from '../index';
 import type { BroadcastJobData } from '../queues/broadcast.queue';
 import { extractHeaderMedia, hasMediaHeader } from '../utils/template-media.util';
@@ -96,6 +97,8 @@ async function sendToRecipient(
       status: BroadcastRecipientStatus.SENT,
       messageId: message.id,
     });
+
+    await applyDefaultOutboundLabel(conversation.contactId);
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     await broadcastService.markRecipientResult(recipient.id, {

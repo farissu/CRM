@@ -40,6 +40,11 @@ export const assignLabelSchema = z.object({
   labelId: z.string().min(1),
 });
 
+export const assignLabelByPhoneSchema = z.object({
+  phoneNumber: z.string().min(1, 'phoneNumber is required'),
+  labelId: z.string().min(1, 'labelId is required'),
+});
+
 export const createAgentSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
