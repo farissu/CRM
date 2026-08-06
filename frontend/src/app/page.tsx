@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainNavigation from '@/components/layout/MainNavigation';
 import ConversationSidebar from '@/components/sidebar/ConversationSidebar';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -12,8 +12,24 @@ import BroadcastPanel from '@/components/broadcast/BroadcastPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
 
+type ActiveTab = 'conversations' | 'dashboard' | 'broadcast' | 'settings';
+
+const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
+const VALID_TABS: ActiveTab[] = ['conversations', 'dashboard', 'broadcast', 'settings'];
+
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'conversations' | 'dashboard' | 'broadcast' | 'settings'>('conversations');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('conversations');
+
+  useEffect(() => {
+    const stored = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (stored && VALID_TABS.includes(stored as ActiveTab)) {
+      setActiveTab(stored as ActiveTab);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
 
   const { isAuthenticated, agent, agentId, agentName, checkingAuth, handleLoginSuccess, handleLogout, refreshAgentData } = useAuth();
 
