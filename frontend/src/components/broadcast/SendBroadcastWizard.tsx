@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronDown, Check, Info, Upload, Image as ImageIcon, Video as VideoIcon, FileText, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Check, Info, Upload, Image as ImageIcon, Video as VideoIcon, FileText, CheckCircle2, X } from 'lucide-react';
 import type { MessageTemplate, TemplateCategory } from '@/types';
 import { templateApi, broadcastApi } from '@/lib/api';
 import { CATEGORIES } from '@/lib/templateConstants';
@@ -83,6 +83,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvSummary, setCsvSummary] = useState<CsvSummary | null>(null);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [isDraggingCsv, setIsDraggingCsv] = useState(false);
 
   const [scheduleMode, setScheduleMode] = useState<'now' | 'later'>('now');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -156,11 +157,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
     else onBack();
   };
 
-  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
+  const processCsvFile = (file: File) => {
     setCsvFile(file);
     setCsvSummary(null);
     setCsvErrors([]);
@@ -200,6 +197,35 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
       setCsvSummary({ rowCount: dataLines.length, headers, previewRows, missingPhoneCount, emptyVariableCount });
     };
     reader.readAsText(file);
+  };
+
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) processCsvFile(file);
+  };
+
+  const handleCsvDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setIsDraggingCsv(true);
+  };
+
+  const handleCsvDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setIsDraggingCsv(false);
+  };
+
+  const handleCsvDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    setIsDraggingCsv(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processCsvFile(file);
+  };
+
+  const handleClearCsvFile = () => {
+    setCsvFile(null);
+    setCsvSummary(null);
+    setCsvErrors([]);
   };
 
   const handleDownloadCsvTemplate = async () => {
@@ -509,7 +535,14 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Upload CSV File</label>
-                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#2d9c8f]/40 rounded-lg py-8 cursor-pointer hover:bg-[#f0faf9] transition-colors">
+                    <label
+                      onDragOver={handleCsvDragOver}
+                      onDragLeave={handleCsvDragLeave}
+                      onDrop={handleCsvDrop}
+                      className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer transition-colors ${
+                        isDraggingCsv ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-[#2d9c8f]/40 hover:bg-[#f0faf9]'
+                      }`}
+                    >
                       <Upload className="w-5 h-5 text-gray-400 mb-2" />
                       <span className="text-sm text-gray-600">Drag and Drop file here or <span className="text-[#2d9c8f] font-semibold">Choose File</span></span>
                       <input type="file" accept=".csv" className="hidden" onChange={handleCsvFileChange} />
@@ -518,10 +551,20 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                   </div>
 
                   {csvFile && (
-                    <div className="border border-gray-200 rounded-lg p-3 text-sm">
-                      <p className="font-semibold text-gray-700">{csvFile.name}</p>
-                      {csvSummary && <p className="text-xs text-gray-500 mt-1">{csvSummary.rowCount} recipients detected</p>}
-                      {csvErrors.length > 0 && <p className="text-xs text-red-600 mt-1">{csvErrors[0]}</p>}
+                    <div className="border border-gray-200 rounded-lg p-3 text-sm flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-gray-700">{csvFile.name}</p>
+                        {csvSummary && <p className="text-xs text-gray-500 mt-1">{csvSummary.rowCount} recipients detected</p>}
+                        {csvErrors.length > 0 && <p className="text-xs text-red-600 mt-1">{csvErrors[0]}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearCsvFile}
+                        className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                        aria-label="Cancel CSV file"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
 
