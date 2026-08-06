@@ -15,6 +15,15 @@ const FORMAT_FALLBACK_MIME_TYPE: Record<'IMAGE' | 'VIDEO' | 'DOCUMENT', string> 
   DOCUMENT: 'application/pdf',
 };
 
+const MIME_TYPE_EXTENSION: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'video/mp4': '.mp4',
+  'video/3gpp': '.3gp',
+  'application/pdf': '.pdf',
+};
+
 interface SendMessageParams {
   to: string;
   text?: string;
@@ -114,10 +123,14 @@ export class WhatsAppService {
     const mimeType = isSupportedMimeType
       ? downloadedMimeType!
       : (expectedFormat && FORMAT_FALLBACK_MIME_TYPE[expectedFormat]) || downloadedMimeType || 'application/octet-stream';
+    const filename = `media${MIME_TYPE_EXTENSION[mimeType] ?? ''}`;
 
     const form = new FormData();
     form.append('messaging_product', 'whatsapp');
-    form.append('file', Buffer.from(download.data), { filename: 'media', contentType: mimeType });
+    // WhatsApp's Media Upload API requires `type` as its own form field, not just the
+    // file part's Content-Type header — omitting it fails with a generic (#100) error.
+    form.append('type', mimeType);
+    form.append('file', Buffer.from(download.data), { filename, contentType: mimeType });
 
     try {
       const response = await axios.post<MetaMediaUploadResponse>(
@@ -130,6 +143,13 @@ export class WhatsAppService {
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         const metaError = err.response.data?.error;
+        console.error('[WhatsAppService] Media upload rejected by Meta:', {
+          url,
+          downloadedContentType: download.headers['content-type'],
+          downloadedByteLength: Buffer.from(download.data).byteLength,
+          resolvedMimeType: mimeType,
+          metaResponse: err.response.data,
+        });
         throw new Error(
           `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
         );
