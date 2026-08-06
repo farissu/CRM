@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 const GRAPH_API_URL = 'https://graph.facebook.com/v19.0';
 
 export interface TemplateComponent {
-  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS' | 'CAROUSEL';
   format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   text?: string;
   example?: { header_handle?: string[]; body_text?: string[][] };
@@ -15,6 +15,7 @@ export interface TemplateComponent {
     url?: string;
     phone_number?: string;
   }>;
+  cards?: Array<{ components: TemplateComponent[] }>;
 }
 
 export interface CreateTemplateDto {

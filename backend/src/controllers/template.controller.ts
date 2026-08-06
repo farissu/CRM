@@ -3,7 +3,7 @@ import { templateService } from '../services/template.service';
 import { TemplateCategory } from '@prisma/client';
 
 const VALID_CATEGORIES = new Set<string>(['MARKETING', 'UTILITY', 'AUTHENTICATION']);
-const VALID_COMPONENT_TYPES = new Set<string>(['HEADER', 'BODY', 'FOOTER', 'BUTTONS']);
+const VALID_COMPONENT_TYPES = new Set<string>(['HEADER', 'BODY', 'FOOTER', 'BUTTONS', 'CAROUSEL']);
 
 type AuthRequest = Request & { user?: { companyId?: string } };
 type UploadRequest = Request & { file?: { buffer: Buffer; mimetype: string } };
@@ -61,7 +61,7 @@ export const templateController = {
         name?: string;
         language?: string;
         category?: string;
-        components?: Array<{ type?: string }>;
+        components?: Array<{ type?: string; cards?: Array<{ components?: Array<{ type?: string }> }> }>;
       };
 
       if (!name || !language || !category || !components) {
@@ -86,6 +86,17 @@ export const templateController = {
 
       if (components.some(c => !VALID_COMPONENT_TYPES.has(c.type ?? ''))) {
         return res.status(400).json({ error: 'Invalid component type found' });
+      }
+
+      const carousel = components.find(c => c.type === 'CAROUSEL');
+      if (carousel) {
+        const cards = carousel.cards ?? [];
+        if (cards.length < 2 || cards.length > 10) {
+          return res.status(400).json({ error: 'Carousel templates must have between 2 and 10 cards' });
+        }
+        if (cards.some(card => !(card.components ?? []).some(cc => cc.type === 'BODY'))) {
+          return res.status(400).json({ error: 'Every carousel card must have a BODY component' });
+        }
       }
 
       const template = await templateService.createTemplate({

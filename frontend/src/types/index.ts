@@ -105,11 +105,12 @@ export interface TemplateButton {
 }
 
 export interface TemplateComponent {
-  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS' | 'CAROUSEL';
   format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   text?: string;
   example?: { header_handle?: string[]; body_text?: string[][] };
   buttons?: TemplateButton[];
+  cards?: Array<{ components: TemplateComponent[] }>;
 }
 
 export interface MessageTemplate {
