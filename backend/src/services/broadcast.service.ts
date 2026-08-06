@@ -10,7 +10,7 @@ import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
 import { parseBroadcastCsv, buildCsvTemplate, type BroadcastCsvRow } from '../utils/csv.util';
 import { enqueueBroadcast, cancelBroadcastJob } from '../queues/broadcast.queue';
-import { extractHeaderMedia, hasMediaHeader } from '../utils/template-media.util';
+import { extractHeaderMedia, hasMediaHeader, extractCarouselCardsMedia, hasCarousel } from '../utils/template-media.util';
 
 export interface CreateBroadcastDto {
   companyId: string;
@@ -146,12 +146,24 @@ export class BroadcastService {
       headerMedia = { format: resolved.format, id: mediaId };
     }
 
+    let carouselCards: Array<{ format: 'IMAGE' | 'VIDEO'; id: string }> | undefined;
+    if (hasCarousel(template.components)) {
+      const cardsMedia = extractCarouselCardsMedia(template.components);
+      if (!cardsMedia) {
+        throw new Error('Carousel card media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
+      }
+      carouselCards = await Promise.all(
+        cardsMedia.map(async card => ({ format: card.format, id: await whatsAppService.uploadMediaFromUrl(card.link) }))
+      );
+    }
+
     const waMessageId = await whatsAppService.sendTemplateMessage({
       to: params.to,
       templateName: template.name,
       language: template.language,
       bodyParams: params.bodyParams ?? [],
       headerMedia,
+      carouselCards,
     });
 
     return { waMessageId };

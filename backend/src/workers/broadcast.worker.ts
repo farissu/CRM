@@ -8,7 +8,7 @@ import { broadcastService } from '../services/broadcast.service';
 import { applyDefaultOutboundLabel } from '../services/label.service';
 import { io } from '../index';
 import type { BroadcastJobData } from '../queues/broadcast.queue';
-import { extractHeaderMedia, hasMediaHeader } from '../utils/template-media.util';
+import { extractHeaderMedia, hasMediaHeader, extractCarouselCardsMedia, hasCarousel } from '../utils/template-media.util';
 
 const SEND_CONCURRENCY = 5;
 const RATE_LIMIT_BATCH_SIZE = 250;
@@ -58,7 +58,8 @@ function renderTemplateText(components: unknown, variables: Record<string, strin
 async function sendToRecipient(
   broadcast: { id: string; template: { name: string; language: string; components: unknown } },
   recipient: RecipientToSend,
-  uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string; link: string } | undefined
+  uploadedHeaderMedia: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string; link: string } | undefined,
+  uploadedCarouselCards: Array<{ format: 'IMAGE' | 'VIDEO'; id: string }> | undefined
 ) {
   const variables = (recipient.variables as Record<string, string> | null) ?? {};
   const bodyParams = Object.keys(variables)
@@ -72,6 +73,7 @@ async function sendToRecipient(
       language: broadcast.template.language,
       bodyParams,
       headerMedia: uploadedHeaderMedia,
+      carouselCards: uploadedCarouselCards,
     });
 
     const conversation = await conversationService.getOrCreateConversation(
@@ -153,11 +155,35 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
     }
   }
 
+  let uploadedCarouselCards: Array<{ format: 'IMAGE' | 'VIDEO'; id: string }> | undefined;
+  if (hasCarousel(broadcast.template.components)) {
+    const cardsMedia = extractCarouselCardsMedia(broadcast.template.components);
+    if (!cardsMedia) {
+      const error = 'Carousel card media link is not ready yet — open WhatsApp Templates to refresh it, then try again.';
+      await Promise.all(recipients.map(r => broadcastService.markRecipientResult(r.id, { status: BroadcastRecipientStatus.FAILED, error })));
+      await broadcastService.finalizeBroadcastStatus(broadcastId);
+      io.emit('broadcast_updated', { broadcastId });
+      return;
+    }
+
+    try {
+      uploadedCarouselCards = await Promise.all(
+        cardsMedia.map(async card => ({ format: card.format, id: await whatsAppService.uploadMediaFromUrl(card.link) }))
+      );
+    } catch (err: unknown) {
+      const error = `Failed to upload carousel card media: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      await Promise.all(recipients.map(r => broadcastService.markRecipientResult(r.id, { status: BroadcastRecipientStatus.FAILED, error })));
+      await broadcastService.finalizeBroadcastStatus(broadcastId);
+      io.emit('broadcast_updated', { broadcastId });
+      return;
+    }
+  }
+
   await prisma.broadcast.update({ where: { id: broadcastId }, data: { status: BroadcastStatus.SENDING } });
 
   for (let i = 0; i < recipients.length; i += SEND_CONCURRENCY) {
     const batch = recipients.slice(i, i + SEND_CONCURRENCY);
-    await Promise.all(batch.map(recipient => sendToRecipient(broadcast, recipient, uploadedHeaderMedia)));
+    await Promise.all(batch.map(recipient => sendToRecipient(broadcast, recipient, uploadedHeaderMedia, uploadedCarouselCards)));
 
     // Pause between every RATE_LIMIT_BATCH_SIZE recipients to avoid tripping
     // WhatsApp's send-rate limits on large broadcasts (e.g. big CSV audiences).

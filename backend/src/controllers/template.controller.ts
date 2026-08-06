@@ -91,8 +91,8 @@ export const templateController = {
       const carousel = components.find(c => c.type === 'CAROUSEL');
       if (carousel) {
         const cards = carousel.cards ?? [];
-        if (cards.length < 2 || cards.length > 10) {
-          return res.status(400).json({ error: 'Carousel templates must have between 2 and 10 cards' });
+        if (cards.length < 1 || cards.length > 10) {
+          return res.status(400).json({ error: 'Carousel templates must have between 1 and 10 cards' });
         }
         if (cards.some(card => !(card.components ?? []).some(cc => cc.type === 'BODY'))) {
           return res.status(400).json({ error: 'Every carousel card must have a BODY component' });

@@ -113,7 +113,7 @@ interface FormState {
 }
 
 function createInitialForm(): FormState {
-  const carouselCards = [createCarouselCard(), createCarouselCard()];
+  const carouselCards = [createCarouselCard()];
   return {
     name: '', category: 'MARKETING', messageType: 'GENERAL', language: 'id',
     headerType: 'NONE', headerText: '',
@@ -221,7 +221,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
 
   const removeCarouselCard = (cardId: string) => {
     setForm(p => {
-      if (p.carouselCards.length <= 2) return p;
+      if (p.carouselCards.length <= 1) return p;
       const removed = p.carouselCards.find(c => c.id === cardId);
       if (removed?.headerPreviewUrl) URL.revokeObjectURL(removed.headerPreviewUrl);
       const remaining = p.carouselCards.filter(c => c.id !== cardId);
@@ -282,7 +282,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
       }
     }
     if (step === 'carousel') {
-      if (form.carouselCards.length < 2) { setError('Carousel templates need at least 2 cards'); return; }
+      if (form.carouselCards.length < 1) { setError('Carousel templates need at least 1 card'); return; }
       const incomplete = form.carouselCards.find(c =>
         !c.headerHandle || !c.bodyText.trim() || !c.buttonText.trim() || (form.carouselButtonFormat === 'URL' && !c.buttonUrl.trim())
       );
@@ -720,7 +720,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${form.carouselActiveCardId === card.id ? 'bg-[#2d9c8f] text-white border-[#2d9c8f]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
                   >
                     Card {i + 1}
-                    {form.carouselCards.length > 2 && (
+                    {form.carouselCards.length > 1 && (
                       <X
                         className="w-3.5 h-3.5"
                         onClick={e => { e.stopPropagation(); removeCarouselCard(card.id); }}

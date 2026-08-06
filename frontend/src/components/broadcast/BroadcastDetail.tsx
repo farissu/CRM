@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, Send, CheckCircle2, CheckCheck, XCircle, Download, Image as ImageIcon, Video as VideoIcon, FileText } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle2, CheckCheck, XCircle, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import type { Broadcast, BroadcastStatus } from '@/types';
+import type { Broadcast, BroadcastStatus, TemplateComponent } from '@/types';
 import { broadcastApi } from '@/lib/api';
+import TemplateMessagePreview from './TemplateMessagePreview';
 
 interface BroadcastDetailProps {
   broadcastId: string;
@@ -174,53 +175,10 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
               <p className="font-bold text-gray-800 mb-3">Preview</p>
               <div className="bg-white rounded-xl shadow-sm p-4 min-h-[80px]">
                 {broadcast.template ? (
-                  (() => {
-                    const components = (broadcast.template as unknown as {
-                      components: Array<{ type: string; format?: string; text?: string; example?: { header_handle?: string[] }; buttons?: Array<{ text: string }> }>;
-                    }).components;
-                    const header = components.find(c => c.type === 'HEADER');
-                    const body = components.find(c => c.type === 'BODY');
-                    const footer = components.find(c => c.type === 'FOOTER');
-                    const buttons = components.find(c => c.type === 'BUTTONS');
-                    const headerMediaUrl =
-                      header?.format && header.format !== 'TEXT' ? header.example?.header_handle?.[0] : undefined;
-                    const isResolvableMediaUrl = Boolean(headerMediaUrl?.startsWith('http'));
-                    return (
-                      <>
-                        {header?.format && header.format !== 'TEXT' && (
-                          <div className="mb-2">
-                            {isResolvableMediaUrl && header.format === 'IMAGE' && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={headerMediaUrl} alt="" className="w-full rounded-lg max-h-52 object-cover" />
-                            )}
-                            {isResolvableMediaUrl && header.format === 'VIDEO' && (
-                              <video src={headerMediaUrl} className="w-full rounded-lg max-h-52" controls />
-                            )}
-                            {(!isResolvableMediaUrl || header.format === 'DOCUMENT') && (
-                              <div className="flex items-center justify-center bg-gray-100 rounded-lg h-24 text-gray-300">
-                                {header.format === 'IMAGE' && <ImageIcon className="w-6 h-6" />}
-                                {header.format === 'VIDEO' && <VideoIcon className="w-6 h-6" />}
-                                {header.format === 'DOCUMENT' && <FileText className="w-6 h-6" />}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {header?.format === 'TEXT' && header.text && <p className="font-bold text-gray-900 text-sm mb-1">{header.text}</p>}
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{body?.text}</p>
-                        {footer?.text && <p className="text-xs text-gray-400 mt-2">{footer.text}</p>}
-                        {buttons?.buttons && buttons.buttons.length > 0 && (
-                          <div className="border-t border-gray-100 mt-3 pt-2 space-y-1.5">
-                            {buttons.buttons.map((b, i) => (
-                              <div key={i} className="text-center text-sm text-[#0093E9] font-medium">{b.text}</div>
-                            ))}
-                          </div>
-                        )}
-                        <p className="text-right text-xs text-gray-400 mt-2">
-                          {format(new Date(broadcast.createdAt), 'HH:mm')}
-                        </p>
-                      </>
-                    );
-                  })()
+                  <TemplateMessagePreview
+                    components={(broadcast.template as unknown as { components: TemplateComponent[] }).components}
+                    timestamp={format(new Date(broadcast.createdAt), 'HH:mm')}
+                  />
                 ) : (
                   <p className="text-sm text-gray-300">No template</p>
                 )}

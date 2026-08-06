@@ -26,6 +26,7 @@ interface SendTemplateMessageParams {
   language: string;
   bodyParams?: string[];
   headerMedia?: { format: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; id: string };
+  carouselCards?: Array<{ format: 'IMAGE' | 'VIDEO'; id: string }>;
 }
 
 interface MetaMediaUploadResponse {
@@ -102,7 +103,7 @@ export class WhatsAppService {
   }
 
   async sendTemplateMessage(params: SendTemplateMessageParams): Promise<string> {
-    const { to, templateName, language, bodyParams = [], headerMedia } = params;
+    const { to, templateName, language, bodyParams = [], headerMedia, carouselCards } = params;
 
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
@@ -115,6 +116,18 @@ export class WhatsAppService {
     }
     if (bodyParams.length > 0) {
       components.push({ type: 'body', parameters: bodyParams.map(text => ({ type: 'text', text })) });
+    }
+    if (carouselCards && carouselCards.length > 0) {
+      components.push({
+        type: 'carousel',
+        cards: carouselCards.map((card, cardIndex) => {
+          const mediaKey = card.format.toLowerCase();
+          return {
+            card_index: cardIndex,
+            components: [{ type: 'header', parameters: [{ type: mediaKey, [mediaKey]: { id: card.id } }] }],
+          };
+        }),
+      });
     }
 
     const payload = {

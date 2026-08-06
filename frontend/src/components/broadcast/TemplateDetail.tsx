@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, MessageSquare, Copy, Check, Image as ImageIcon, Video as VideoIcon, FileText } from 'lucide-react';
+import { ChevronLeft, MessageSquare, Copy, Check } from 'lucide-react';
 import type { MessageTemplate, TemplateStatus } from '@/types';
 import { templateApi } from '@/lib/api';
+import TemplateMessagePreview from './TemplateMessagePreview';
 
 interface TemplateDetailProps {
   template: MessageTemplate;
@@ -54,9 +55,6 @@ export default function TemplateDetail({ template, onBack }: TemplateDetailProps
   }, []);
 
   const header = template.components.find(c => c.type === 'HEADER');
-  const body = template.components.find(c => c.type === 'BODY');
-  const footer = template.components.find(c => c.type === 'FOOTER');
-  const buttons = template.components.find(c => c.type === 'BUTTONS');
 
   const headerMediaUrl =
     header?.format && header.format !== 'TEXT'
@@ -133,44 +131,7 @@ export default function TemplateDetail({ template, onBack }: TemplateDetailProps
             )}
           </div>
           <div className="bg-white rounded-xl shadow-sm p-4 min-h-[80px]">
-            {header?.format && header.format !== 'TEXT' && (
-              <div className="mb-2">
-                {isResolvableMediaUrl && header.format === 'IMAGE' && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={headerMediaUrl} alt="" className="w-full rounded-lg max-h-52 object-cover" />
-                )}
-                {isResolvableMediaUrl && header.format === 'VIDEO' && (
-                  <video src={headerMediaUrl} className="w-full rounded-lg max-h-52" controls />
-                )}
-                {(!isResolvableMediaUrl || header.format === 'DOCUMENT') && (
-                  <div className="flex items-center justify-center bg-gray-100 rounded-lg h-24 text-gray-300">
-                    {header.format === 'IMAGE' && <ImageIcon className="w-6 h-6" />}
-                    {header.format === 'VIDEO' && <VideoIcon className="w-6 h-6" />}
-                    {header.format === 'DOCUMENT' && <FileText className="w-6 h-6" />}
-                  </div>
-                )}
-              </div>
-            )}
-            {header?.format === 'TEXT' && header.text && <p className="font-bold text-gray-900 text-sm mb-1">{header.text}</p>}
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{body?.text}</p>
-            {footer?.text && <p className="text-xs text-gray-400 mt-2">{footer.text}</p>}
-            {buttons?.buttons && buttons.buttons.length > 0 && (
-              <div className="border-t border-gray-100 mt-3 pt-2 space-y-1.5">
-                {buttons.buttons.map((b, i) =>
-                  b.type === 'URL' && b.url ? (
-                    <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block text-center text-sm text-[#0093E9] font-medium hover:underline">
-                      {b.text}
-                    </a>
-                  ) : b.type === 'PHONE_NUMBER' && b.phone_number ? (
-                    <a key={i} href={`tel:${b.phone_number}`} className="block text-center text-sm text-[#0093E9] font-medium hover:underline">
-                      {b.text}
-                    </a>
-                  ) : (
-                    <div key={i} className="text-center text-sm text-[#0093E9] font-medium">{b.text}</div>
-                  )
-                )}
-              </div>
-            )}
+            <TemplateMessagePreview components={template.components} />
           </div>
         </div>
       </div>
