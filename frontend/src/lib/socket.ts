@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { Message, Conversation } from '@/types';
+import type { Message, Conversation, MessageStatus } from '@/types';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
 
@@ -72,6 +72,14 @@ class SocketClient {
     this.socket?.on('typing_stop', callback);
   }
 
+  onBroadcastUpdated(callback: (data: { broadcastId: string }) => void) {
+    this.socket?.on('broadcast_updated', callback);
+  }
+
+  onMessageStatusUpdated(callback: (data: { messageId: string; status: MessageStatus }) => void) {
+    this.socket?.on('message_status_updated', callback);
+  }
+
   offMessageReceived() {
     this.socket?.off('message_received');
   }
@@ -86,6 +94,14 @@ class SocketClient {
 
   offTypingStop() {
     this.socket?.off('typing_stop');
+  }
+
+  offBroadcastUpdated() {
+    this.socket?.off('broadcast_updated');
+  }
+
+  offMessageStatusUpdated() {
+    this.socket?.off('message_status_updated');
   }
 }
 

@@ -5,6 +5,7 @@ import { ChevronLeft, Send, CheckCircle2, CheckCheck, XCircle, Download } from '
 import { format } from 'date-fns';
 import type { Broadcast, BroadcastStatus, TemplateComponent } from '@/types';
 import { broadcastApi } from '@/lib/api';
+import { socketClient } from '@/lib/socket';
 import TemplateMessagePreview from './TemplateMessagePreview';
 
 interface BroadcastDetailProps {
@@ -48,9 +49,9 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const loadBroadcast = async () => {
       try {
-        setLoading(true);
         setError(null);
         const res = await broadcastApi.getBroadcast(broadcastId);
         if (!cancelled) setBroadcast(res.broadcast);
@@ -59,9 +60,20 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    setLoading(true);
+    void loadBroadcast();
+
+    // Broadcast sending runs in a background worker — re-fetch on its progress/status
+    // signal so Sent/Delivered/Read/Failed and the status badge update live.
+    socketClient.onBroadcastUpdated((data) => {
+      if (data.broadcastId === broadcastId) void loadBroadcast();
+    });
+
     return () => {
       cancelled = true;
+      socketClient.offBroadcastUpdated();
     };
   }, [broadcastId]);
 

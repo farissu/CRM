@@ -189,6 +189,16 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       if (data.conversationId === activeConversation?.id) setTypingIndicator(null);
     });
 
+    // Payload shape varies by call site (assignment/resolve/read vs. label updates), so
+    // treat it purely as a "something changed" signal and refetch rather than merge it.
+    socketClient.onConversationUpdated(() => {
+      loadConversations();
+    });
+
+    socketClient.onMessageStatusUpdated((data) => {
+      setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, status: data.status } : m));
+    });
+
     return () => { socketClient.disconnect(); };
   }, [isAuthenticated, activeConversation?.id, loadConversations]);
 

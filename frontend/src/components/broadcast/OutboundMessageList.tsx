@@ -5,6 +5,7 @@ import { Megaphone, Search, Filter as FilterIcon, Plus, Calendar, Hourglass, Lis
 import { format } from 'date-fns';
 import type { Broadcast, BroadcastStatus } from '@/types';
 import { broadcastApi } from '@/lib/api';
+import { socketClient } from '@/lib/socket';
 import CreateBroadcastModal from './CreateBroadcastModal';
 import SendBroadcastWizard from './SendBroadcastWizard';
 import BroadcastDetail from './BroadcastDetail';
@@ -86,6 +87,14 @@ export default function OutboundMessageList() {
 
   useEffect(() => {
     void loadBroadcasts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, search, page]);
+
+  useEffect(() => {
+    socketClient.onBroadcastUpdated(() => {
+      void loadBroadcasts();
+    });
+    return () => socketClient.offBroadcastUpdated();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, search, page]);
 
