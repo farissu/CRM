@@ -7,9 +7,15 @@ import type { TemplateComponent } from '@/types';
 interface TemplateMessagePreviewProps {
   components: TemplateComponent[];
   timestamp?: string;
+  variables?: Record<string, string>;
 }
 
-export default function TemplateMessagePreview({ components, timestamp }: TemplateMessagePreviewProps) {
+function substituteVariables(text: string, variables?: Record<string, string>): string {
+  if (!variables) return text;
+  return text.replace(/\{\{(\d+)\}\}/g, (_, n: string) => variables[n] || `{{${n}}}`);
+}
+
+export default function TemplateMessagePreview({ components, timestamp, variables }: TemplateMessagePreviewProps) {
   const header = components.find(c => c.type === 'HEADER');
   const body = components.find(c => c.type === 'BODY');
   const footer = components.find(c => c.type === 'FOOTER');
@@ -40,7 +46,7 @@ export default function TemplateMessagePreview({ components, timestamp }: Templa
         </div>
       )}
       {header?.format === 'TEXT' && header.text && <p className="font-bold text-gray-900 text-sm mb-1">{header.text}</p>}
-      <p className="text-sm text-gray-800 whitespace-pre-wrap">{body?.text}</p>
+      <p className="text-sm text-gray-800 whitespace-pre-wrap">{body?.text ? substituteVariables(body.text, variables) : ''}</p>
       {footer?.text && <p className="text-xs text-gray-400 mt-2">{footer.text}</p>}
       {buttons?.buttons && buttons.buttons.length > 0 && (
         <div className="border-t border-gray-100 mt-3 pt-2 space-y-1.5">
