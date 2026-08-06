@@ -6,6 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import { labelApi } from '@/lib/api';
 
 type StatusFilter = 'served' | 'unread' | 'resolved' | 'all';
+type ViewMode = 'normal' | 'label';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -36,6 +37,8 @@ export default function ConversationSidebar({
   const [labels, setLabels] = useState<Label[]>([]);
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [showLabelDropdown, setShowLabelDropdown] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('normal');
+  const [activeLabelTab, setActiveLabelTab] = useState<string>('all');
 
   // Load labels
   useEffect(() => {
@@ -81,34 +84,59 @@ export default function ConversationSidebar({
     return () => observer.disconnect();
   }, [onLoadMore, hasMore, loadingMore]);
 
-  // Filter conversations based on status and search
-  const filteredConversations = conversations.filter(conv => {
-    // Status filter
+  // Search filter applies regardless of view mode
+  const searchFilteredConversations = conversations.filter(conv => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const contactName = (conv.contact.name || '').toLowerCase();
+    const phoneNumber = conv.contact.phoneNumber.toLowerCase();
+    return contactName.includes(query) || phoneNumber.includes(query);
+  });
+
+  // Normal view: filter by status tab + optional label filter
+  const filteredConversations = searchFilteredConversations.filter(conv => {
     if (statusFilter === 'served' && conv.status !== 'OPEN') return false;
     if (statusFilter === 'unread' && (conv.unreadCount === 0 || conv.status !== 'OPEN')) return false;
     if (statusFilter === 'resolved' && conv.status !== 'RESOLVED') return false;
-    
-    // Label filter
+
     if (selectedLabelId) {
       const hasLabel = conv.contact.labels?.some(label => label.id === selectedLabelId);
       if (!hasLabel) return false;
     }
-    
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const contactName = (conv.contact.name || '').toLowerCase();
-      const phoneNumber = conv.contact.phoneNumber.toLowerCase();
-      
-      return contactName.includes(query) || phoneNumber.includes(query);
-    }
-    
+
     return true;
   });
 
   const servedCount = conversations.filter(c => c.status === 'OPEN').length;
   const unreadCount = conversations.filter(c => c.status === 'OPEN' && c.unreadCount > 0).length;
   const resolvedCount = conversations.filter(c => c.status === 'RESOLVED').length;
+
+  // Per-label view: only served (OPEN) conversations, grouped by label
+  const servedForLabelView = searchFilteredConversations.filter(c => c.status === 'OPEN');
+  const conversationsByLabel = labels.map(label => ({
+    label,
+    conversations: servedForLabelView.filter(c => c.contact.labels?.some(l => l.id === label.id)),
+  }));
+  const labelGroupsWithConversations = conversationsByLabel.filter(group => group.conversations.length > 0);
+  const unlabeledConversations = servedForLabelView.filter(
+    c => !c.contact.labels || c.contact.labels.length === 0
+  );
+  const activeLabelConversations = activeLabelTab === 'all'
+    ? servedForLabelView
+    : activeLabelTab === 'unlabeled'
+      ? unlabeledConversations
+      : conversationsByLabel.find(group => group.label.id === activeLabelTab)?.conversations ?? [];
+
+  const loadMoreFooter = (
+    <>
+      {hasMore && <div ref={sentinelRef} className="h-1" />}
+      {loadingMore && (
+        <div className="py-4 flex justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
+        </div>
+      )}
+    </>
+  );
 
   if (loading) {
     return (
@@ -127,7 +155,7 @@ export default function ConversationSidebar({
           <div className="flex items-center gap-2">
             {/* Label Filter Button */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowLabelDropdown(!showLabelDropdown)}
                 className={clsx(
                   "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 flex-shrink-0 relative",
@@ -146,7 +174,7 @@ export default function ConversationSidebar({
               {showLabelDropdown && (
                 <>
                   {/* Backdrop */}
-                  <div 
+                  <div
                     className="fixed inset-0 z-40"
                     onClick={() => setShowLabelDropdown(false)}
                   />
@@ -164,8 +192,8 @@ export default function ConversationSidebar({
                         }}
                         className={clsx(
                           "w-full px-4 py-3 text-left transition-colors duration-200 flex items-center gap-3",
-                          !selectedLabelId 
-                            ? "bg-saas-primary-blue/10 text-saas-primary-blue font-semibold" 
+                          !selectedLabelId
+                            ? "bg-saas-primary-blue/10 text-saas-primary-blue font-semibold"
                             : "hover:bg-gray-50 text-gray-700"
                         )}
                       >
@@ -221,7 +249,7 @@ export default function ConversationSidebar({
             </div>
 
             {/* Search Button */}
-            <button 
+            <button
               onClick={() => setShowSearch(!showSearch)}
               className={clsx(
                 "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 flex-shrink-0",
@@ -234,7 +262,7 @@ export default function ConversationSidebar({
             </button>
           </div>
         </div>
-        
+
         {/* Search Input */}
         {showSearch && (
           <div className="mt-4 relative">
@@ -260,61 +288,146 @@ export default function ConversationSidebar({
         )}
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="bg-white border-b border-saas-border flex px-2 pt-2">
-        <FilterTab
-          label="Served"
-          count={servedCount}
-          active={statusFilter === 'served'}
-          onClick={() => setStatusFilter('served')}
-          color="blue"
-        />
-        <FilterTab
-          label="Belum Dibaca"
-          count={unreadCount}
-          active={statusFilter === 'unread'}
-          onClick={() => setStatusFilter('unread')}
-          color="red"
-        />
-        <FilterTab
-          label="Resolved"
-          count={resolvedCount}
-          active={statusFilter === 'resolved'}
-          onClick={() => setStatusFilter('resolved')}
-          color="gray"
-        />
-        <FilterTab
-          label="All"
-          count={conversations.length}
-          active={statusFilter === 'all'}
-          onClick={() => setStatusFilter('all')}
-        />
+      {/* View Mode Switch */}
+      <div className="bg-white border-b border-saas-border px-3 pt-3 pb-2 flex items-center gap-1.5">
+        <button
+          onClick={() => setViewMode('normal')}
+          className={clsx(
+            'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200',
+            viewMode === 'normal'
+              ? 'bg-saas-primary-blue text-white shadow-soft-sm'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          )}
+        >
+          Tampilan Normal
+        </button>
+        <button
+          onClick={() => setViewMode('label')}
+          className={clsx(
+            'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200',
+            viewMode === 'label'
+              ? 'bg-saas-primary-blue text-white shadow-soft-sm'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          )}
+        >
+          Per Label
+        </button>
       </div>
+
+      {/* Filter Tabs */}
+      {viewMode === 'normal' ? (
+        <div className="bg-white border-b border-saas-border flex px-2 pt-2">
+          <FilterTab
+            label="Served"
+            count={servedCount}
+            active={statusFilter === 'served'}
+            onClick={() => setStatusFilter('served')}
+            color="blue"
+          />
+          <FilterTab
+            label="Belum Dibaca"
+            count={unreadCount}
+            active={statusFilter === 'unread'}
+            onClick={() => setStatusFilter('unread')}
+            color="red"
+          />
+          <FilterTab
+            label="Resolved"
+            count={resolvedCount}
+            active={statusFilter === 'resolved'}
+            onClick={() => setStatusFilter('resolved')}
+            color="gray"
+          />
+          <FilterTab
+            label="All"
+            count={conversations.length}
+            active={statusFilter === 'all'}
+            onClick={() => setStatusFilter('all')}
+          />
+        </div>
+      ) : (
+        <div className="bg-white border-b border-saas-border px-2 pt-2 pb-2 flex gap-1.5 overflow-x-auto">
+          <LabelTab
+            name="All"
+            count={servedForLabelView.length}
+            active={activeLabelTab === 'all'}
+            onClick={() => setActiveLabelTab('all')}
+          />
+          {conversationsByLabel.map(({ label, conversations: labelConversations }) => (
+            <LabelTab
+              key={label.id}
+              name={label.name}
+              color={label.color}
+              count={labelConversations.length}
+              active={activeLabelTab === label.id}
+              onClick={() => setActiveLabelTab(label.id)}
+            />
+          ))}
+          {unlabeledConversations.length > 0 && (
+            <LabelTab
+              name="Tanpa Label"
+              count={unlabeledConversations.length}
+              active={activeLabelTab === 'unlabeled'}
+              onClick={() => setActiveLabelTab('unlabeled')}
+            />
+          )}
+        </div>
+      )}
 
       {/* Conversation List */}
       <div ref={listContainerRef} className="flex-1 overflow-y-auto bg-saas-bg">
-        {filteredConversations.length === 0 ? (
-          <div className="p-8 text-center">
-            {searchQuery.trim() ? (
-              <div>
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <p className="text-gray-700 font-semibold mb-1">No results found</p>
-                <p className="text-sm text-gray-500">Try a different search term</p>
-              </div>
-            ) : (
-              <div className="text-gray-500">
-                {statusFilter === 'all' && 'No conversations yet'}
-                {statusFilter === 'served' && 'No served conversations'}
-                {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
-                {statusFilter === 'resolved' && 'No resolved conversations'}
-              </div>
-            )}
+        {viewMode === 'normal' ? (
+          filteredConversations.length === 0 ? (
+            <EmptyListState statusFilter={statusFilter} searching={!!searchQuery.trim()} />
+          ) : (
+            <>
+              {filteredConversations.map((conversation) => (
+                <ConversationItem
+                  key={conversation.id}
+                  conversation={conversation}
+                  isActive={conversation.id === activeConversationId}
+                  onClick={() => onSelectConversation(conversation)}
+                />
+              ))}
+              {loadMoreFooter}
+            </>
+          )
+        ) : activeLabelTab === 'all' ? (
+          servedForLabelView.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {searchQuery.trim() ? 'No results found' : 'Tidak ada percakapan served'}
+            </div>
+          ) : (
+            <>
+              {labelGroupsWithConversations.map(({ label, conversations: labelConversations }) => (
+                <LabelGroupSection
+                  key={label.id}
+                  name={label.name}
+                  color={label.color}
+                  conversations={labelConversations}
+                  activeConversationId={activeConversationId}
+                  onSelectConversation={onSelectConversation}
+                />
+              ))}
+              {unlabeledConversations.length > 0 && (
+                <LabelGroupSection
+                  name="Tanpa Label"
+                  color="#9ca3af"
+                  conversations={unlabeledConversations}
+                  activeConversationId={activeConversationId}
+                  onSelectConversation={onSelectConversation}
+                />
+              )}
+              {loadMoreFooter}
+            </>
+          )
+        ) : activeLabelConversations.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            {searchQuery.trim() ? 'No results found' : 'Tidak ada percakapan pada label ini'}
           </div>
         ) : (
           <>
-            {filteredConversations.map((conversation) => (
+            {activeLabelConversations.map((conversation) => (
               <ConversationItem
                 key={conversation.id}
                 conversation={conversation}
@@ -322,15 +435,66 @@ export default function ConversationSidebar({
                 onClick={() => onSelectConversation(conversation)}
               />
             ))}
-            {hasMore && <div ref={sentinelRef} className="h-1" />}
-            {loadingMore && (
-              <div className="py-4 flex justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
-              </div>
-            )}
+            {loadMoreFooter}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+interface EmptyListStateProps {
+  statusFilter: StatusFilter;
+  searching: boolean;
+}
+
+function EmptyListState({ statusFilter, searching }: EmptyListStateProps) {
+  if (searching) {
+    return (
+      <div className="p-8 text-center">
+        <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <p className="text-gray-700 font-semibold mb-1">No results found</p>
+        <p className="text-sm text-gray-500">Try a different search term</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 text-center text-gray-500">
+      {statusFilter === 'all' && 'No conversations yet'}
+      {statusFilter === 'served' && 'No served conversations'}
+      {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
+      {statusFilter === 'resolved' && 'No resolved conversations'}
+    </div>
+  );
+}
+
+interface LabelGroupSectionProps {
+  name: string;
+  color: string;
+  conversations: Conversation[];
+  activeConversationId?: string;
+  onSelectConversation: (conversation: Conversation) => void;
+}
+
+function LabelGroupSection({ name, color, conversations, activeConversationId, onSelectConversation }: LabelGroupSectionProps) {
+  return (
+    <div>
+      <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{name}</span>
+        <span className="text-xs text-gray-400">({conversations.length})</span>
+      </div>
+      {conversations.map((conversation) => (
+        <ConversationItem
+          key={conversation.id}
+          conversation={conversation}
+          isActive={conversation.id === activeConversationId}
+          onClick={() => onSelectConversation(conversation)}
+        />
+      ))}
     </div>
   );
 }
@@ -374,6 +538,34 @@ function FilterTab({ label, count, active, onClick, color }: FilterTabProps) {
   );
 }
 
+interface LabelTabProps {
+  name: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+  color?: string;
+}
+
+function LabelTab({ name, count, active, onClick, color }: LabelTabProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        'flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1.5',
+        active
+          ? 'bg-saas-primary-blue/10 text-saas-primary-blue border border-saas-primary-blue'
+          : 'bg-gray-100 text-gray-600 border border-transparent hover:bg-gray-200'
+      )}
+    >
+      {color && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />}
+      <span>{name}</span>
+      <span className={clsx('text-xs', active ? 'text-saas-primary-blue' : 'text-gray-400')}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
 interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
@@ -391,7 +583,7 @@ function ConversationItem({ conversation, isActive, onClick }: ConversationItemP
       onClick={onClick}
       className={clsx(
         'm-2 p-4 rounded-2xl cursor-pointer transition-all duration-200',
-        isActive 
+        isActive
           ? 'bg-gradient-to-br from-saas-primary-blue/10 to-saas-accent-blue/10 border-2 border-saas-primary-blue shadow-soft-sm scale-[1.02]'
           : 'bg-white hover:bg-gray-50 hover:shadow-soft-sm border border-transparent hover:border-saas-border'
       )}
