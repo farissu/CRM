@@ -13,7 +13,7 @@ interface SendBroadcastWizardProps {
 }
 
 type Step = 'template' | 'audience' | 'schedule';
-type AudienceType = 'SINGLE_NUMBER' | 'CSV' | 'CONDITION';
+type AudienceType = 'SINGLE_NUMBER' | 'CSV';
 
 const STEPS: { key: Step; label: string }[] = [
   { key: 'template', label: 'Select Template' },
@@ -21,9 +21,20 @@ const STEPS: { key: Step; label: string }[] = [
   { key: 'schedule', label: 'Set Schedule & Send' },
 ];
 
+const CSV_PREVIEW_ROW_LIMIT = 10;
+
+interface CsvPreviewRow {
+  cells: string[];
+  missingPhone: boolean;
+  hasEmptyVariable: boolean;
+}
+
 interface CsvSummary {
   rowCount: number;
   headers: string[];
+  previewRows: CsvPreviewRow[];
+  missingPhoneCount: number;
+  emptyVariableCount: number;
 }
 
 function extractBodyVariableNumbers(template: MessageTemplate | null): string[] {
@@ -167,7 +178,26 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
         setCsvErrors(['CSV is missing the required "phone_number" column']);
         return;
       }
-      setCsvSummary({ rowCount: lines.length - 1, headers });
+
+      const phoneIndex = headers.indexOf('phone_number');
+      const variableIndexes = bodyVariableNumbers.map(n => headers.indexOf(`var${n}`));
+      const dataLines = lines.slice(1);
+
+      let missingPhoneCount = 0;
+      let emptyVariableCount = 0;
+      const previewRows: CsvPreviewRow[] = [];
+
+      dataLines.forEach((line, i) => {
+        const cells = line.split(csvSeparator).map(c => c.trim());
+        const missingPhone = !cells[phoneIndex];
+        const hasEmptyVariable = variableIndexes.some(idx => idx === -1 || !cells[idx]);
+
+        if (missingPhone) missingPhoneCount += 1;
+        if (hasEmptyVariable) emptyVariableCount += 1;
+        if (i < CSV_PREVIEW_ROW_LIMIT) previewRows.push({ cells, missingPhone, hasEmptyVariable });
+      });
+
+      setCsvSummary({ rowCount: dataLines.length, headers, previewRows, missingPhoneCount, emptyVariableCount });
     };
     reader.readAsText(file);
   };
@@ -238,7 +268,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   };
 
   const categoryLabel = CATEGORIES.find(c => c.value === category)?.label ?? category;
-  const audienceLabel = audienceType === 'SINGLE_NUMBER' ? 'Single Number' : audienceType === 'CSV' ? 'By CSV' : 'By Condition';
+  const audienceLabel = audienceType === 'SINGLE_NUMBER' ? 'Single Number' : 'By CSV';
   const recipientCount = audienceType === 'SINGLE_NUMBER' ? (phoneNumber.trim() ? 1 : 0) : csvSummary?.rowCount ?? 0;
 
   const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -400,7 +430,6 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                 >
                   <option value="SINGLE_NUMBER">Single Number</option>
                   <option value="CSV">By CSV</option>
-                  <option value="CONDITION" disabled>By Condition (Coming soon)</option>
                 </select>
               </div>
 
@@ -493,6 +522,53 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                       <p className="font-semibold text-gray-700">{csvFile.name}</p>
                       {csvSummary && <p className="text-xs text-gray-500 mt-1">{csvSummary.rowCount} recipients detected</p>}
                       {csvErrors.length > 0 && <p className="text-xs text-red-600 mt-1">{csvErrors[0]}</p>}
+                    </div>
+                  )}
+
+                  {csvSummary && csvSummary.previewRows.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-semibold text-gray-700">Preview</label>
+                        {(csvSummary.missingPhoneCount > 0 || csvSummary.emptyVariableCount > 0) && (
+                          <span className="text-xs font-semibold text-red-600">
+                            {csvSummary.missingPhoneCount > 0 && `${csvSummary.missingPhoneCount} missing phone_number`}
+                            {csvSummary.missingPhoneCount > 0 && csvSummary.emptyVariableCount > 0 && ' · '}
+                            {csvSummary.emptyVariableCount > 0 && `${csvSummary.emptyVariableCount} row(s) with empty variable`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-50 text-gray-500">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-semibold">#</th>
+                              {csvSummary.headers.map(h => (
+                                <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {csvSummary.previewRows.map((row, i) => {
+                              const hasIssue = row.missingPhone || row.hasEmptyVariable;
+                              return (
+                                <tr key={i} className={hasIssue ? 'bg-red-50' : undefined}>
+                                  <td className="px-3 py-2 text-gray-400">{i + 1}</td>
+                                  {csvSummary.headers.map((h, colIdx) => (
+                                    <td key={h} className={`px-3 py-2 whitespace-nowrap ${!row.cells[colIdx] ? 'text-red-500 italic' : 'text-gray-700'}`}>
+                                      {row.cells[colIdx] || 'empty'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      {csvSummary.rowCount > CSV_PREVIEW_ROW_LIMIT && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Showing first {CSV_PREVIEW_ROW_LIMIT} of {csvSummary.rowCount} recipients
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
