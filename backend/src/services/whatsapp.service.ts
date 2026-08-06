@@ -3,6 +3,18 @@ import FormData from 'form-data';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v19.0';
 
+const SUPPORTED_MEDIA_MIME_TYPES = new Set<string>([
+  'image/jpeg', 'image/png', 'image/webp',
+  'video/mp4', 'video/3gpp',
+  'application/pdf',
+]);
+
+const FORMAT_FALLBACK_MIME_TYPE: Record<'IMAGE' | 'VIDEO' | 'DOCUMENT', string> = {
+  IMAGE: 'image/jpeg',
+  VIDEO: 'video/mp4',
+  DOCUMENT: 'application/pdf',
+};
+
 interface SendMessageParams {
   to: string;
   text?: string;
@@ -80,26 +92,50 @@ export class WhatsAppService {
    * messaging pipeline cannot reliably re-fetch Meta's own signed template-preview CDN
    * URLs (confirmed: those links 403 when WhatsApp itself tries to download them, even
    * though they're fetchable by a normal HTTP client).
+   *
+   * `expectedFormat` is used to pick a safe content-type fallback — Meta's CDN doesn't
+   * reliably return a WhatsApp-supported content-type header for every media kind (video
+   * in particular), and uploading with an unsupported/generic content-type gets rejected.
    */
-  async uploadMediaFromUrl(url: string): Promise<string> {
+  async uploadMediaFromUrl(url: string, expectedFormat?: 'IMAGE' | 'VIDEO' | 'DOCUMENT'): Promise<string> {
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
     }
 
-    const download = await axios.get<ArrayBuffer>(url, { responseType: 'arraybuffer' });
-    const mimeType = (download.headers['content-type'] as string | undefined) ?? 'application/octet-stream';
+    let download: { data: ArrayBuffer; headers: Record<string, unknown> };
+    try {
+      download = await axios.get<ArrayBuffer>(url, { responseType: 'arraybuffer' });
+    } catch (err: unknown) {
+      throw new Error(`Failed to download media from ${url}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+
+    const downloadedMimeType = (download.headers['content-type'] as string | undefined)?.split(';')[0].trim();
+    const isSupportedMimeType = downloadedMimeType ? SUPPORTED_MEDIA_MIME_TYPES.has(downloadedMimeType) : false;
+    const mimeType = isSupportedMimeType
+      ? downloadedMimeType!
+      : (expectedFormat && FORMAT_FALLBACK_MIME_TYPE[expectedFormat]) || downloadedMimeType || 'application/octet-stream';
 
     const form = new FormData();
     form.append('messaging_product', 'whatsapp');
     form.append('file', Buffer.from(download.data), { filename: 'media', contentType: mimeType });
 
-    const response = await axios.post<MetaMediaUploadResponse>(
-      `${GRAPH_API_URL}/${this.phoneNumberId}/media`,
-      form,
-      { headers: { Authorization: `Bearer ${this.accessToken}`, ...form.getHeaders() } }
-    );
+    try {
+      const response = await axios.post<MetaMediaUploadResponse>(
+        `${GRAPH_API_URL}/${this.phoneNumberId}/media`,
+        form,
+        { headers: { Authorization: `Bearer ${this.accessToken}`, ...form.getHeaders() } }
+      );
 
-    return response.data.id;
+      return response.data.id;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const metaError = err.response.data?.error;
+        throw new Error(
+          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
+        );
+      }
+      throw err;
+    }
   }
 
   async sendTemplateMessage(params: SendTemplateMessageParams): Promise<string> {

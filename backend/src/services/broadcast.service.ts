@@ -142,7 +142,7 @@ export class BroadcastService {
       if (!resolved) {
         throw new Error('Template header media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
       }
-      const mediaId = await whatsAppService.uploadMediaFromUrl(resolved.link);
+      const mediaId = await whatsAppService.uploadMediaFromUrl(resolved.link, resolved.format);
       headerMedia = { format: resolved.format, id: mediaId };
     }
 
@@ -153,7 +153,7 @@ export class BroadcastService {
         throw new Error('Carousel card media link is not ready yet — open WhatsApp Templates to refresh it, then try again.');
       }
       carouselCards = await Promise.all(
-        cardsMedia.map(async card => ({ format: card.format, id: await whatsAppService.uploadMediaFromUrl(card.link) }))
+        cardsMedia.map(async card => ({ format: card.format, id: await whatsAppService.uploadMediaFromUrl(card.link, card.format) }))
       );
     }
 

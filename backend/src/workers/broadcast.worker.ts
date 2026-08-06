@@ -144,7 +144,7 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
     }
 
     try {
-      const mediaId = await whatsAppService.uploadMediaFromUrl(headerMedia.link);
+      const mediaId = await whatsAppService.uploadMediaFromUrl(headerMedia.link, headerMedia.format);
       uploadedHeaderMedia = { format: headerMedia.format, id: mediaId, link: headerMedia.link };
     } catch (err: unknown) {
       const error = `Failed to upload header media: ${err instanceof Error ? err.message : 'Unknown error'}`;
@@ -168,7 +168,7 @@ async function processBroadcast(job: Job<BroadcastJobData>) {
 
     try {
       uploadedCarouselCards = await Promise.all(
-        cardsMedia.map(async card => ({ format: card.format, id: await whatsAppService.uploadMediaFromUrl(card.link) }))
+        cardsMedia.map(async card => ({ format: card.format, id: await whatsAppService.uploadMediaFromUrl(card.link, card.format) }))
       );
     } catch (err: unknown) {
       const error = `Failed to upload carousel card media: ${err instanceof Error ? err.message : 'Unknown error'}`;
