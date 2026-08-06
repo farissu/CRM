@@ -56,6 +56,11 @@ class SocketClient {
     this.socket?.emit('typing_stop', { conversationId });
   }
 
+  // `off*` takes the same callback reference passed to the matching `on*` so it only
+  // removes that one listener — `socket.off(event)` with no handler wipes every listener
+  // for that event on this shared singleton, which would clobber other components still
+  // listening (e.g. a list view and a detail view both subscribed to the same event).
+
   onMessageReceived(callback: (data: { conversationId: string; message: Message }) => void) {
     this.socket?.on('message_received', callback);
   }
@@ -80,28 +85,28 @@ class SocketClient {
     this.socket?.on('message_status_updated', callback);
   }
 
-  offMessageReceived() {
-    this.socket?.off('message_received');
+  offMessageReceived(callback: (data: { conversationId: string; message: Message }) => void) {
+    this.socket?.off('message_received', callback);
   }
 
-  offConversationUpdated() {
-    this.socket?.off('conversation_updated');
+  offConversationUpdated(callback: (conversation: Conversation) => void) {
+    this.socket?.off('conversation_updated', callback);
   }
 
-  offTypingStart() {
-    this.socket?.off('typing_start');
+  offTypingStart(callback: (data: { conversationId: string; agentName: string }) => void) {
+    this.socket?.off('typing_start', callback);
   }
 
-  offTypingStop() {
-    this.socket?.off('typing_stop');
+  offTypingStop(callback: (data: { conversationId: string }) => void) {
+    this.socket?.off('typing_stop', callback);
   }
 
-  offBroadcastUpdated() {
-    this.socket?.off('broadcast_updated');
+  offBroadcastUpdated(callback: (data: { broadcastId: string }) => void) {
+    this.socket?.off('broadcast_updated', callback);
   }
 
-  offMessageStatusUpdated() {
-    this.socket?.off('message_status_updated');
+  offMessageStatusUpdated(callback: (data: { messageId: string; status: MessageStatus }) => void) {
+    this.socket?.off('message_status_updated', callback);
   }
 }
 

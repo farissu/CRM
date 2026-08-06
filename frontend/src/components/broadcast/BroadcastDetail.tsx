@@ -67,13 +67,14 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
 
     // Broadcast sending runs in a background worker — re-fetch on its progress/status
     // signal so Sent/Delivered/Read/Failed and the status badge update live.
-    socketClient.onBroadcastUpdated((data) => {
+    const handleBroadcastUpdated = (data: { broadcastId: string }) => {
       if (data.broadcastId === broadcastId) void loadBroadcast();
-    });
+    };
+    socketClient.onBroadcastUpdated(handleBroadcastUpdated);
 
     return () => {
       cancelled = true;
-      socketClient.offBroadcastUpdated();
+      socketClient.offBroadcastUpdated(handleBroadcastUpdated);
     };
   }, [broadcastId]);
 

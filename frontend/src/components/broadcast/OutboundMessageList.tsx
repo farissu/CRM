@@ -91,10 +91,11 @@ export default function OutboundMessageList() {
   }, [statusFilter, search, page]);
 
   useEffect(() => {
-    socketClient.onBroadcastUpdated(() => {
+    const handleBroadcastUpdated = () => {
       void loadBroadcasts();
-    });
-    return () => socketClient.offBroadcastUpdated();
+    };
+    socketClient.onBroadcastUpdated(handleBroadcastUpdated);
+    return () => socketClient.offBroadcastUpdated(handleBroadcastUpdated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, search, page]);
 
