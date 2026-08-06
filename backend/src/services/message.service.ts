@@ -194,6 +194,8 @@ export class MessageService {
         ? (caption || text || `📎 ${messageType}`)
         : (text || caption || '');
       await conversationService.updateLastMessage(conversationId, lastMessageText);
+      // A reply just went out (manual or automated/external) — nothing is left pending.
+      await conversationService.markAsRead(conversationId);
 
       // Emit socket event
       io.emit('message_received', {

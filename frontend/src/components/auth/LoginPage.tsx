@@ -28,7 +28,11 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       onLoginSuccess(response.agent.id, response.agent.name);
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      if (err.response?.status === 429) {
+        setError('Terlalu banyak percobaan login dan dianggap sebagai spam. Silakan coba lagi dalam 15 menit.');
+      } else {
+        setError(err.response?.data?.error || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
