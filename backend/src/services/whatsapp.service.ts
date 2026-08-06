@@ -118,11 +118,17 @@ export class WhatsAppService {
       throw new Error(`Failed to download media from ${url}: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
 
+    // Meta's CDN does not reliably report the correct content-type for template header
+    // example media — confirmed: a VIDEO header's example link came back labeled
+    // "image/jpeg" while serving the actual video bytes (same byte length as the
+    // originally uploaded video). When we already know the true format from the
+    // template's own component data, trust that over whatever the CDN claims.
     const downloadedMimeType = (download.headers['content-type'] as string | undefined)?.split(';')[0].trim();
-    const isSupportedMimeType = downloadedMimeType ? SUPPORTED_MEDIA_MIME_TYPES.has(downloadedMimeType) : false;
-    const mimeType = isSupportedMimeType
-      ? downloadedMimeType!
-      : (expectedFormat && FORMAT_FALLBACK_MIME_TYPE[expectedFormat]) || downloadedMimeType || 'application/octet-stream';
+    const mimeType =
+      (expectedFormat && FORMAT_FALLBACK_MIME_TYPE[expectedFormat]) ||
+      (downloadedMimeType && SUPPORTED_MEDIA_MIME_TYPES.has(downloadedMimeType) ? downloadedMimeType : undefined) ||
+      downloadedMimeType ||
+      'application/octet-stream';
     const filename = `media${MIME_TYPE_EXTENSION[mimeType] ?? ''}`;
 
     const form = new FormData();
