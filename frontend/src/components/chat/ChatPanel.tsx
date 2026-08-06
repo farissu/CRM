@@ -5,6 +5,7 @@ import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ManageLabelsModal from './ManageLabelsModal';
 import ConfirmDialog from './ConfirmDialog';
+import SendTemplateModal from './SendTemplateModal';
 
 // Helper function to format date for separator
 function formatDateSeparator(date: Date): string {
@@ -69,7 +70,6 @@ interface ChatPanelProps {
   onTypingStop: () => void;
   onResolveConversation?: () => void;
   onConversationUpdate?: () => void;
-  onSendBroadcast?: () => void;
   onSendCsat?: () => Promise<void>;
   typingIndicator?: { agentName: string } | null;
 }
@@ -83,7 +83,6 @@ export default function ChatPanel({
   onTypingStop,
   onResolveConversation,
   onConversationUpdate,
-  onSendBroadcast,
   onSendCsat,
   typingIndicator,
 }: ChatPanelProps) {
@@ -92,6 +91,7 @@ export default function ChatPanel({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
+  const [showSendTemplateModal, setShowSendTemplateModal] = useState(false);
   const [sendingCsat, setSendingCsat] = useState(false);
   const [showCsatConfirm, setShowCsatConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -323,7 +323,7 @@ export default function ChatPanel({
             has expired. You can send a broadcast to start the conversation.
           </p>
           <button
-            onClick={onSendBroadcast}
+            onClick={() => setShowSendTemplateModal(true)}
             className="shrink-0 bg-[#2d9c8f] hover:bg-[#258577] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all"
           >
             Send Broadcast
@@ -344,6 +344,18 @@ export default function ChatPanel({
         isOpen={showLabelsModal}
         onClose={() => setShowLabelsModal(false)}
         onLabelsUpdated={() => {
+          if (onConversationUpdate) {
+            onConversationUpdate();
+          }
+        }}
+      />
+
+      {/* Send Template Modal (for expired customer service window) */}
+      <SendTemplateModal
+        contact={conversation.contact}
+        isOpen={showSendTemplateModal}
+        onClose={() => setShowSendTemplateModal(false)}
+        onSent={() => {
           if (onConversationUpdate) {
             onConversationUpdate();
           }

@@ -93,6 +93,11 @@ async function sendToRecipient(
     });
     await conversationService.updateLastMessage(conversation.id, lastMessageText);
 
+    io.emit('message_received', {
+      conversationId: conversation.id,
+      message,
+    });
+
     await broadcastService.markRecipientResult(recipient.id, {
       status: BroadcastRecipientStatus.SENT,
       messageId: message.id,

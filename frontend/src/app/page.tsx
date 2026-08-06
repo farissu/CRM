@@ -69,7 +69,6 @@ export default function HomePage() {
             onTypingStop={handleTypingStop}
             onResolveConversation={handleResolveConversation}
             onConversationUpdate={loadConversations}
-            onSendBroadcast={() => setActiveTab('broadcast')}
             onSendCsat={handleSendCsat}
             typingIndicator={typingIndicator}
           />
