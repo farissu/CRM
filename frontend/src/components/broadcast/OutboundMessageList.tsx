@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Megaphone, Search, Filter as FilterIcon, Plus, Calendar, Hourglass, List, Send, CheckSquare, XCircle, Ban } from 'lucide-react';
+import { Megaphone, Search, Filter as FilterIcon, Plus, Calendar, Hourglass, List, Send, CheckSquare, XCircle, Ban, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Broadcast, BroadcastStatus } from '@/types';
 import { broadcastApi } from '@/lib/api';
@@ -230,8 +230,30 @@ export default function OutboundMessageList() {
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-100">
-                <td colSpan={9} className="px-5 py-2.5 text-xs text-gray-400 text-right">
-                  {page} / {totalPages} · {total} broadcasts
+                <td colSpan={9} className="px-5 py-2.5">
+                  <div className="flex items-center justify-end gap-3">
+                    <span className="text-xs text-gray-400">{page} / {totalPages} · {total} broadcasts</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                        aria-label="Previous page"
+                        className="p-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages}
+                        aria-label="Next page"
+                        className="p-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tfoot>

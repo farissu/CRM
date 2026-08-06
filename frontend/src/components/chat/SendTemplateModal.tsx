@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, ChevronDown, Check, Send, CheckCircle2 } from 'lucide-react';
+import { X, ChevronDown, Check, Send, CheckCircle2, Image as ImageIcon, Video as VideoIcon, FileText } from 'lucide-react';
 import type { Contact, MessageTemplate, TemplateCategory } from '@/types';
 import { templateApi, broadcastApi } from '@/lib/api';
 import { CATEGORIES } from '@/lib/templateConstants';
@@ -100,6 +100,10 @@ export default function SendTemplateModal({ contact, isOpen, onClose, onSent }: 
   };
 
   const bodyComponent = selectedTemplate?.components.find(c => c.type === 'BODY');
+  const headerComponent = selectedTemplate?.components.find(c => c.type === 'HEADER');
+  const headerMediaUrl =
+    headerComponent?.format && headerComponent.format !== 'TEXT' ? headerComponent.example?.header_handle?.[0] : undefined;
+  const isResolvableMediaUrl = Boolean(headerMediaUrl?.startsWith('http'));
 
   return (
     <>
@@ -221,11 +225,34 @@ export default function SendTemplateModal({ contact, isOpen, onClose, onSent }: 
                   </div>
                 )}
 
-                {selectedTemplate && bodyComponent?.text && (
+                {selectedTemplate && (headerComponent || bodyComponent?.text) && (
                   <div className="bg-[#ede7dc] rounded-xl p-3">
                     <p className="text-xs font-bold text-gray-500 mb-2">Preview</p>
                     <div className="bg-white rounded-xl shadow-sm p-3">
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{substituteVariables(bodyComponent.text, variables)}</p>
+                      {headerComponent?.format && headerComponent.format !== 'TEXT' && (
+                        <div className="mb-2">
+                          {isResolvableMediaUrl && headerComponent.format === 'IMAGE' && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={headerMediaUrl} alt="" className="w-full rounded-lg max-h-40 object-cover" />
+                          )}
+                          {isResolvableMediaUrl && headerComponent.format === 'VIDEO' && (
+                            <video src={headerMediaUrl} className="w-full rounded-lg max-h-40" controls />
+                          )}
+                          {(!isResolvableMediaUrl || headerComponent.format === 'DOCUMENT') && (
+                            <div className="flex items-center justify-center bg-gray-100 rounded-lg h-24 text-gray-300">
+                              {headerComponent.format === 'IMAGE' && <ImageIcon className="w-6 h-6" />}
+                              {headerComponent.format === 'VIDEO' && <VideoIcon className="w-6 h-6" />}
+                              {headerComponent.format === 'DOCUMENT' && <FileText className="w-6 h-6" />}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {headerComponent?.format === 'TEXT' && headerComponent.text && (
+                        <p className="font-bold text-gray-900 text-sm mb-1">{headerComponent.text}</p>
+                      )}
+                      {bodyComponent?.text && (
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{substituteVariables(bodyComponent.text, variables)}</p>
+                      )}
                     </div>
                   </div>
                 )}
