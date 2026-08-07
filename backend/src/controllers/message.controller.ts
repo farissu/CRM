@@ -46,6 +46,7 @@ interface WhatsAppMessage {
   button?: { text: string };
   interactive?: { button_reply?: { title: string }; list_reply?: { title: string } };
   context?: { id: string };
+  reaction?: { message_id: string; emoji?: string };
 }
 
 function extractContactName(contacts: WhatsAppContact[] | undefined, from: string): string {
@@ -107,7 +108,11 @@ async function extractMediaContent(message: WhatsAppMessage): Promise<{
     return { text: title };
   }
 
-  return { text: '' };
+  if (type === 'reaction') {
+    return { text: message.reaction?.emoji ? `Reacted ${message.reaction.emoji}` : 'Reacted to a message' };
+  }
+
+  return { text: '📎 Unsupported message' };
 }
 
 interface WhatsAppStatus {
