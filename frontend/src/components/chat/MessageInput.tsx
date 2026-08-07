@@ -38,6 +38,16 @@ export default function MessageInput({
       .catch(() => {});
   }, []);
 
+  // Resize the textarea whenever the message content changes — covers direct
+  // typing/pasting as well as programmatic sets (quick reply, emoji insert)
+  // that don't fire a native `input` event.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 96)}px`;
+  }, [message]);
+
   const handleSelectQuickReply = (quickReply: QuickReply) => {
     setMessage(quickReply.text);
     setShowQuickReplyPicker(false);
@@ -309,11 +319,6 @@ export default function MessageInput({
           rows={1}
           className="flex-1 resize-none bg-saas-bg border-2 border-saas-border rounded-2xl px-5 py-3.5 focus:outline-none focus:border-saas-primary-blue text-sm disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200 font-medium placeholder:text-gray-400"
           style={{ minHeight: '48px', maxHeight: '96px' }}
-          onInput={(e) => {
-            const target = e.target as HTMLTextAreaElement;
-            target.style.height = 'auto';
-            target.style.height = `${Math.min(target.scrollHeight, 96)}px`;
-          }}
         />
         <button
           onClick={handleSend}
