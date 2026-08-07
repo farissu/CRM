@@ -4,7 +4,6 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import jwt from 'jsonwebtoken';
-import { rateLimit } from 'express-rate-limit';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import { connectDatabase } from './config/database';
@@ -16,8 +15,8 @@ dotenv.config();
 
 // Create Express app
 const app = express();
-// Trust the first hop (Nginx reverse proxy) so req.ip / express-rate-limit see the
-// real client IP from X-Forwarded-For instead of lumping every visitor together.
+// Trust the first hop (Nginx reverse proxy) so req.ip reflects the real client IP
+// from X-Forwarded-For instead of the proxy's address.
 app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
@@ -44,12 +43,6 @@ app.use(morgan('dev'));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-// Rate limiting
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
-app.use('/api', apiLimiter);
-app.use('/api/auth/login', authLimiter);
 
 // Serve uploaded media files — JWT required
 app.use('/uploads', (req, res, next) => {
