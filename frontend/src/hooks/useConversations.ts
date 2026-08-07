@@ -21,6 +21,9 @@ interface UseConversationsReturn {
   loadingMoreConversations: boolean;
   hasMoreConversations: boolean;
   loadingMessages: boolean;
+  hasMoreMessages: boolean;
+  loadingMoreMessages: boolean;
+  loadMoreMessages: () => Promise<void>;
   typingIndicator: { agentName: string } | null;
   handleSelectConversation: (conversation: Conversation) => Promise<void>;
   handleSendMessage: (text: string, file?: File, quotedMessageId?: string) => Promise<void>;
@@ -41,10 +44,13 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
   const [typingIndicator, setTypingIndicator] = useState<{ agentName: string } | null>(null);
 
   const pageRef = useRef(1);
   const isFetchingMoreRef = useRef(false);
+  const messagesPageRef = useRef(1);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -92,12 +98,32 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   const loadMessages = async (conversationId: string) => {
     try {
       setLoadingMessages(true);
-      const response = await messageApi.getMessages(conversationId, { limit: 100 });
+      messagesPageRef.current = 1;
+      const response = await messageApi.getMessages(conversationId, { page: 1, limit: 100 });
       setMessages(response.messages);
+      setHasMoreMessages(response.page < response.totalPages);
       await conversationApi.markAsRead(conversationId);
       setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
     } finally {
       setLoadingMessages(false);
+    }
+  };
+
+  const loadMoreMessages = async () => {
+    if (!activeConversation || loadingMoreMessages || !hasMoreMessages) return;
+    setLoadingMoreMessages(true);
+    try {
+      const nextPage = messagesPageRef.current + 1;
+      const response = await messageApi.getMessages(activeConversation.id, { page: nextPage, limit: 100 });
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id));
+        const older = response.messages.filter(m => !existingIds.has(m.id));
+        return [...older, ...prev];
+      });
+      messagesPageRef.current = nextPage;
+      setHasMoreMessages(nextPage < response.totalPages);
+    } finally {
+      setLoadingMoreMessages(false);
     }
   };
 
@@ -209,7 +235,8 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
 
   return {
     conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
-    hasMoreConversations, loadingMessages, typingIndicator, handleSelectConversation,
+    hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
+    typingIndicator, handleSelectConversation,
     handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
     setConversations, loadConversations, loadMoreConversations,
   };

@@ -65,6 +65,9 @@ interface ChatPanelProps {
   conversation: Conversation | null;
   messages: Message[];
   loading?: boolean;
+  hasMoreMessages?: boolean;
+  loadingMoreMessages?: boolean;
+  onLoadMoreMessages?: () => void;
   onSendMessage: (text: string, file?: File, quotedMessageId?: string) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
@@ -78,6 +81,9 @@ export default function ChatPanel({
   conversation,
   messages,
   loading,
+  hasMoreMessages,
+  loadingMoreMessages,
+  onLoadMoreMessages,
   onSendMessage,
   onTypingStart,
   onTypingStop,
@@ -88,6 +94,9 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const isPrependingRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -101,12 +110,47 @@ export default function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  const handleLoadMoreMessages = () => {
+    if (!onLoadMoreMessages || loadingMoreMessages || !hasMoreMessages) return;
+    const container = messagesContainerRef.current;
+    if (container) prevScrollHeightRef.current = container.scrollHeight;
+    isPrependingRef.current = true;
+    onLoadMoreMessages();
+  };
+
   useEffect(() => {
+    // Loading older history prepends messages above what's visible — restore
+    // the scroll offset so the content the user was reading doesn't jump.
+    if (isPrependingRef.current) {
+      isPrependingRef.current = false;
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight - prevScrollHeightRef.current;
+      }
+      return;
+    }
     // Jump instantly once the message list actually finishes rendering
     // (right after `loading` flips to false) so opening a conversation
     // always lands on the latest message, not wherever it happened to render.
     if (!loading) scrollToBottom('auto');
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (!onLoadMoreMessages || !hasMoreMessages) return;
+    const sentinel = topSentinelRef.current;
+    const root = messagesContainerRef.current;
+    if (!sentinel || !root) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) handleLoadMoreMessages();
+      },
+      { root, rootMargin: '150px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [onLoadMoreMessages, hasMoreMessages, loadingMoreMessages, conversation?.id]);
 
   useEffect(() => {
     setReplyingTo(null);
@@ -254,6 +298,12 @@ export default function ChatPanel({
           </div>
         ) : (
           <>
+            {hasMoreMessages && <div ref={topSentinelRef} className="h-1" />}
+            {loadingMoreMessages && (
+              <div className="py-3 flex justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-saas-primary-blue border-t-transparent"></div>
+              </div>
+            )}
             {messages.map((message, index) => {
               // Check if we need to show date separator
               let showDateSeparator = false;

@@ -89,12 +89,15 @@ export class MessageService {
   async getMessages(conversationId: string, page = 1, limit = 50) {
     const skip = (page - 1) * limit;
 
+    // Page through from the newest message backward so page 1 always contains
+    // the most recent activity (what a chat UI should open on), then reverse
+    // back to chronological order for display.
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
         where: { conversationId },
         include: MESSAGE_INCLUDE,
         orderBy: {
-          timestamp: 'asc'
+          timestamp: 'desc'
         },
         skip,
         take: limit
@@ -103,7 +106,7 @@ export class MessageService {
     ]);
 
     return {
-      messages,
+      messages: messages.reverse(),
       total,
       page,
       totalPages: Math.ceil(total / limit)

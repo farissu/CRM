@@ -35,7 +35,8 @@ export default function HomePage() {
 
   const {
     conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
-    hasMoreConversations, loadingMessages, typingIndicator, handleSelectConversation,
+    hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
+    typingIndicator, handleSelectConversation,
     handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
     loadConversations, loadMoreConversations,
   } = useConversations({ isAuthenticated, agentId, agentName });
@@ -80,6 +81,9 @@ export default function HomePage() {
             conversation={activeConversation}
             messages={messages}
             loading={loadingMessages}
+            hasMoreMessages={hasMoreMessages}
+            loadingMoreMessages={loadingMoreMessages}
+            onLoadMoreMessages={loadMoreMessages}
             onSendMessage={handleSendMessage}
             onTypingStart={handleTypingStart}
             onTypingStop={handleTypingStop}
