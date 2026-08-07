@@ -163,7 +163,7 @@ export default function DashboardPanel() {
   return (
     <div className="flex-1 flex flex-col bg-saas-bg overflow-y-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-saas-primary-blue to-saas-secondary-blue text-white px-8 py-6 shadow-soft">
+      <div className="bg-saas-secondary-blue text-white px-8 py-6 shadow-soft">
         <h1 className="text-3xl font-bold leading-none">Dashboard</h1>
         <p className="text-sm text-white/80 font-medium mt-1">Business insights and analytics</p>
       </div>

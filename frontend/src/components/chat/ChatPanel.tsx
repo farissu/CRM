@@ -162,7 +162,7 @@ export default function ChatPanel({
   return (
     <div className="flex-1 flex flex-col h-full bg-saas-bg">
       {/* Header */}
-      <div className="bg-gradient-to-r from-saas-primary-blue to-saas-secondary-blue text-white px-6 py-4 flex items-center justify-between shadow-soft">
+      <div className="bg-saas-secondary-blue text-white px-6 py-4 flex items-center justify-between shadow-soft">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 shadow-soft-sm">
             <span className="text-xl font-bold">

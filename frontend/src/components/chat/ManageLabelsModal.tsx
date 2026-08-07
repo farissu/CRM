@@ -82,7 +82,7 @@ export default function ManageLabelsModal({
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-3xl shadow-soft max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-r from-saas-primary-blue to-saas-secondary-blue text-white px-6 py-5 flex items-center justify-between">
+          <div className="bg-saas-secondary-blue text-white px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <Tag className="w-5 h-5" />

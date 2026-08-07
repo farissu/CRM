@@ -149,7 +149,7 @@ export default function ConversationSidebar({
   return (
     <div className="w-96 bg-white border-r border-saas-border flex flex-col h-full shadow-soft-sm">
       {/* Header */}
-      <div className="bg-gradient-to-r from-saas-primary-blue to-saas-secondary-blue text-white px-6 py-5">
+      <div className="bg-saas-secondary-blue text-white px-6 py-5">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold leading-none">WAKU</h2>
           <div className="flex items-center gap-2">

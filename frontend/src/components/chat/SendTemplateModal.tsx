@@ -105,7 +105,7 @@ export default function SendTemplateModal({ contact, isOpen, onClose, onSent }: 
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-3xl shadow-soft max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
-          <div className="bg-gradient-to-r from-saas-primary-blue to-saas-secondary-blue text-white px-6 py-5 flex items-center justify-between shrink-0">
+          <div className="bg-saas-secondary-blue text-white px-6 py-5 flex items-center justify-between shrink-0">
             <div>
               <h2 className="text-xl font-bold">Send Template Message</h2>
               <p className="text-sm text-white/80">{contact.name || contact.phoneNumber}</p>
