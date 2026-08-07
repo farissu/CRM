@@ -1,23 +1,90 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download, X, ExternalLink } from 'lucide-react';
+import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download, X, ExternalLink, MoreVertical, Reply } from 'lucide-react';
 import type { Message } from '@/types';
 import clsx from 'clsx';
 
 interface MessageBubbleProps {
   message: Message;
+  onReply?: (message: Message) => void;
 }
 
-export default function MessageBubble({ message }: MessageBubbleProps) {
+function quotedPreviewText(quoted: NonNullable<Message['quotedMessage']>): string {
+  if (quoted.text || quoted.caption) return quoted.text || quoted.caption || '';
+  const LABELS: Record<string, string> = {
+    IMAGE: '📷 Photo',
+    VIDEO: '🎥 Video',
+    DOCUMENT: '📄 Document',
+    AUDIO: '🎵 Audio',
+    STICKER: '✨ Sticker',
+  };
+  return LABELS[quoted.messageType] || '';
+}
+
+function QuotedMessagePreview({ quoted }: { quoted: NonNullable<Message['quotedMessage']> }) {
+  return (
+    <div className="mb-2 rounded-lg border-l-4 border-saas-primary-blue/50 bg-black/5 px-3 py-1.5">
+      <p className="text-xs font-semibold text-saas-primary-blue">
+        {quoted.direction === 'OUTBOUND' ? (quoted.sender?.name || 'You') : 'Customer'}
+      </p>
+      <p className="text-xs text-gray-600 truncate">{quotedPreviewText(quoted)}</p>
+    </div>
+  );
+}
+
+interface MessageMenuProps {
+  menuRef: React.RefObject<HTMLDivElement>;
+  showMenu: boolean;
+  setShowMenu: (show: boolean) => void;
+  onReply: () => void;
+}
+
+function MessageMenu({ menuRef, showMenu, setShowMenu, onReply }: MessageMenuProps) {
+  return (
+    <div ref={menuRef} className="relative self-center opacity-0 group-hover:opacity-100 transition-opacity">
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className="p-1 rounded-full hover:bg-gray-200 text-gray-500"
+        aria-label="Message options"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+      {showMenu && (
+        <div className="absolute z-20 top-full right-0 mt-1 w-32 bg-white border border-saas-border rounded-xl shadow-soft py-1">
+          <button
+            onClick={onReply}
+            className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <Reply className="w-4 h-4" />
+            Reply
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function MessageBubble({ message, onReply }: MessageBubbleProps) {
   const isOutbound = message.direction === 'OUTBOUND';
   const timestamp = format(new Date(message.timestamp), 'HH:mm');
   const hasMedia = message.messageType !== 'TEXT' && message.mediaUrl;
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   return (
     <div
       className={clsx(
-        'flex mb-3 px-4',
+        'group flex mb-3 px-4 items-center gap-1',
         isOutbound ? 'justify-end' : 'justify-start'
       )}
     >
@@ -30,6 +97,13 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             : 'bg-saas-chat-agent text-saas-text-primary border border-saas-border'
         )}
       >
+        {/* Quoted reply preview */}
+        {message.quotedMessage && (
+          <div className={hasMedia ? 'px-5 pt-3' : ''}>
+            <QuotedMessagePreview quoted={message.quotedMessage} />
+          </div>
+        )}
+
         {/* Media Content */}
         {hasMedia && <MediaContent message={message} />}
 
@@ -83,6 +157,14 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         )}
       </div>
+      {onReply && !isOutbound && (
+        <MessageMenu
+          menuRef={menuRef}
+          showMenu={showMenu}
+          setShowMenu={setShowMenu}
+          onReply={() => { onReply(message); setShowMenu(false); }}
+        />
+      )}
     </div>
   );
 }

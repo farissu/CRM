@@ -38,7 +38,28 @@ interface SendMessageParams {
   caption?: string;
   buttonText?: string;
   buttonUrl?: string;
+  quotedMessageId?: string;
 }
+
+const MESSAGE_INCLUDE = {
+  sender: {
+    select: {
+      id: true,
+      name: true,
+      email: true
+    }
+  },
+  quotedMessage: {
+    select: {
+      id: true,
+      text: true,
+      caption: true,
+      messageType: true,
+      direction: true,
+      sender: { select: { id: true, name: true } }
+    }
+  }
+} as const;
 
 interface ReceiveMessageParams {
   phoneNumber: string;
@@ -52,6 +73,7 @@ interface ReceiveMessageParams {
   fileName?: string;
   fileSize?: number;
   caption?: string;
+  quotedExternalId?: string;
 }
 
 export class MessageService {
@@ -64,15 +86,7 @@ export class MessageService {
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
         where: { conversationId },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        },
+        include: MESSAGE_INCLUDE,
         orderBy: {
           timestamp: 'asc'
         },
@@ -126,7 +140,11 @@ export class MessageService {
     conversation: { id: string; contact: { phoneNumber: string } },
     params: SendMessageParams
   ) {
-    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption, buttonText, buttonUrl } = params;
+    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption, buttonText, buttonUrl, quotedMessageId } = params;
+
+    const quotedMessage = quotedMessageId
+      ? await prisma.message.findUnique({ where: { id: quotedMessageId }, select: { externalId: true } })
+      : null;
 
     // Create message record
     const message = await prisma.message.create({
@@ -141,17 +159,10 @@ export class MessageService {
         mediaType,
         fileName,
         fileSize,
-        caption
+        caption,
+        quotedMessageId
       },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      }
+      include: MESSAGE_INCLUDE
     });
 
     // Send via WhatsApp Cloud API
@@ -165,7 +176,8 @@ export class MessageService {
         caption,
         fileName,
         buttonText,
-        buttonUrl
+        buttonUrl,
+        quotedExternalId: quotedMessage?.externalId ?? undefined
       });
 
       // Update message status
@@ -178,15 +190,7 @@ export class MessageService {
             ...(buttonUrl && { interactive: { type: 'cta_url', buttonText, buttonUrl } })
           }
         },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
+        include: MESSAGE_INCLUDE
       });
 
       // Update conversation last message
@@ -227,11 +231,11 @@ export class MessageService {
    * Receive inbound message (from webhook)
    */
   async receiveMessage(params: ReceiveMessageParams) {
-    const { phoneNumber, text, contactName, timestamp, messageType, externalId, mediaUrl, mediaType, fileName, fileSize, caption } = params;
+    const { phoneNumber, text, contactName, timestamp, messageType, externalId, mediaUrl, mediaType, fileName, fileSize, caption, quotedExternalId } = params;
 
     // Deduplication: skip if we already processed this WhatsApp message
     if (externalId) {
-      const existing = await prisma.message.findUnique({ where: { externalId } });
+      const existing = await prisma.message.findUnique({ where: { externalId }, include: MESSAGE_INCLUDE });
       if (existing) return existing;
     }
 
@@ -239,6 +243,10 @@ export class MessageService {
     const conversation = await conversationService.getOrCreateConversation(phoneNumber, contactName);
 
     const resolvedType = toMessageType(messageType);
+
+    const quotedMessage = quotedExternalId
+      ? await prisma.message.findUnique({ where: { externalId: quotedExternalId }, select: { id: true } })
+      : null;
 
     // Create message record
     const message = await prisma.message.create({
@@ -254,8 +262,10 @@ export class MessageService {
         mediaType,
         fileName,
         fileSize,
-        caption
-      }
+        caption,
+        quotedMessageId: quotedMessage?.id
+      },
+      include: MESSAGE_INCLUDE
     });
 
     // Update conversation

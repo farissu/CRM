@@ -65,7 +65,7 @@ interface ChatPanelProps {
   conversation: Conversation | null;
   messages: Message[];
   loading?: boolean;
-  onSendMessage: (text: string, file?: File) => void;
+  onSendMessage: (text: string, file?: File, quotedMessageId?: string) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
   onResolveConversation?: () => void;
@@ -89,6 +89,7 @@ export default function ChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
   const [showSendTemplateModal, setShowSendTemplateModal] = useState(false);
@@ -106,6 +107,10 @@ export default function ChatPanel({
     // always lands on the latest message, not wherever it happened to render.
     if (!loading) scrollToBottom('auto');
   }, [messages, loading]);
+
+  useEffect(() => {
+    setReplyingTo(null);
+  }, [conversation?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -267,7 +272,7 @@ export default function ChatPanel({
                   {showDateSeparator && (
                     <DateSeparator date={formatDateSeparator(new Date(message.timestamp))} />
                   )}
-                  <MessageBubble message={message} />
+                  <MessageBubble message={message} onReply={setReplyingTo} />
                 </React.Fragment>
               );
             })}
@@ -335,6 +340,8 @@ export default function ChatPanel({
           onTypingStart={onTypingStart}
           onTypingStop={onTypingStop}
           disabled={conversation.status === 'RESOLVED'}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
         />
       )}
 

@@ -70,6 +70,7 @@ export const messageApi = {
     fileName?: string;
     fileSize?: number;
     caption?: string;
+    quotedMessageId?: string;
   }): Promise<Message> => {
     const response = await api.post('/messages', data);
     return response.data;

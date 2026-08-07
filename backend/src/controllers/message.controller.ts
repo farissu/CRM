@@ -45,6 +45,7 @@ interface WhatsAppMessage {
   sticker?: WhatsAppMediaPayload;
   button?: { text: string };
   interactive?: { button_reply?: { title: string }; list_reply?: { title: string } };
+  context?: { id: string };
 }
 
 function extractContactName(contacts: WhatsAppContact[] | undefined, from: string): string {
@@ -153,6 +154,7 @@ async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsA
     mediaType,
     fileName,
     caption,
+    quotedExternalId: message.context?.id,
   });
 }
 
@@ -186,7 +188,7 @@ export class MessageController {
 
   async sendMessage(req: Request, res: Response) {
     try {
-      const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption } = req.body;
+      const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption, quotedMessageId } = req.body;
       const message = await messageService.sendMessage({
         conversationId,
         text,
@@ -197,6 +199,7 @@ export class MessageController {
         fileName,
         fileSize,
         caption,
+        quotedMessageId,
       });
       res.status(201).json(message);
     } catch (err: unknown) {

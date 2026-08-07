@@ -101,6 +101,15 @@ export interface Message {
   metadata?: {
     interactive?: { buttonText?: string; buttonUrl?: string };
   } | null;
+  quotedMessageId?: string | null;
+  quotedMessage?: {
+    id: string;
+    text: string | null;
+    caption?: string | null;
+    messageType: MessageType;
+    direction: MessageDirection;
+    sender?: { id: string; name: string } | null;
+  } | null;
 }
 
 export type TemplateCategory = 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';

@@ -33,6 +33,7 @@ interface SendMessageParams {
   fileName?: string;
   buttonText?: string;
   buttonUrl?: string;
+  quotedExternalId?: string;
 }
 
 interface MetaMessageResponse {
@@ -64,13 +65,13 @@ export class WhatsAppService {
   }
 
   async sendMessage(params: SendMessageParams): Promise<string> {
-    const { to, text, messageType = 'text', mediaUrl, caption, fileName, buttonText, buttonUrl } = params;
+    const { to, text, messageType = 'text', mediaUrl, caption, fileName, buttonText, buttonUrl, quotedExternalId } = params;
 
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
     }
 
-    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName, buttonText, buttonUrl);
+    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName, buttonText, buttonUrl, quotedExternalId);
 
     try {
       const response = await axios.post<MetaMessageResponse>(
@@ -235,12 +236,14 @@ export class WhatsAppService {
     caption?: string,
     fileName?: string,
     buttonText?: string,
-    buttonUrl?: string
+    buttonUrl?: string,
+    quotedExternalId?: string
   ): Record<string, unknown> {
     const base = {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
-      to
+      to,
+      ...(quotedExternalId && { context: { message_id: quotedExternalId } })
     };
 
     if (messageType === 'interactive' && buttonUrl) {

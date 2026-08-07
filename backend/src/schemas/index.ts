@@ -16,6 +16,7 @@ export const sendMessageSchema = z
     fileName: z.string().optional(),
     fileSize: z.number().int().nonnegative().optional(),
     caption: z.string().optional(),
+    quotedMessageId: z.string().min(1).optional(),
   })
   .refine((data) => Boolean(data.text?.trim()) || Boolean(data.mediaUrl), {
     message: 'text or mediaUrl is required',

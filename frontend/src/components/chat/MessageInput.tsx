@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, Image, FileText, Video, Music, MessageSquareText } from 'lucide-react';
-import type { QuickReply } from '@/types';
+import { Send, Paperclip, X, Image, FileText, Video, Music, MessageSquareText, Reply } from 'lucide-react';
+import type { QuickReply, Message } from '@/types';
 import { quickReplyApi } from '@/lib/api';
 
 interface MessageInputProps {
-  onSendMessage: (text: string, file?: File) => void;
+  onSendMessage: (text: string, file?: File, quotedMessageId?: string) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
   disabled?: boolean;
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 export default function MessageInput({
@@ -15,6 +17,8 @@ export default function MessageInput({
   onTypingStart,
   onTypingStop,
   disabled,
+  replyingTo,
+  onCancelReply,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -62,17 +66,18 @@ export default function MessageInput({
 
   const handleSend = () => {
     if ((message.trim() || selectedFile) && !disabled) {
-      onSendMessage(message.trim(), selectedFile ?? undefined);
+      onSendMessage(message.trim(), selectedFile ?? undefined, replyingTo?.id);
 
       setMessage('');
       setSelectedFile(null);
       setFilePreview(null);
-      
+      onCancelReply?.();
+
       // Reset textarea height to minimum
       if (textareaRef.current) {
         textareaRef.current.style.height = '48px';
       }
-      
+
       // Stop typing indicator
       if (isTyping) {
         setIsTyping(false);
@@ -133,8 +138,34 @@ export default function MessageInput({
     };
   }, []);
 
+  useEffect(() => {
+    if (replyingTo) textareaRef.current?.focus();
+  }, [replyingTo]);
+
   return (
     <div className="bg-white border-t border-saas-border px-6 py-4">
+      {/* Reply banner */}
+      {replyingTo && (
+        <div className="mb-3 flex items-center gap-3 rounded-xl border border-saas-border bg-gray-50 px-4 py-2.5">
+          <Reply className="w-4 h-4 text-saas-primary-blue shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-saas-primary-blue">
+              Replying to {replyingTo.direction === 'OUTBOUND' ? (replyingTo.sender?.name || 'You') : 'Customer'}
+            </p>
+            <p className="text-xs text-gray-600 truncate">
+              {replyingTo.text || replyingTo.caption || `📎 ${replyingTo.messageType.toLowerCase()}`}
+            </p>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="p-1 hover:bg-gray-200 rounded-lg transition-colors shrink-0"
+            aria-label="Cancel reply"
+          >
+            <X className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
+      )}
+
       {/* File Preview */}
       {selectedFile && (
         <div className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200">

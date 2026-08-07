@@ -23,7 +23,7 @@ interface UseConversationsReturn {
   loadingMessages: boolean;
   typingIndicator: { agentName: string } | null;
   handleSelectConversation: (conversation: Conversation) => Promise<void>;
-  handleSendMessage: (text: string, file?: File) => Promise<void>;
+  handleSendMessage: (text: string, file?: File, quotedMessageId?: string) => Promise<void>;
   handleResolveConversation: () => Promise<void>;
   handleSendCsat: () => Promise<void>;
   handleTypingStart: () => void;
@@ -107,7 +107,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     socketClient.joinConversation(conversation.id);
   };
 
-  const handleSendMessage = async (text: string, file?: File) => {
+  const handleSendMessage = async (text: string, file?: File, quotedMessageId?: string) => {
     if (!activeConversation) return;
     try {
       if (file) {
@@ -121,9 +121,10 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
           fileName: uploaded.fileName,
           fileSize: uploaded.fileSize,
           caption: text || undefined,
+          quotedMessageId,
         });
       } else {
-        await messageApi.sendMessage({ conversationId: activeConversation.id, text, senderId: agentId });
+        await messageApi.sendMessage({ conversationId: activeConversation.id, text, senderId: agentId, quotedMessageId });
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;

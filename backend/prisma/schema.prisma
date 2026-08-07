@@ -201,30 +201,34 @@ model Conversation {
 }
 
 model Message {
-  id             String           @id @default(uuid())
-  conversationId String
-  externalId     String?          @unique
-  direction      MessageDirection
-  text           String?
-  messageType    MessageType      @default(TEXT)
-  status         MessageStatus?   @default(SENT)
-  senderId       String?
-  mediaUrl       String?
-  mediaType      String?
-  fileName       String?
-  fileSize       Int?
-  caption        String?
-  metadata       Json?
-  timestamp      DateTime         @default(now())
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id              String           @id @default(uuid())
+  conversationId  String
+  externalId      String?          @unique
+  direction       MessageDirection
+  text            String?
+  messageType     MessageType      @default(TEXT)
+  status          MessageStatus?   @default(SENT)
+  senderId        String?
+  mediaUrl        String?
+  mediaType       String?
+  fileName        String?
+  fileSize        Int?
+  caption         String?
+  metadata        Json?
+  quotedMessageId String?
+  timestamp       DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   conversation        Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender              Agent?              @relation(fields: [senderId], references: [id], onDelete: SetNull)
   broadcastRecipient  BroadcastRecipient?
+  quotedMessage        Message?            @relation("MessageReplies", fields: [quotedMessageId], references: [id], onDelete: SetNull)
+  replies              Message[]           @relation("MessageReplies")
 
   @@index([conversationId])
   @@index([timestamp])
+  @@index([quotedMessageId])
   @@map("messages")
 }
 
