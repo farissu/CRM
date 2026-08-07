@@ -92,7 +92,7 @@ export default function TemplateDetail({ template, onBack }: TemplateDetailProps
   return (
     <div className="p-8">
       <div className="flex items-center gap-1.5 text-sm text-gray-400 mb-4">
-        <button onClick={onBack} className="flex items-center gap-1 text-[#2d9c8f] font-semibold hover:opacity-80 transition-opacity">
+        <button onClick={onBack} className="flex items-center gap-1 text-[#597ea3] font-semibold hover:opacity-80 transition-opacity">
           <ChevronLeft className="w-4 h-4" />
           WhatsApp Template
         </button>
@@ -124,7 +124,7 @@ export default function TemplateDetail({ template, onBack }: TemplateDetailProps
           <div className="flex items-center justify-between mb-3">
             <p className="font-bold text-gray-800">Preview</p>
             {isResolvableMediaUrl && (
-              <button onClick={handleCopyMediaLink} className="flex items-center gap-1.5 text-xs font-semibold text-[#2d9c8f] hover:opacity-80 transition-opacity">
+              <button onClick={handleCopyMediaLink} className="flex items-center gap-1.5 text-xs font-semibold text-[#597ea3] hover:opacity-80 transition-opacity">
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied!' : 'Copy Media Link'}
               </button>

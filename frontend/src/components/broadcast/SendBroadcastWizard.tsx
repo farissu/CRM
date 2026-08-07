@@ -298,7 +298,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#f7f9fc] p-8">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-[#2d9c8f] font-semibold text-sm mb-4 hover:opacity-80 transition-opacity">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-[#597ea3] font-semibold text-sm mb-4 hover:opacity-80 transition-opacity">
         <ChevronLeft className="w-4 h-4" />
         Outbound Message List
       </button>
@@ -309,7 +309,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
         <div className="flex items-center gap-6 flex-wrap">
           {STEPS.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i <= stepIndex ? 'bg-[#2d9c8f] text-white' : 'bg-gray-100 text-gray-400'}`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i <= stepIndex ? 'bg-[#597ea3] text-white' : 'bg-gray-100 text-gray-400'}`}>
                 {i + 1}
               </span>
               <span className={`text-sm font-semibold whitespace-nowrap ${i === stepIndex ? 'text-gray-900' : 'text-gray-400'}`}>{s.label}</span>
@@ -321,14 +321,14 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
             {stepIndex === 0 ? 'Cancel' : 'Previous'}
           </button>
           {step !== 'schedule' ? (
-            <button onClick={goNext} className="px-8 py-2 bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all">
+            <button onClick={goNext} className="px-8 py-2 bg-[#597ea3] text-white rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all">
               Next
             </button>
           ) : (
             <button
               onClick={() => void handleSubmit()}
               disabled={submitting}
-              className="px-8 py-2 bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold hover:bg-[#258577] disabled:opacity-50 transition-all"
+              className="px-8 py-2 bg-[#597ea3] text-white rounded-lg text-sm font-semibold hover:bg-[#416180] disabled:opacity-50 transition-all"
             >
               {submitting ? 'Sending...' : scheduleMode === 'later' ? 'Schedule Broadcast' : 'Send Broadcast'}
             </button>
@@ -351,13 +351,13 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                   value={broadcastName}
                   onChange={e => setBroadcastName(e.target.value)}
                   onBlur={() => setEditingName(false)}
-                  className="text-lg font-bold text-gray-900 border-b border-[#2d9c8f] focus:outline-none"
+                  className="text-lg font-bold text-gray-900 border-b border-[#597ea3] focus:outline-none"
                 />
               ) : (
                 <p className="text-lg font-bold text-gray-900">{broadcastName}</p>
               )}
             </div>
-            <button onClick={() => setEditingName(true)} className="text-[#2d9c8f] text-sm font-semibold hover:opacity-80 transition-opacity">
+            <button onClick={() => setEditingName(true)} className="text-[#597ea3] text-sm font-semibold hover:opacity-80 transition-opacity">
               Edit Name
             </button>
           </div>
@@ -373,7 +373,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                 <select
                   value={category}
                   onChange={e => { setCategory(e.target.value as TemplateCategory); setSelectedTemplate(null); }}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                 >
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
@@ -387,7 +387,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                     setTemplateDropdownOpen(opening);
                     if (opening) void loadTemplates();
                   }}
-                  className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
+                  className="w-full flex items-center justify-between px-4 py-3 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none"
                 >
                   <span className={selectedTemplate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
                     {selectedTemplate ? selectedTemplate.name : 'Select a template'}
@@ -405,7 +405,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                           value={templateSearch}
                           onChange={e => setTemplateSearch(e.target.value)}
                           placeholder="Search template name"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none"
                         />
                       </div>
                       {templatesLoading ? (
@@ -413,7 +413,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                       ) : templatesError ? (
                         <div className="px-4 py-3">
                           <p className="text-sm text-red-600 mb-1.5">{templatesError}</p>
-                          <button type="button" onClick={() => void loadTemplates()} className="text-xs font-semibold text-[#2d9c8f] hover:opacity-80">
+                          <button type="button" onClick={() => void loadTemplates()} className="text-xs font-semibold text-[#597ea3] hover:opacity-80">
                             Retry
                           </button>
                         </div>
@@ -427,7 +427,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                               className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
                             >
                               {t.name}
-                              {selectedTemplate?.id === t.id && <Check className="w-4 h-4 text-[#2d9c8f]" />}
+                              {selectedTemplate?.id === t.id && <Check className="w-4 h-4 text-[#597ea3]" />}
                             </button>
                           ))}
                           {filteredTemplates.length === 0 && (
@@ -449,7 +449,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                 <select
                   value={audienceType}
                   onChange={e => setAudienceType(e.target.value as AudienceType)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                 >
                   <option value="SINGLE_NUMBER">Single Number</option>
                   <option value="CSV">By CSV</option>
@@ -466,7 +466,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                       value={phoneNumber}
                       onChange={e => setPhoneNumber(normalizePhoneInput(e.target.value))}
                       placeholder="62812xxxxxxx"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                     />
                   </div>
                   <div>
@@ -476,7 +476,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                       value={recipientName}
                       onChange={e => setRecipientName(e.target.value)}
                       placeholder="e.g. Budi Santoso"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                     />
                     <p className="text-xs text-gray-400 mt-1">Shown as the contact name in Conversations instead of the phone number.</p>
                   </div>
@@ -492,7 +492,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                               value={variables[n] ?? ''}
                               onChange={e => setVariables(p => ({ ...p, [n]: e.target.value }))}
                               placeholder={`Value for {{${n}}}`}
-                              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                             />
                           </div>
                         ))}
@@ -505,15 +505,15 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
               {audienceType === 'CSV' && (
                 <div className="space-y-4">
                   <div className="space-y-2 text-sm text-gray-600">
-                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#2d9c8f] mt-0.5" />Send a Broadcast Message from CSV (Max 100,000 customers)</p>
-                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#2d9c8f] mt-0.5" />Please use the correct CSV format. We recommend using Google Sheets for editing.</p>
-                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#2d9c8f] mt-0.5" />To send a broadcast message, please use the downloaded CSV file below. It has been designed according to your template structure.</p>
+                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />Send a Broadcast Message from CSV (Max 100,000 customers)</p>
+                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />Please use the correct CSV format. We recommend using Google Sheets for editing.</p>
+                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />To send a broadcast message, please use the downloaded CSV file below. It has been designed according to your template structure.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => void handleDownloadCsvTemplate()}
                     disabled={!selectedTemplate}
-                    className="bg-[#2d9c8f] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#258577] disabled:opacity-50 transition-all"
+                    className="bg-[#597ea3] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#416180] disabled:opacity-50 transition-all"
                   >
                     Download CSV Template
                   </button>
@@ -523,7 +523,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                     <select
                       value={csvSeparator}
                       onChange={e => setCsvSeparator(e.target.value as ',' | ';')}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                     >
                       <option value=",">Comma ( , )</option>
                       <option value=";">Semicolon ( ; )</option>
@@ -537,11 +537,11 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                       onDragLeave={handleCsvDragLeave}
                       onDrop={handleCsvDrop}
                       className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer transition-colors ${
-                        isDraggingCsv ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-[#2d9c8f]/40 hover:bg-[#f0faf9]'
+                        isDraggingCsv ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-[#597ea3]/40 hover:bg-[#f0faf9]'
                       }`}
                     >
                       <Upload className="w-5 h-5 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-600">Drag and Drop file here or <span className="text-[#2d9c8f] font-semibold">Choose File</span></span>
+                      <span className="text-sm text-gray-600">Drag and Drop file here or <span className="text-[#597ea3] font-semibold">Choose File</span></span>
                       <input type="file" accept=".csv" className="hidden" onChange={handleCsvFileChange} />
                     </label>
                     <p className="text-xs text-gray-400 mt-1">Supported File: CSV</p>
@@ -619,16 +619,16 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
           {step === 'schedule' && (
             <div className="space-y-5">
               <div className="flex gap-3">
-                <label className={`flex-1 border rounded-lg p-4 cursor-pointer transition-all ${scheduleMode === 'now' ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
+                <label className={`flex-1 border rounded-lg p-4 cursor-pointer transition-all ${scheduleMode === 'now' ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <input type="radio" name="scheduleMode" checked={scheduleMode === 'now'} onChange={() => setScheduleMode('now')} className="accent-[#2d9c8f]" />
+                    <input type="radio" name="scheduleMode" checked={scheduleMode === 'now'} onChange={() => setScheduleMode('now')} className="accent-[#597ea3]" />
                     <span className="font-semibold text-sm text-gray-800">Send Now</span>
                   </div>
                   <p className="text-xs text-gray-500">Broadcast will be sent immediately after you confirm.</p>
                 </label>
-                <label className={`flex-1 border rounded-lg p-4 cursor-pointer transition-all ${scheduleMode === 'later' ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
+                <label className={`flex-1 border rounded-lg p-4 cursor-pointer transition-all ${scheduleMode === 'later' ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <input type="radio" name="scheduleMode" checked={scheduleMode === 'later'} onChange={() => setScheduleMode('later')} className="accent-[#2d9c8f]" />
+                    <input type="radio" name="scheduleMode" checked={scheduleMode === 'later'} onChange={() => setScheduleMode('later')} className="accent-[#597ea3]" />
                     <span className="font-semibold text-sm text-gray-800">Schedule for later</span>
                   </div>
                   <p className="text-xs text-gray-500">Pick a date and time to send this broadcast automatically.</p>
@@ -643,7 +643,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                     value={scheduledAt}
                     min={nowLocal}
                     onChange={e => setScheduledAt(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                   />
                 </div>
               )}
@@ -666,11 +666,11 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
         </div>
 
         <div className="space-y-4 sticky top-0">
-          <div className="bg-[#e8f5f3] border border-[#2d9c8f]/30 rounded-xl p-4 flex items-center justify-between">
+          <div className="bg-[#eef6ff] border border-[#597ea3]/30 rounded-xl p-4 flex items-center justify-between">
             <p className="font-bold text-gray-800 text-sm">Try Your Broadcast</p>
             <button
               onClick={() => setShowTestPanel(v => !v)}
-              className="text-xs font-semibold text-[#2d9c8f] border border-[#2d9c8f] rounded-full px-3 py-1 hover:bg-white transition-colors"
+              className="text-xs font-semibold text-[#597ea3] border border-[#597ea3] rounded-full px-3 py-1 hover:bg-white transition-colors"
             >
               Test Broadcast
             </button>
@@ -684,12 +684,12 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                 value={testPhone}
                 onChange={e => setTestPhone(normalizePhoneInput(e.target.value))}
                 placeholder="62812xxxxxxx"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none"
               />
               <button
                 onClick={() => void handleSendTest()}
                 disabled={!selectedTemplate || !testPhone.trim() || testSending}
-                className="w-full bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold py-2 disabled:opacity-50 transition-all"
+                className="w-full bg-[#597ea3] text-white rounded-lg text-sm font-semibold py-2 disabled:opacity-50 transition-all"
               >
                 {testSending ? 'Sending...' : 'Send Test'}
               </button>
@@ -716,8 +716,8 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-soft max-w-sm w-full p-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-[#e8f5f3] flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-7 h-7 text-[#2d9c8f]" />
+              <div className="w-14 h-14 rounded-full bg-[#eef6ff] flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-7 h-7 text-[#597ea3]" />
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-1.5">
                 {submitResult === 'scheduled' ? 'Broadcast Scheduled' : 'Broadcast Queued'}
@@ -729,7 +729,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
               </p>
               <button
                 onClick={onSuccess}
-                className="w-full px-6 py-2.5 bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all"
+                className="w-full px-6 py-2.5 bg-[#597ea3] text-white rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all"
               >
                 Done
               </button>

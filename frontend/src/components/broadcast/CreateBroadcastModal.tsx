@@ -51,7 +51,7 @@ export default function CreateBroadcastModal({ isOpen, onCancel, onNext }: Creat
                   value={name}
                   onChange={e => setName(e.target.value.slice(0, MAX_LENGTH))}
                   placeholder="Type your broadcast name"
-                  className="w-full px-4 py-3 pr-14 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                  className="w-full px-4 py-3 pr-14 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                 />
                 <span className="absolute right-3 bottom-2.5 text-xs text-gray-400">{name.length}/{MAX_LENGTH}</span>
               </div>
@@ -65,7 +65,7 @@ export default function CreateBroadcastModal({ isOpen, onCancel, onNext }: Creat
                   value={label}
                   onChange={e => setLabel(e.target.value.slice(0, MAX_LENGTH))}
                   placeholder="Type your broadcast label"
-                  className="w-full px-4 py-3 pr-14 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                  className="w-full px-4 py-3 pr-14 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                 />
                 <span className="absolute right-3 bottom-2.5 text-xs text-gray-400">{label.length}/{MAX_LENGTH}</span>
               </div>
@@ -82,7 +82,7 @@ export default function CreateBroadcastModal({ isOpen, onCancel, onNext }: Creat
             <button
               onClick={handleNext}
               disabled={!name.trim()}
-              className="px-8 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#2d9c8f] hover:bg-[#258577] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-8 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#597ea3] hover:bg-[#416180] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Next
             </button>

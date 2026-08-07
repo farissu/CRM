@@ -139,16 +139,16 @@ export default function BroadcastPanel() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search template name"
-                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
+                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none"
                   />
                   <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35" /></svg>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => void handleSync()} disabled={syncing} className="flex items-center gap-1.5 text-[#2d9c8f] font-semibold text-sm hover:opacity-80 disabled:opacity-50 transition-opacity">
+                  <button onClick={() => void handleSync()} disabled={syncing} className="flex items-center gap-1.5 text-[#597ea3] font-semibold text-sm hover:opacity-80 disabled:opacity-50 transition-opacity">
                     <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                     Sync Now
                   </button>
-                  <button onClick={() => setShowWizard(true)} className="flex items-center gap-1.5 bg-[#2d9c8f] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all">
+                  <button onClick={() => setShowWizard(true)} className="flex items-center gap-1.5 bg-[#597ea3] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all">
                     <Plus className="w-4 h-4" />
                     New Template
                   </button>
@@ -167,7 +167,7 @@ export default function BroadcastPanel() {
                     {search ? 'No templates match your search.' : 'No templates yet. Create your first template to get started.'}
                   </p>
                   {!search && (
-                    <button onClick={() => setShowWizard(true)} className="inline-flex items-center gap-2 bg-[#2d9c8f] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all">
+                    <button onClick={() => setShowWizard(true)} className="inline-flex items-center gap-2 bg-[#597ea3] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all">
                       <Plus className="w-4 h-4" />New Template
                     </button>
                   )}
@@ -188,7 +188,7 @@ export default function BroadcastPanel() {
                     {filtered.map(t => (
                       <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                         <td className="px-5 py-4">
-                          <button onClick={() => setSelectedTemplate(t)} className="text-[#2d9c8f] font-semibold hover:underline">{t.name}</button>
+                          <button onClick={() => setSelectedTemplate(t)} className="text-[#597ea3] font-semibold hover:underline">{t.name}</button>
                         </td>
                         <td className="px-5 py-4 text-gray-700">Sharing Happiness</td>
                         <td className="px-5 py-4 text-gray-700 font-medium">
@@ -201,8 +201,8 @@ export default function BroadcastPanel() {
                           </span>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#e8f5f3] text-[#2d9c8f]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#2d9c8f] shrink-0" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#eef6ff] text-[#597ea3]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#597ea3] shrink-0" />
                             {t.language === 'id' ? 'Indonesian' : t.language === 'en_US' ? 'English (US)' : t.language}
                           </span>
                         </td>
@@ -256,11 +256,11 @@ function NavBtn({ icon, label, active, onClick }: { icon: React.ReactNode; label
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left group ${active ? 'bg-[#e8f5f3] text-[#2d9c8f] font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'}`}
+      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left group ${active ? 'bg-[#eef6ff] text-[#597ea3] font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'}`}
     >
-      <span className={active ? 'text-[#2d9c8f]' : 'text-gray-400 group-hover:text-gray-600'}>{icon}</span>
+      <span className={active ? 'text-[#597ea3]' : 'text-gray-400 group-hover:text-gray-600'}>{icon}</span>
       <span className="flex-1 leading-tight">{label}</span>
-      {active && <ChevronRight className="w-3.5 h-3.5 text-[#2d9c8f] shrink-0" />}
+      {active && <ChevronRight className="w-3.5 h-3.5 text-[#597ea3] shrink-0" />}
     </button>
   );
 }

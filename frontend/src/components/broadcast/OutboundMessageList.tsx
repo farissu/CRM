@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<BroadcastStatus, string> = {
   SCHEDULED: 'bg-blue-100 text-blue-700',
   PREPARING: 'bg-yellow-100 text-yellow-700',
   ON_QUEUE: 'bg-yellow-100 text-yellow-700',
-  SENDING: 'bg-[#e8f5f3] text-[#2d9c8f]',
+  SENDING: 'bg-[#eef6ff] text-[#597ea3]',
   FINISHED: 'bg-green-100 text-green-700',
   UNFINISHED: 'bg-orange-100 text-orange-700',
   FAILED: 'bg-red-100 text-red-700',
@@ -39,7 +39,7 @@ const STATUS_DOT: Record<BroadcastStatus, string> = {
   SCHEDULED: 'bg-blue-500',
   PREPARING: 'bg-yellow-500',
   ON_QUEUE: 'bg-yellow-500',
-  SENDING: 'bg-[#2d9c8f]',
+  SENDING: 'bg-[#597ea3]',
   FINISHED: 'bg-green-500',
   UNFINISHED: 'bg-orange-500',
   FAILED: 'bg-red-500',
@@ -126,7 +126,7 @@ export default function OutboundMessageList() {
         <h2 className="text-2xl font-bold text-gray-900">Outbound Message</h2>
       </div>
 
-      <div className="bg-[#e8f5f3] border border-[#2d9c8f]/20 rounded-xl px-5 py-3 mb-6 text-sm text-gray-700">
+      <div className="bg-[#eef6ff] border border-[#597ea3]/20 rounded-xl px-5 py-3 mb-6 text-sm text-gray-700">
         This is where you manage and send WhatsApp broadcast messages to your customers.
       </div>
 
@@ -140,7 +140,7 @@ export default function OutboundMessageList() {
                 key={tab.key}
                 onClick={() => { setStatusFilter(tab.key); setPage(1); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all mb-3 ${
-                  active ? 'bg-[#2d9c8f] text-white border-[#2d9c8f]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                  active ? 'bg-[#597ea3] text-white border-[#597ea3]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -157,7 +157,7 @@ export default function OutboundMessageList() {
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
               placeholder="Search broadcast name"
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
@@ -168,7 +168,7 @@ export default function OutboundMessageList() {
             </button>
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-1.5 bg-[#2d9c8f] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all"
+              className="flex items-center gap-1.5 bg-[#597ea3] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all"
             >
               <Plus className="w-4 h-4" />
               New Broadcast
@@ -191,7 +191,7 @@ export default function OutboundMessageList() {
             {!search && statusFilter === 'ALL' && (
               <button
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 bg-[#2d9c8f] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all"
+                className="inline-flex items-center gap-2 bg-[#597ea3] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all"
               >
                 <Plus className="w-4 h-4" />New Broadcast
               </button>
@@ -219,7 +219,7 @@ export default function OutboundMessageList() {
                   onClick={() => setSelectedBroadcastId(b.id)}
                   className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  <td className="px-5 py-4 text-[#2d9c8f] font-semibold hover:underline">{b.name}</td>
+                  <td className="px-5 py-4 text-[#597ea3] font-semibold hover:underline">{b.name}</td>
                   <td className="px-5 py-4 text-gray-700">{b.template?.name ?? '-'}</td>
                   <td className="px-5 py-4 text-gray-700 font-medium">
                     {b.template ? b.template.category.charAt(0) + b.template.category.slice(1).toLowerCase() : '-'}

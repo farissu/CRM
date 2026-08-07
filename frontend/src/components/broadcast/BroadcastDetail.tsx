@@ -17,7 +17,7 @@ const STATUS_COLORS: Record<BroadcastStatus, string> = {
   SCHEDULED: 'bg-blue-100 text-blue-700',
   PREPARING: 'bg-yellow-100 text-yellow-700',
   ON_QUEUE: 'bg-yellow-100 text-yellow-700',
-  SENDING: 'bg-[#e8f5f3] text-[#2d9c8f]',
+  SENDING: 'bg-[#eef6ff] text-[#597ea3]',
   FINISHED: 'bg-green-100 text-green-700',
   UNFINISHED: 'bg-orange-100 text-orange-700',
   FAILED: 'bg-red-100 text-red-700',
@@ -108,7 +108,7 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
 
   return (
     <div className="p-8">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-[#2d9c8f] font-semibold text-sm mb-4 hover:opacity-80 transition-opacity">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-[#597ea3] font-semibold text-sm mb-4 hover:opacity-80 transition-opacity">
         <ChevronLeft className="w-4 h-4" />
         Outbound Message List
       </button>
@@ -168,7 +168,7 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
                 <div className="space-y-2">
                   {[
                     { label: 'Sent', value: broadcast.sentCount, icon: Send, color: 'text-blue-500' },
-                    { label: 'Delivered', value: broadcast.deliveredCount, icon: CheckCircle2, color: 'text-[#2d9c8f]' },
+                    { label: 'Delivered', value: broadcast.deliveredCount, icon: CheckCircle2, color: 'text-[#597ea3]' },
                     { label: 'Read', value: broadcast.readCount, icon: CheckCheck, color: 'text-green-600' },
                     { label: 'Failed', value: broadcast.failedCount, icon: XCircle, color: 'text-red-500' },
                   ].map(row => (
@@ -204,7 +204,7 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
               <h3 className="font-bold text-gray-800">Broadcast Logs</h3>
               <button
                 onClick={handleDownloadLog}
-                className="flex items-center gap-1.5 text-[#2d9c8f] font-semibold text-sm hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1.5 text-[#597ea3] font-semibold text-sm hover:opacity-80 transition-opacity"
               >
                 <Download className="w-4 h-4" />
                 Download Broadcast Log

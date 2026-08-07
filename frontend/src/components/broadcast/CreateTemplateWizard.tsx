@@ -383,7 +383,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#f7f9fc] p-8">
-      <button onClick={goBack} className="flex items-center gap-1.5 text-[#2d9c8f] font-semibold text-sm mb-6 hover:opacity-80 transition-opacity">
+      <button onClick={goBack} className="flex items-center gap-1.5 text-[#597ea3] font-semibold text-sm mb-6 hover:opacity-80 transition-opacity">
         <ChevronLeft className="w-4 h-4" />
         Back to previous page
       </button>
@@ -394,7 +394,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
       {/* Progress bar */}
       <div className="relative h-2 bg-[#c8ede9] rounded-full mb-8">
         <div
-          className="absolute left-0 top-0 h-2 bg-[#2d9c8f] rounded-full transition-all duration-500"
+          className="absolute left-0 top-0 h-2 bg-[#597ea3] rounded-full transition-all duration-500"
           style={{ width: `${((stepIndex) / (STEPS.length - 1)) * 100}%` }}
         />
         {STEPS.slice(1, -1).map((_, i) => {
@@ -403,7 +403,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
           return (
             <div
               key={i}
-              className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 transition-all ${passed ? 'bg-[#2d9c8f] border-[#2d9c8f]' : 'bg-white border-gray-300'}`}
+              className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 transition-all ${passed ? 'bg-[#597ea3] border-[#597ea3]' : 'bg-white border-gray-300'}`}
               style={{ left: `calc(${pct}% - 6px)` }}
             />
           );
@@ -430,7 +430,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                   value={form.name}
                   onChange={e => setForm(p => ({ ...p, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') }))}
                   placeholder="Type the name of your message template"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                 />
                 <p className="text-xs text-gray-400 mt-1">Only lowercase letters, numbers, and underscores</p>
               </div>
@@ -439,14 +439,14 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                 <div className="space-y-2">
                   {CATEGORIES.map(cat => (
                     <div key={cat.value}>
-                      <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-all ${form.category === cat.value ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <label className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-all ${form.category === cat.value ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
                         <input
                           type="radio"
                           name="category"
                           value={cat.value}
                           checked={form.category === cat.value}
                           onChange={() => setForm(p => ({ ...p, category: cat.value, messageType: cat.value === 'MARKETING' ? p.messageType : 'GENERAL' }))}
-                          className="mt-0.5 accent-[#2d9c8f]"
+                          className="mt-0.5 accent-[#597ea3]"
                         />
                         <div>
                           <div className="font-semibold text-sm text-gray-800">{cat.label}</div>
@@ -456,14 +456,14 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                       {cat.value === 'MARKETING' && form.category === 'MARKETING' && (
                         <div className="ml-4 mt-2 space-y-2 border-l-2 border-[#c8ede9] pl-4">
                           {MARKETING_MESSAGE_TYPES.map(mt => (
-                            <label key={mt.value} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${form.messageType === mt.value ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
+                            <label key={mt.value} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${form.messageType === mt.value ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}>
                               <input
                                 type="radio"
                                 name="messageType"
                                 value={mt.value}
                                 checked={form.messageType === mt.value}
                                 onChange={() => setForm(p => ({ ...p, messageType: mt.value }))}
-                                className="mt-0.5 accent-[#2d9c8f]"
+                                className="mt-0.5 accent-[#597ea3]"
                               />
                               <div>
                                 <div className="font-semibold text-sm text-gray-800">{mt.label}</div>
@@ -479,7 +479,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Languages</label>
-                <select value={form.language} onChange={e => setForm(p => ({ ...p, language: e.target.value }))} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm">
+                <select value={form.language} onChange={e => setForm(p => ({ ...p, language: e.target.value }))} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm">
                   {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                 </select>
               </div>
@@ -498,7 +498,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                   setHeaderMediaError(null);
                   setForm(p => ({ ...p, headerType, headerMediaFile: null, headerMediaHandle: null, headerMediaPreviewUrl: null }));
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm mb-3"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm mb-3"
               >
                 <option value="NONE">None</option>
                 <option value="TEXT">Text</option>
@@ -506,7 +506,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
               </select>
 
               {form.headerType === 'TEXT' && (
-                <input type="text" value={form.headerText} onChange={e => setForm(p => ({ ...p, headerText: e.target.value }))} placeholder="Enter header text" maxLength={60} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm" />
+                <input type="text" value={form.headerText} onChange={e => setForm(p => ({ ...p, headerText: e.target.value }))} placeholder="Enter header text" maxLength={60} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm" />
               )}
 
               {form.headerType === 'MEDIA' && (
@@ -522,9 +522,9 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                           setHeaderMediaError(null);
                           setForm(p => ({ ...p, headerMediaType: mt.value, headerMediaFile: null, headerMediaHandle: null, headerMediaPreviewUrl: null }));
                         }}
-                        className={`flex flex-col items-center gap-1.5 py-6 border rounded-lg transition-all ${form.headerMediaType === mt.value ? 'border-[#2d9c8f] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}
+                        className={`flex flex-col items-center gap-1.5 py-6 border rounded-lg transition-all ${form.headerMediaType === mt.value ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-gray-200 hover:border-gray-300'}`}
                       >
-                        <mt.icon className="w-5 h-5 text-[#2d9c8f]" />
+                        <mt.icon className="w-5 h-5 text-[#597ea3]" />
                         <span className="text-sm font-medium text-gray-700">{mt.label}</span>
                       </button>
                     ))}
@@ -570,7 +570,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Body</h3>
               <p className="text-sm text-gray-500 mb-4">Enter the text for your message in the language you&apos;ve selected.</p>
-              <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:border-[#2d9c8f] transition-colors">
+              <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:border-[#597ea3] transition-colors">
                 <textarea
                   ref={bodyRef}
                   value={form.bodyText}
@@ -584,7 +584,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                   <button
                     type="button"
                     onClick={insertVariable}
-                    className="flex items-center gap-1.5 text-[#2d9c8f] font-semibold text-xs hover:opacity-80 transition-opacity px-2 py-1 rounded hover:bg-[#e8f5f3]"
+                    className="flex items-center gap-1.5 text-[#597ea3] font-semibold text-xs hover:opacity-80 transition-opacity px-2 py-1 rounded hover:bg-[#eef6ff]"
                   >
                     <span className="text-base leading-none">+</span>
                     Add Variable
@@ -605,7 +605,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                           value={form.bodySamples[num] ?? ''}
                           onChange={e => setForm(p => ({ ...p, bodySamples: { ...p.bodySamples, [num]: e.target.value } }))}
                           placeholder={`Type content for {{${num}}}`}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                         />
                       </div>
                     ))}
@@ -619,7 +619,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
             <div>
               <h3 className="font-bold text-gray-800 mb-1">Footer <span className="font-normal text-gray-400">Optional</span></h3>
               <p className="text-sm text-gray-500 mb-4">Add a short line of text at the bottom of your message template.</p>
-              <input type="text" value={form.footerText} onChange={e => setForm(p => ({ ...p, footerText: e.target.value }))} placeholder="Enter your text" maxLength={60} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm" />
+              <input type="text" value={form.footerText} onChange={e => setForm(p => ({ ...p, footerText: e.target.value }))} placeholder="Enter your text" maxLength={60} className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm" />
               <p className="text-xs text-gray-400 text-right mt-1">{form.footerText.length}/60</p>
             </div>
           )}
@@ -634,7 +634,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                   const bt = e.target.value as FormState['buttonType'];
                   setForm(p => ({ ...p, buttonType: bt, buttons: bt === 'NONE' ? [] : bt === 'QUICK_REPLY' ? [{ text: '' }] : [{ text: '', actionType: 'URL' as const, url: '' }] }));
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm mb-4"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm mb-4"
               >
                 <option value="NONE">None</option>
                 <option value="CALL_TO_ACTION">Call to action</option>
@@ -644,27 +644,27 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                 <div className="space-y-2">
                   {form.buttons.map((btn, i) => (
                     <div key={i} className="flex gap-2 items-center">
-                      <input type="text" value={btn.text} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, text: e.target.value } : b) }))} placeholder="Button text" maxLength={25} className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm" />
+                      <input type="text" value={btn.text} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, text: e.target.value } : b) }))} placeholder="Button text" maxLength={25} className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm" />
                       <button onClick={() => setForm(p => ({ ...p, buttons: p.buttons.filter((_, bi) => bi !== i) }))} className="text-gray-300 hover:text-red-400 text-xl font-bold leading-none">×</button>
                     </div>
                   ))}
-                  {form.buttons.length < 3 && <button onClick={() => setForm(p => ({ ...p, buttons: [...p.buttons, { text: '' }] }))} className="text-sm text-[#2d9c8f] font-semibold hover:opacity-80">+ Add button</button>}
+                  {form.buttons.length < 3 && <button onClick={() => setForm(p => ({ ...p, buttons: [...p.buttons, { text: '' }] }))} className="text-sm text-[#597ea3] font-semibold hover:opacity-80">+ Add button</button>}
                 </div>
               )}
               {form.buttonType === 'CALL_TO_ACTION' && (
                 <div className="space-y-3">
                   {form.buttons.map((btn, i) => (
                     <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-2">
-                      <select value={btn.actionType} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, actionType: e.target.value as 'URL' | 'PHONE' } : b) }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none">
+                      <select value={btn.actionType} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, actionType: e.target.value as 'URL' | 'PHONE' } : b) }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none">
                         <option value="URL">Visit Website</option>
                         <option value="PHONE">Call Phone Number</option>
                       </select>
-                      <input type="text" value={btn.text} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, text: e.target.value } : b) }))} placeholder="Button text" maxLength={25} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none" />
-                      {btn.actionType === 'URL' && <input type="url" value={btn.url ?? ''} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, url: e.target.value } : b) }))} placeholder="https://..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none" />}
-                      {btn.actionType === 'PHONE' && <input type="tel" value={btn.phone ?? ''} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, phone: e.target.value } : b) }))} placeholder="+62..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#2d9c8f] focus:outline-none" />}
+                      <input type="text" value={btn.text} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, text: e.target.value } : b) }))} placeholder="Button text" maxLength={25} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none" />
+                      {btn.actionType === 'URL' && <input type="url" value={btn.url ?? ''} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, url: e.target.value } : b) }))} placeholder="https://..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none" />}
+                      {btn.actionType === 'PHONE' && <input type="tel" value={btn.phone ?? ''} onChange={e => setForm(p => ({ ...p, buttons: p.buttons.map((b, bi) => bi === i ? { ...b, phone: e.target.value } : b) }))} placeholder="+62..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#597ea3] focus:outline-none" />}
                     </div>
                   ))}
-                  {form.buttons.length < 2 && <button onClick={() => setForm(p => ({ ...p, buttons: [...p.buttons, { text: '', actionType: 'URL', url: '' }] }))} className="text-sm text-[#2d9c8f] font-semibold hover:opacity-80">+ Add button</button>}
+                  {form.buttons.length < 2 && <button onClick={() => setForm(p => ({ ...p, buttons: [...p.buttons, { text: '', actionType: 'URL', url: '' }] }))} className="text-sm text-[#597ea3] font-semibold hover:opacity-80">+ Add button</button>}
                 </div>
               )}
             </div>
@@ -690,7 +690,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                         };
                       });
                     }}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                   >
                     <option value="IMAGE">Image</option>
                     <option value="VIDEO">Video</option>
@@ -701,7 +701,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                   <select
                     value={form.carouselButtonFormat}
                     onChange={e => setForm(p => ({ ...p, carouselButtonFormat: e.target.value as CarouselButtonFormat }))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                   >
                     <option value="URL">URL Button</option>
                     <option value="QUICK_REPLY">Quick Reply Button</option>
@@ -717,7 +717,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                     key={card.id}
                     type="button"
                     onClick={() => setForm(p => ({ ...p, carouselActiveCardId: card.id }))}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${form.carouselActiveCardId === card.id ? 'bg-[#2d9c8f] text-white border-[#2d9c8f]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${form.carouselActiveCardId === card.id ? 'bg-[#597ea3] text-white border-[#597ea3]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
                   >
                     Card {i + 1}
                     {form.carouselCards.length > 1 && (
@@ -732,7 +732,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                   <button
                     type="button"
                     onClick={addCarouselCard}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold border border-dashed border-gray-300 text-gray-500 hover:border-[#2d9c8f] hover:text-[#2d9c8f] transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold border border-dashed border-gray-300 text-gray-500 hover:border-[#597ea3] hover:text-[#597ea3] transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Card
                   </button>
@@ -743,7 +743,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                 <div className="border border-gray-200 rounded-lg p-4 space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Header</label>
-                    <label className="block w-full text-center px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#2d9c8f] hover:bg-[#258577] cursor-pointer transition-colors">
+                    <label className="block w-full text-center px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#597ea3] hover:bg-[#416180] cursor-pointer transition-colors">
                       {activeCarouselCard.headerFile ? activeCarouselCard.headerFile.name : `Choose ${form.carouselHeaderFormat === 'IMAGE' ? 'JPG or PNG' : 'MP4 or 3GP'} File`}
                       <input
                         type="file"
@@ -766,7 +766,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                       rows={3}
                       maxLength={160}
                       placeholder="Enter the card body text"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm resize-none"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm resize-none"
                     />
                     <p className="text-xs text-gray-400 text-right mt-1">{activeCarouselCard.bodyText.length}/160</p>
                   </div>
@@ -782,7 +782,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                       onChange={e => updateCarouselCard(activeCarouselCard.id, { buttonText: e.target.value })}
                       placeholder="Button text"
                       maxLength={25}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm mb-3"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm mb-3"
                     />
                     {form.carouselButtonFormat === 'URL' && (
                       <>
@@ -792,7 +792,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                           value={activeCarouselCard.buttonUrl}
                           onChange={e => updateCarouselCard(activeCarouselCard.id, { buttonUrl: e.target.value })}
                           placeholder="www.qiscus.com"
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#2d9c8f] focus:outline-none text-sm"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                         />
                       </>
                     )}
@@ -819,7 +819,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                     <div className="px-4 py-3 font-semibold text-gray-800">{v}</div>
                   </div>
                 ))}
-                <div className="border border-[#2d9c8f] m-3 rounded-lg p-4">
+                <div className="border border-[#597ea3] m-3 rounded-lg p-4">
                   <p className="text-xs text-gray-400 mb-1">Content</p>
                   {isCarouselFlow(form.category, form.messageType) ? (
                     <>
@@ -841,7 +841,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                             </div>
                             <div className="p-2">
                               <p className="text-xs text-gray-700 truncate">{card.bodyText || `Card ${i + 1}`}</p>
-                              {card.buttonText && <p className="text-xs text-[#2d9c8f] font-semibold truncate mt-1">{card.buttonText}</p>}
+                              {card.buttonText && <p className="text-xs text-[#597ea3] font-semibold truncate mt-1">{card.buttonText}</p>}
                             </div>
                           </div>
                         ))}
@@ -862,7 +862,7 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
                       {form.footerText && <p className="text-xs text-gray-400 mt-2 italic">{form.footerText}</p>}
                       {form.buttons.filter(b => b.text).length > 0 && (
                         <div className="flex gap-2 mt-3 flex-wrap">
-                          {form.buttons.filter(b => b.text).map((b, i) => <span key={i} className="text-xs border border-[#2d9c8f] text-[#2d9c8f] px-3 py-1 rounded-lg">{b.text}</span>)}
+                          {form.buttons.filter(b => b.text).map((b, i) => <span key={i} className="text-xs border border-[#597ea3] text-[#597ea3] px-3 py-1 rounded-lg">{b.text}</span>)}
                         </div>
                       )}
                     </>
@@ -877,9 +877,9 @@ export default function CreateTemplateWizard({ onBack, onSuccess }: CreateTempla
               {stepIndex === 0 ? 'Cancel' : 'Back'}
             </button>
             {step !== 'summary' ? (
-              <button onClick={goNext} className="px-8 py-2.5 bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all">Next</button>
+              <button onClick={goNext} className="px-8 py-2.5 bg-[#597ea3] text-white rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all">Next</button>
             ) : (
-              <button onClick={() => void handleSubmit()} disabled={submitting} className="px-8 py-2.5 bg-[#2d9c8f] text-white rounded-lg text-sm font-semibold hover:bg-[#258577] transition-all disabled:opacity-50">
+              <button onClick={() => void handleSubmit()} disabled={submitting} className="px-8 py-2.5 bg-[#597ea3] text-white rounded-lg text-sm font-semibold hover:bg-[#416180] transition-all disabled:opacity-50">
                 {submitting ? 'Submitting...' : 'Submit Template'}
               </button>
             )}
