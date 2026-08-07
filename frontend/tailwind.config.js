@@ -12,15 +12,28 @@ module.exports = {
       },
       colors: {
         saas: {
-          'primary-blue': '#2563EB',
-          'secondary-blue': '#3B82F6',
-          'accent-blue': '#60A5FA',
-          'sidebar-blue': '#1E40AF',
-          'bg': '#F8FAFC',
-          'chat-user': '#DBEAFE',
+          // Full accent scale — pulled from the brand's muted blue-gray tokens.
+          50: '#eef6ff',
+          100: '#eef6ff',
+          200: '#d6ebff',
+          300: '#b5d9fd',
+          400: '#94bce3',
+          500: '#749dc4',
+          600: '#597ea3',
+          700: '#416180',
+          800: '#33506b',
+          900: '#1f3346',
+          // Semantic aliases so existing components (saas-primary-blue, saas-bg, ...)
+          // keep working — only the underlying values changed.
+          'primary-blue': '#597ea3',
+          'secondary-blue': '#749dc4',
+          'accent-blue': '#94bce3',
+          'sidebar-blue': '#1f3346',
+          'bg': '#F7F9FC',
+          'chat-user': '#eaf2fb',
           'chat-agent': '#FFFFFF',
-          'text-primary': '#0F172A',
-          'border': '#E2E8F0',
+          'text-primary': '#1a2733',
+          'border': '#E1E8F0',
         },
         whatsapp: {
           green: '#25D366',
@@ -32,8 +45,9 @@ module.exports = {
         },
       },
       boxShadow: {
-        'soft': '0 8px 24px rgba(0, 0, 0, 0.08)',
-        'soft-sm': '0 2px 8px rgba(0, 0, 0, 0.06)',
+        'soft': '0 8px 24px rgba(31, 51, 70, 0.08)',
+        'soft-sm': '0 2px 8px rgba(31, 51, 70, 0.06)',
+        'soft-lg': '0 16px 40px rgba(31, 51, 70, 0.14)',
       },
     },
   },

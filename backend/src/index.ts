@@ -22,6 +22,7 @@ const httpServer = createServer(app);
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
+  'http://localhost:3000', // always allow local dev regardless of FRONTEND_URL
   process.env.FRONTEND_URL_NGROK,
 ].filter(Boolean) as string[];
 

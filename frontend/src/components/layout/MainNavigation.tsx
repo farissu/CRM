@@ -101,7 +101,7 @@ function NavItem({ icon, label, active, onClick, badge }: NavItemProps) {
     >
       {icon}
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-soft-sm">
+        <span className="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-soft-sm tabular-nums">
           {badge > 99 ? '99+' : badge}
         </span>
       )}

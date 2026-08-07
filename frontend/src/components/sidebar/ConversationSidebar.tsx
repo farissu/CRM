@@ -524,7 +524,7 @@ function FilterTab({ label, count, active, onClick, color }: FilterTabProps) {
         <span>{label}</span>
         {count > 0 && (
           <span className={clsx(
-            'px-2.5 py-1 rounded-full text-xs font-bold transition-all duration-200',
+            'px-2.5 py-1 rounded-full text-xs font-bold transition-all duration-200 tabular-nums',
             active && color === 'red' && 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-soft-sm',
             active && color === 'blue' && 'bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white shadow-soft-sm',
             active && color === 'gray' && 'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-soft-sm',
@@ -610,7 +610,7 @@ function ConversationItem({ conversation, isActive, onClick }: ConversationItemP
                 {lastMessageTime.replace('about ', '').replace(' ago', '')}
               </span>
               {conversation.unreadCount > 0 && (
-                <span className="bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[28px] text-center shadow-soft-sm">
+                <span className="bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[28px] text-center shadow-soft-sm tabular-nums">
                   {conversation.unreadCount}
                 </span>
               )}
