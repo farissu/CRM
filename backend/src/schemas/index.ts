@@ -40,6 +40,14 @@ export const assignLabelSchema = z.object({
   labelId: z.string().min(1),
 });
 
+export const createQuickReplySchema = z.object({
+  title: z.string().min(1).max(100),
+  text: z.string().min(1).max(2000),
+  isActive: z.boolean().optional(),
+});
+
+export const updateQuickReplySchema = createQuickReplySchema.partial();
+
 export const assignLabelByPhoneSchema = z.object({
   phoneNumber: z.string().min(1, 'phoneNumber is required'),
   labelId: z.string().min(1, 'labelId is required'),

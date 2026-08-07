@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -124,6 +124,28 @@ export const labelApi = {
 
   getContactLabels: async (contactId: string): Promise<{ labels: Label[] }> => {
     const response = await api.get(`/labels/contact/${contactId}`);
+    return response.data;
+  },
+};
+
+export const quickReplyApi = {
+  getQuickReplies: async (params?: { active?: boolean }): Promise<{ quickReplies: QuickReply[] }> => {
+    const response = await api.get('/quick-replies', { params });
+    return response.data;
+  },
+
+  createQuickReply: async (data: { title: string; text: string; isActive?: boolean }): Promise<{ quickReply: QuickReply }> => {
+    const response = await api.post('/quick-replies', data);
+    return response.data;
+  },
+
+  updateQuickReply: async (id: string, data: { title?: string; text?: string; isActive?: boolean }): Promise<{ quickReply: QuickReply }> => {
+    const response = await api.put(`/quick-replies/${id}`, data);
+    return response.data;
+  },
+
+  deleteQuickReply: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/quick-replies/${id}`);
     return response.data;
   },
 };

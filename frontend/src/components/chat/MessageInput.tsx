@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, Image, FileText, Video, Music } from 'lucide-react';
+import { Send, Paperclip, X, Image, FileText, Video, Music, MessageSquareText } from 'lucide-react';
+import type { QuickReply } from '@/types';
+import { quickReplyApi } from '@/lib/api';
 
 interface MessageInputProps {
   onSendMessage: (text: string, file?: File) => void;
@@ -18,9 +20,23 @@ export default function MessageInput({
   const [isTyping, setIsTyping] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [showQuickReplyPicker, setShowQuickReplyPicker] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    quickReplyApi.getQuickReplies({ active: true })
+      .then(res => setQuickReplies(res.quickReplies))
+      .catch(() => {});
+  }, []);
+
+  const handleSelectQuickReply = (quickReply: QuickReply) => {
+    setMessage(quickReply.text);
+    setShowQuickReplyPicker(false);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -167,6 +183,40 @@ export default function MessageInput({
         >
           <Paperclip className="w-5 h-5" />
         </button>
+
+        <div className="relative">
+          <button
+            onClick={() => setShowQuickReplyPicker(v => !v)}
+            disabled={disabled}
+            className="bg-gray-100 text-gray-700 p-4 rounded-2xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 disabled:hover:scale-100"
+            aria-label="Quick reply"
+          >
+            <MessageSquareText className="w-5 h-5" />
+          </button>
+
+          {showQuickReplyPicker && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowQuickReplyPicker(false)} />
+              <div className="absolute z-20 bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto bg-white border border-saas-border rounded-2xl shadow-soft py-2">
+                {quickReplies.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-gray-400">Belum ada quick reply aktif</p>
+                ) : (
+                  quickReplies.map(quickReply => (
+                    <button
+                      key={quickReply.id}
+                      type="button"
+                      onClick={() => handleSelectQuickReply(quickReply)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <p className="text-sm font-semibold text-gray-800">{quickReply.title}</p>
+                      <p className="text-xs text-gray-500 truncate">{quickReply.text}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         <textarea
           ref={textareaRef}

@@ -43,6 +43,15 @@ export interface Label {
   };
 }
 
+export interface QuickReply {
+  id: string;
+  title: string;
+  text: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Contact {
   id: string;
   phoneNumber: string;
