@@ -4,7 +4,7 @@ import { messageController } from '../controllers/message.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { apiKeyAuth } from '../middleware/apiKeyAuth';
 import { validate } from '../middleware/validate.middleware';
-import { sendMessageSchema, sendExternalMessageSchema } from '../schemas';
+import { sendMessageSchema, sendExternalMessageSchema, reactMessageSchema } from '../schemas';
 
 const router = Router();
 
@@ -34,5 +34,8 @@ router.post('/upload', upload.single('file'), (req, res) => messageController.up
 
 // Send message
 router.post('/', validate(sendMessageSchema), (req, res) => messageController.sendMessage(req, res));
+
+// React to a message with an emoji (emoji: '' removes the agent's reaction)
+router.post('/:id/react', validate(reactMessageSchema), (req, res) => messageController.reactToMessage(req, res));
 
 export default router;

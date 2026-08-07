@@ -165,6 +165,38 @@ export class WhatsAppService {
     }
   }
 
+  async sendReaction(to: string, messageId: string, emoji: string): Promise<string> {
+    if (!this.phoneNumberId || !this.accessToken) {
+      throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
+    }
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'reaction',
+      reaction: { message_id: messageId, emoji },
+    };
+
+    try {
+      const response = await axios.post<MetaMessageResponse>(
+        `${GRAPH_API_URL}/${this.phoneNumberId}/messages`,
+        payload,
+        { headers: { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' } }
+      );
+
+      return response.data.messages?.[0]?.id ?? '';
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const metaError = err.response.data?.error;
+        throw new Error(
+          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
+        );
+      }
+      throw err;
+    }
+  }
+
   async sendTemplateMessage(params: SendTemplateMessageParams): Promise<string> {
     const { to, templateName, language, bodyParams = [], headerMedia, carouselCards } = params;
 

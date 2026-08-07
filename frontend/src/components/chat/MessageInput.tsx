@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X, Image, FileText, Video, Music, MessageSquareText, Reply } from 'lucide-react';
+import { Send, Paperclip, X, Image, FileText, Video, Music, MessageSquareText, Reply, Smile } from 'lucide-react';
 import type { QuickReply, Message } from '@/types';
 import { quickReplyApi } from '@/lib/api';
+import { EMOJI_PICKER_GROUPS } from '@/lib/emojiData';
 
 interface MessageInputProps {
   onSendMessage: (text: string, file?: File, quotedMessageId?: string) => void;
@@ -26,6 +27,7 @@ export default function MessageInput({
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [showQuickReplyPicker, setShowQuickReplyPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +42,18 @@ export default function MessageInput({
     setMessage(quickReply.text);
     setShowQuickReplyPicker(false);
     requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const handleInsertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    const start = textarea?.selectionStart ?? message.length;
+    const end = textarea?.selectionEnd ?? message.length;
+    const next = message.slice(0, start) + emoji + message.slice(end);
+    setMessage(next);
+    requestAnimationFrame(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
   };
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -214,6 +228,42 @@ export default function MessageInput({
         >
           <Paperclip className="w-5 h-5" />
         </button>
+
+        <div className="relative">
+          <button
+            onClick={() => setShowEmojiPicker(v => !v)}
+            disabled={disabled}
+            className="bg-gray-100 text-gray-700 p-4 rounded-2xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 disabled:hover:scale-100"
+            aria-label="Insert emoji"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          {showEmojiPicker && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
+              <div className="absolute z-20 bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto bg-white border border-saas-border rounded-2xl shadow-soft p-3">
+                {EMOJI_PICKER_GROUPS.map(group => (
+                  <div key={group.label} className="mb-2 last:mb-0">
+                    <p className="text-xs font-semibold text-gray-400 mb-1">{group.label}</p>
+                    <div className="grid grid-cols-8 gap-1">
+                      {group.emojis.map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => handleInsertEmoji(emoji)}
+                          className="text-xl hover:bg-gray-100 rounded-lg p-1 transition-colors"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="relative">
           <button

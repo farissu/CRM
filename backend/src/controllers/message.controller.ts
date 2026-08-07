@@ -108,10 +108,6 @@ async function extractMediaContent(message: WhatsAppMessage): Promise<{
     return { text: title };
   }
 
-  if (type === 'reaction') {
-    return { text: message.reaction?.emoji ? `Reacted ${message.reaction.emoji}` : 'Reacted to a message' };
-  }
-
   return { text: '📎 Unsupported message' };
 }
 
@@ -144,6 +140,12 @@ async function processWhatsAppStatus(status: WhatsAppStatus) {
 
 async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsAppContact[] | undefined) {
   if (!message.from) return;
+
+  if (message.type === 'reaction' && message.reaction) {
+    await messageService.applyInboundReaction(message.reaction.message_id, message.reaction.emoji ?? '');
+    return;
+  }
+
   const timestamp = message.timestamp ? parseInt(message.timestamp) * 1000 : Date.now();
   const { text, mediaUrl, mediaType, fileName, caption } = await extractMediaContent(message);
   const contactName = extractContactName(contacts, message.from);
@@ -209,6 +211,17 @@ export class MessageController {
       res.status(201).json(message);
     } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to send message', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+
+  async reactToMessage(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { emoji } = req.body as { emoji: string };
+      const message = await messageService.reactToMessage(id, emoji, { id: req.user!.id, name: req.user!.name });
+      res.json(message);
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to react to message', message: err instanceof Error ? err.message : 'Unknown error' });
     }
   }
 

@@ -200,6 +200,10 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       setMessages(prev => prev.map(m => m.id === data.messageId ? { ...m, status: data.status } : m));
     });
 
+    socketClient.onMessageReactionUpdated((data) => {
+      setMessages(prev => prev.map(m => m.id === data.message.id ? data.message : m));
+    });
+
     return () => { socketClient.disconnect(); };
   }, [isAuthenticated, activeConversation?.id, loadConversations]);
 

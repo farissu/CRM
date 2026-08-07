@@ -85,6 +85,10 @@ class SocketClient {
     this.socket?.on('message_status_updated', callback);
   }
 
+  onMessageReactionUpdated(callback: (data: { conversationId: string; message: Message }) => void) {
+    this.socket?.on('message_reaction_updated', callback);
+  }
+
   offMessageReceived(callback: (data: { conversationId: string; message: Message }) => void) {
     this.socket?.off('message_received', callback);
   }
@@ -107,6 +111,10 @@ class SocketClient {
 
   offMessageStatusUpdated(callback: (data: { messageId: string; status: MessageStatus }) => void) {
     this.socket?.off('message_status_updated', callback);
+  }
+
+  offMessageReactionUpdated(callback: (data: { conversationId: string; message: Message }) => void) {
+    this.socket?.off('message_reaction_updated', callback);
   }
 }
 

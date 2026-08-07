@@ -101,6 +101,7 @@ export interface Message {
   metadata?: {
     interactive?: { buttonText?: string; buttonUrl?: string };
   } | null;
+  reactions?: Array<{ emoji: string; by: 'AGENT' | 'CONTACT'; agentName?: string }> | null;
   quotedMessageId?: string | null;
   quotedMessage?: {
     id: string;

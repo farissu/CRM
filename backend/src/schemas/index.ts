@@ -29,6 +29,10 @@ export const sendExternalMessageSchema = z.object({
   contactName: z.string().optional(),
 });
 
+export const reactMessageSchema = z.object({
+  emoji: z.string().max(8, 'emoji must be a single emoji'),
+});
+
 export const createLabelSchema = z.object({
   name: z.string().min(1).max(50),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'color must be a hex value e.g. #FF0000'),

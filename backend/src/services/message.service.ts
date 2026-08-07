@@ -1,4 +1,4 @@
-import { MessageDirection, MessageType, MessageStatus } from '@prisma/client';
+import { MessageDirection, MessageType, MessageStatus, Prisma } from '@prisma/client';
 import axios from 'axios';
 import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
@@ -24,6 +24,12 @@ const WEBHOOK_TYPE_MAP: Record<string, MessageType> = {
 
 function toMessageType(s?: string): MessageType {
   return (s ? WEBHOOK_TYPE_MAP[s] : undefined) ?? MessageType.TEXT;
+}
+
+interface MessageReaction {
+  emoji: string;
+  by: 'AGENT' | 'CONTACT';
+  agentName?: string;
 }
 
 interface SendMessageParams {
@@ -318,6 +324,59 @@ export class MessageService {
       console.error('[Broadcast] Failed to update recipient status from webhook:', err);
     }
 
+    return updated;
+  }
+
+  /**
+   * Agent reacts to a message with an emoji (or removes their reaction with emoji: '').
+   * Sends a real WhatsApp reaction to the customer and stores it on the message.
+   */
+  async reactToMessage(messageId: string, emoji: string, agent: { id: string; name: string }) {
+    const message = await prisma.message.findUniqueOrThrow({
+      where: { id: messageId },
+      include: { conversation: { include: { contact: true } } },
+    });
+
+    const waMessageId = message.externalId || (message.metadata as { waMessageId?: string } | null)?.waMessageId;
+    if (!waMessageId) {
+      throw new Error('This message cannot be reacted to (no WhatsApp message id on record)');
+    }
+
+    await whatsAppService.sendReaction(message.conversation.contact.phoneNumber, waMessageId, emoji);
+
+    const reactions: MessageReaction[] = ((message.reactions as MessageReaction[] | null) ?? [])
+      .filter(r => r.by !== 'AGENT');
+    if (emoji) reactions.push({ emoji, by: 'AGENT', agentName: agent.name });
+
+    const updated = await prisma.message.update({
+      where: { id: messageId },
+      data: { reactions: reactions as unknown as Prisma.InputJsonValue },
+      include: MESSAGE_INCLUDE,
+    });
+
+    io.emit('message_reaction_updated', { conversationId: message.conversationId, message: updated });
+    return updated;
+  }
+
+  /**
+   * Apply an inbound reaction from a customer (webhook `type: reaction`) to the
+   * message it targets, instead of creating a separate chat bubble for it.
+   */
+  async applyInboundReaction(targetExternalId: string, emoji: string) {
+    const message = await prisma.message.findUnique({ where: { externalId: targetExternalId } });
+    if (!message) return null;
+
+    const reactions: MessageReaction[] = ((message.reactions as MessageReaction[] | null) ?? [])
+      .filter(r => r.by !== 'CONTACT');
+    if (emoji) reactions.push({ emoji, by: 'CONTACT' });
+
+    const updated = await prisma.message.update({
+      where: { id: message.id },
+      data: { reactions: reactions as unknown as Prisma.InputJsonValue },
+      include: MESSAGE_INCLUDE,
+    });
+
+    io.emit('message_reaction_updated', { conversationId: message.conversationId, message: updated });
     return updated;
   }
 }

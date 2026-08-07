@@ -76,6 +76,11 @@ export const messageApi = {
     return response.data;
   },
 
+  reactToMessage: async (messageId: string, emoji: string): Promise<Message> => {
+    const response = await api.post(`/messages/${messageId}/react`, { emoji });
+    return response.data;
+  },
+
   uploadMedia: async (file: File): Promise<{
     mediaUrl: string;
     mediaType: string;

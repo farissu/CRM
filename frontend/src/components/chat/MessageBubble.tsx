@@ -3,11 +3,28 @@ import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { Check, CheckCheck, Image as ImageIcon, FileText, Video, Music, Download, X, ExternalLink, MoreVertical, Reply } from 'lucide-react';
 import type { Message } from '@/types';
+import { messageApi } from '@/lib/api';
+import { QUICK_REACTIONS } from '@/lib/emojiData';
 import clsx from 'clsx';
 
 interface MessageBubbleProps {
   message: Message;
   onReply?: (message: Message) => void;
+}
+
+function ReactionBadge({ reactions }: { reactions: Message['reactions'] }) {
+  if (!reactions || reactions.length === 0) return null;
+  const title = reactions
+    .map(r => `${r.by === 'AGENT' ? (r.agentName || 'Agent') : 'Customer'}: ${r.emoji}`)
+    .join(', ');
+  return (
+    <div
+      title={title}
+      className="absolute -bottom-2.5 right-2 bg-white border border-saas-border rounded-full px-1.5 py-0.5 shadow-sm flex items-center gap-0.5 text-sm leading-none"
+    >
+      {reactions.map((r, i) => <span key={i}>{r.emoji}</span>)}
+    </div>
+  );
 }
 
 function quotedPreviewText(quoted: NonNullable<Message['quotedMessage']>): string {
@@ -37,10 +54,11 @@ interface MessageMenuProps {
   menuRef: React.RefObject<HTMLDivElement>;
   showMenu: boolean;
   setShowMenu: (show: boolean) => void;
-  onReply: () => void;
+  onReply?: () => void;
+  onReact: (emoji: string) => void;
 }
 
-function MessageMenu({ menuRef, showMenu, setShowMenu, onReply }: MessageMenuProps) {
+function MessageMenu({ menuRef, showMenu, setShowMenu, onReply, onReact }: MessageMenuProps) {
   return (
     <div ref={menuRef} className="relative self-center opacity-0 group-hover:opacity-100 transition-opacity">
       <button
@@ -51,14 +69,29 @@ function MessageMenu({ menuRef, showMenu, setShowMenu, onReply }: MessageMenuPro
         <MoreVertical className="w-4 h-4" />
       </button>
       {showMenu && (
-        <div className="absolute z-20 top-full right-0 mt-1 w-32 bg-white border border-saas-border rounded-xl shadow-soft py-1">
-          <button
-            onClick={onReply}
-            className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            <Reply className="w-4 h-4" />
-            Reply
-          </button>
+        <div className="absolute z-20 top-full right-0 mt-1 w-48 bg-white border border-saas-border rounded-xl shadow-soft py-2">
+          <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-gray-100">
+            {QUICK_REACTIONS.map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onReact(emoji)}
+                className="text-lg hover:scale-125 transition-transform"
+                aria-label={`React with ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          {onReply && (
+            <button
+              onClick={onReply}
+              className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <Reply className="w-4 h-4" />
+              Reply
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -81,6 +114,17 @@ export default function MessageBubble({ message, onReply }: MessageBubbleProps) 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
+  const handleReact = async (emoji: string) => {
+    setShowMenu(false);
+    const mine = message.reactions?.find(r => r.by === 'AGENT');
+    const nextEmoji = mine?.emoji === emoji ? '' : emoji;
+    try {
+      await messageApi.reactToMessage(message.id, nextEmoji);
+    } catch {
+      alert('Gagal mengirim reaction');
+    }
+  };
+
   return (
     <div
       className={clsx(
@@ -90,13 +134,15 @@ export default function MessageBubble({ message, onReply }: MessageBubbleProps) 
     >
       <div
         className={clsx(
-          'max-w-[70%] rounded-2xl shadow-soft-sm transition-all duration-200',
+          'relative max-w-[70%] rounded-2xl shadow-soft-sm transition-all duration-200',
           hasMedia ? 'overflow-hidden p-0' : 'px-5 py-3',
           isOutbound
             ? 'bg-gradient-to-br from-saas-chat-user to-blue-100 text-saas-text-primary border border-blue-200'
             : 'bg-saas-chat-agent text-saas-text-primary border border-saas-border'
         )}
       >
+        <ReactionBadge reactions={message.reactions} />
+
         {/* Quoted reply preview */}
         {message.quotedMessage && (
           <div className={hasMedia ? 'px-5 pt-3' : ''}>
@@ -157,14 +203,13 @@ export default function MessageBubble({ message, onReply }: MessageBubbleProps) 
           </div>
         )}
       </div>
-      {onReply && !isOutbound && (
-        <MessageMenu
-          menuRef={menuRef}
-          showMenu={showMenu}
-          setShowMenu={setShowMenu}
-          onReply={() => { onReply(message); setShowMenu(false); }}
-        />
-      )}
+      <MessageMenu
+        menuRef={menuRef}
+        showMenu={showMenu}
+        setShowMenu={setShowMenu}
+        onReply={onReply && !isOutbound ? () => { onReply(message); setShowMenu(false); } : undefined}
+        onReact={handleReact}
+      />
     </div>
   );
 }

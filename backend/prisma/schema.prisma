@@ -215,6 +215,7 @@ model Message {
   fileSize        Int?
   caption         String?
   metadata        Json?
+  reactions       Json?
   quotedMessageId String?
   timestamp       DateTime         @default(now())
   createdAt       DateTime         @default(now())
