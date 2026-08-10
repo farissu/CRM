@@ -365,6 +365,23 @@ function MediaContent({ message }: MediaContentProps) {
     );
   }
 
+  if (messageType === 'STICKER') {
+    return (
+      <div className="p-2">
+        {failed ? (
+          <MediaUnavailable icon={<ImageIcon className="w-8 h-8 text-gray-400 mx-auto" />} />
+        ) : (
+          <img
+            src={src}
+            alt="Sticker"
+            className="w-28 h-28 object-contain block"
+            onError={() => setFailed(true)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return null;
 }
 
