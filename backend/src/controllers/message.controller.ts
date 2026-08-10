@@ -47,6 +47,11 @@ interface WhatsAppMessage {
   interactive?: { button_reply?: { title: string }; list_reply?: { title: string } };
   context?: { id: string };
   reaction?: { message_id: string; emoji?: string };
+  order?: {
+    catalog_id: string;
+    text?: string;
+    product_items: Array<{ product_retailer_id: string; quantity: string; item_price: string; currency: string }>;
+  };
 }
 
 function extractContactName(contacts: WhatsAppContact[] | undefined, from: string): string {
@@ -106,6 +111,15 @@ async function extractMediaContent(message: WhatsAppMessage): Promise<{
   if (type === 'interactive' && message.interactive) {
     const title = message.interactive.button_reply?.title ?? message.interactive.list_reply?.title ?? '';
     return { text: title };
+  }
+
+  if (type === 'order' && message.order) {
+    const items = message.order.product_items || [];
+    const itemCount = items.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
+    const total = items.reduce((sum, i) => sum + (Number(i.item_price) || 0) * (Number(i.quantity) || 1), 0);
+    const priceText = total ? ` (estimasi Rp ${total.toLocaleString('id-ID')})` : '';
+    const note = message.order.text ? `\n${message.order.text}` : '';
+    return { text: `🛒 Pesan via katalog — ${itemCount} item${priceText}${note}` };
   }
 
   return { text: '📎 Unsupported message' };
