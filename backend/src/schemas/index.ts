@@ -23,11 +23,21 @@ export const sendMessageSchema = z
     path: ['text'],
   });
 
-export const sendExternalMessageSchema = z.object({
-  to: z.string().min(1, 'to is required'),
-  text: z.string().min(1, 'text is required'),
-  contactName: z.string().optional(),
-});
+export const sendExternalMessageSchema = z
+  .object({
+    to: z.string().min(1, 'to is required'),
+    text: z.string().optional(),
+    contactName: z.string().optional(),
+    mediaUrl: z.string().min(1).optional(),
+    mediaType: z.string().optional(),
+    messageType: z.enum(['text', 'image', 'video', 'document', 'audio']).optional(),
+    caption: z.string().optional(),
+    fileName: z.string().optional(),
+  })
+  .refine((data) => Boolean(data.text?.trim()) || Boolean(data.mediaUrl), {
+    message: 'text or mediaUrl is required',
+    path: ['text'],
+  });
 
 export const reactMessageSchema = z.object({
   emoji: z.string().max(8, 'emoji must be a single emoji'),

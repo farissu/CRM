@@ -4,6 +4,7 @@ import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
 import { conversationService } from './conversation.service';
 import { storageService } from './storage.service';
+import { mediaService } from './media.service';
 import { io } from '../index';
 import { broadcastService } from './broadcast.service';
 
@@ -128,9 +129,13 @@ export class MessageService {
    */
   async sendMessageByPhone(params: {
     phoneNumber: string;
-    text: string;
+    text?: string;
     contactName?: string;
     messageType?: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    caption?: string;
+    fileName?: string;
     buttonText?: string;
     buttonUrl?: string;
   }) {
@@ -140,6 +145,10 @@ export class MessageService {
       text: params.text,
       senderId: undefined as unknown as string,
       messageType: params.messageType,
+      mediaUrl: params.mediaUrl,
+      mediaType: params.mediaType,
+      caption: params.caption,
+      fileName: params.fileName,
       buttonText: params.buttonText,
       buttonUrl: params.buttonUrl,
     });
@@ -149,7 +158,16 @@ export class MessageService {
     conversation: { id: string; contact: { phoneNumber: string } },
     params: SendMessageParams
   ) {
-    const { conversationId, text, senderId, messageType, mediaUrl, mediaType, fileName, fileSize, caption, buttonText, buttonUrl, quotedMessageId } = params;
+    const { conversationId, text, senderId, messageType, fileName, fileSize, caption, buttonText, buttonUrl, quotedMessageId } = params;
+
+    // External URLs (e.g. a payment gateway's QR image) get archived into our
+    // own storage instead of being sent to WhatsApp straight from the source,
+    // so the media stays available even if the source link later expires.
+    const externalMedia = params.mediaUrl?.startsWith('http')
+      ? await mediaService.downloadFromUrlAndSave(params.mediaUrl, params.mediaType)
+      : null;
+    const mediaUrl = externalMedia?.objectPath ?? params.mediaUrl;
+    const mediaType = externalMedia?.mimeType ?? params.mediaType;
 
     const quotedMessage = quotedMessageId
       ? await prisma.message.findUnique({ where: { id: quotedMessageId }, select: { externalId: true } })
