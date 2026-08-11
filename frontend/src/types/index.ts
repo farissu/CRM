@@ -99,7 +99,12 @@ export interface Message {
   fileSize?: number | null;
   caption?: string | null;
   metadata?: {
-    interactive?: { buttonText?: string; buttonUrl?: string };
+    interactive?: {
+      type?: 'cta_url' | 'buttons';
+      buttonText?: string;
+      buttonUrl?: string;
+      buttons?: Array<{ id: string; title: string }>;
+    };
   } | null;
   reactions?: Array<{ emoji: string; by: 'AGENT' | 'CONTACT'; agentName?: string }> | null;
   quotedMessageId?: string | null;

@@ -241,12 +241,13 @@ export class MessageController {
 
   async sendExternalMessage(req: Request, res: Response) {
     try {
-      const { to, text, contactName, mediaUrl, mediaType, messageType, caption, fileName } = req.body as {
+      const { to, text, contactName, mediaUrl, mediaType, messageType, caption, fileName, buttons } = req.body as {
         to: string; text?: string; contactName?: string;
         mediaUrl?: string; mediaType?: string; messageType?: string; caption?: string; fileName?: string;
+        buttons?: Array<{ id: string; title: string }>;
       };
       const message = await messageService.sendMessageByPhone({
-        phoneNumber: to, text, contactName, mediaUrl, mediaType, messageType, caption, fileName,
+        phoneNumber: to, text, contactName, mediaUrl, mediaType, messageType, caption, fileName, buttons,
       });
       res.status(201).json(message);
     } catch (err: unknown) {

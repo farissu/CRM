@@ -24,6 +24,11 @@ const MIME_TYPE_EXTENSION: Record<string, string> = {
   'application/pdf': '.pdf',
 };
 
+interface QuickReplyButton {
+  id: string;
+  title: string;
+}
+
 interface SendMessageParams {
   to: string;
   text?: string;
@@ -33,6 +38,7 @@ interface SendMessageParams {
   fileName?: string;
   buttonText?: string;
   buttonUrl?: string;
+  buttons?: QuickReplyButton[];
   quotedExternalId?: string;
 }
 
@@ -65,13 +71,13 @@ export class WhatsAppService {
   }
 
   async sendMessage(params: SendMessageParams): Promise<string> {
-    const { to, text, messageType = 'text', mediaUrl, caption, fileName, buttonText, buttonUrl, quotedExternalId } = params;
+    const { to, text, messageType = 'text', mediaUrl, caption, fileName, buttonText, buttonUrl, buttons, quotedExternalId } = params;
 
     if (!this.phoneNumberId || !this.accessToken) {
       throw new Error('WhatsApp credentials not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN.');
     }
 
-    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName, buttonText, buttonUrl, quotedExternalId);
+    const payload = this.buildPayload(to, messageType, text, mediaUrl, caption, fileName, buttonText, buttonUrl, buttons, quotedExternalId);
 
     try {
       const response = await axios.post<MetaMessageResponse>(
@@ -269,6 +275,7 @@ export class WhatsAppService {
     fileName?: string,
     buttonText?: string,
     buttonUrl?: string,
+    buttons?: QuickReplyButton[],
     quotedExternalId?: string
   ): Record<string, unknown> {
     const base = {
@@ -277,6 +284,24 @@ export class WhatsAppService {
       to,
       ...(quotedExternalId && { context: { message_id: quotedExternalId } })
     };
+
+    if (messageType === 'interactive_buttons' && buttons?.length) {
+      return {
+        ...base,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          ...(mediaUrl && { header: { type: 'image', image: { link: mediaUrl } } }),
+          body: { text: text || caption || '' },
+          action: {
+            buttons: buttons.map((button) => ({
+              type: 'reply',
+              reply: { id: button.id, title: button.title },
+            })),
+          },
+        },
+      };
+    }
 
     if (messageType === 'interactive' && buttonUrl) {
       return {

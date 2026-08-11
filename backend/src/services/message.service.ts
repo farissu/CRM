@@ -15,12 +15,13 @@ function resolveOutboundMediaUrl(mediaUrl?: string): Promise<string | undefined>
 }
 
 const WEBHOOK_TYPE_MAP: Record<string, MessageType> = {
-  text:     MessageType.TEXT,
-  image:    MessageType.IMAGE,
-  video:    MessageType.VIDEO,
-  document: MessageType.DOCUMENT,
-  audio:    MessageType.AUDIO,
-  sticker:  MessageType.STICKER,
+  text:                MessageType.TEXT,
+  image:               MessageType.IMAGE,
+  video:               MessageType.VIDEO,
+  document:            MessageType.DOCUMENT,
+  audio:               MessageType.AUDIO,
+  sticker:             MessageType.STICKER,
+  interactive_buttons: MessageType.IMAGE,
 };
 
 function toMessageType(s?: string): MessageType {
@@ -31,6 +32,11 @@ interface MessageReaction {
   emoji: string;
   by: 'AGENT' | 'CONTACT';
   agentName?: string;
+}
+
+interface QuickReplyButton {
+  id: string;
+  title: string;
 }
 
 interface SendMessageParams {
@@ -45,6 +51,7 @@ interface SendMessageParams {
   caption?: string;
   buttonText?: string;
   buttonUrl?: string;
+  buttons?: QuickReplyButton[];
   quotedMessageId?: string;
 }
 
@@ -138,6 +145,7 @@ export class MessageService {
     fileName?: string;
     buttonText?: string;
     buttonUrl?: string;
+    buttons?: QuickReplyButton[];
   }) {
     const conversation = await conversationService.getOrCreateConversation(params.phoneNumber, params.contactName);
     return this.sendToConversation(conversation, {
@@ -151,6 +159,7 @@ export class MessageService {
       fileName: params.fileName,
       buttonText: params.buttonText,
       buttonUrl: params.buttonUrl,
+      buttons: params.buttons,
     });
   }
 
@@ -158,7 +167,7 @@ export class MessageService {
     conversation: { id: string; contact: { phoneNumber: string } },
     params: SendMessageParams
   ) {
-    const { conversationId, text, senderId, messageType, fileName, fileSize, caption, buttonText, buttonUrl, quotedMessageId } = params;
+    const { conversationId, text, senderId, messageType, fileName, fileSize, caption, buttonText, buttonUrl, buttons, quotedMessageId } = params;
 
     // External URLs (e.g. a payment gateway's QR image) get archived into our
     // own storage instead of being sent to WhatsApp straight from the source,
@@ -204,8 +213,15 @@ export class MessageService {
         fileName,
         buttonText,
         buttonUrl,
+        buttons,
         quotedExternalId: quotedMessage?.externalId ?? undefined
       });
+
+      const interactiveMetadata = buttonUrl
+        ? { type: 'cta_url', buttonText: buttonText ?? null, buttonUrl }
+        : buttons?.length
+        ? { type: 'buttons', buttons }
+        : undefined;
 
       // Update message status
       const updatedMessage = await prisma.message.update({
@@ -214,8 +230,8 @@ export class MessageService {
           status: MessageStatus.SENT,
           metadata: {
             waMessageId,
-            ...(buttonUrl && { interactive: { type: 'cta_url', buttonText, buttonUrl } })
-          }
+            ...(interactiveMetadata && { interactive: interactiveMetadata })
+          } as Prisma.InputJsonValue
         },
         include: MESSAGE_INCLUDE
       });

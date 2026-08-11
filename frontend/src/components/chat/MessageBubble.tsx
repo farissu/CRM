@@ -182,6 +182,20 @@ export default function MessageBubble({ message, onReply }: MessageBubbleProps) 
           </div>
         )}
 
+        {/* Interactive quick-reply buttons */}
+        {message.metadata?.interactive?.type === 'buttons' && !!message.metadata.interactive.buttons?.length && (
+          <div className={clsx('flex flex-col gap-1.5', hasMedia ? 'px-5 pb-3' : 'px-0')}>
+            {message.metadata.interactive.buttons.map((button) => (
+              <div
+                key={button.id}
+                className="flex items-center justify-center rounded-xl bg-white/70 border border-saas-primary-blue/30 px-4 py-2 text-sm font-semibold text-saas-primary-blue"
+              >
+                {button.title}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Timestamp and Status */}
         <div
           className={clsx(

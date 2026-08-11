@@ -23,6 +23,11 @@ export const sendMessageSchema = z
     path: ['text'],
   });
 
+const quickReplyButtonSchema = z.object({
+  id: z.string().min(1).max(256),
+  title: z.string().min(1).max(20, 'title must be 20 characters or fewer'),
+});
+
 export const sendExternalMessageSchema = z
   .object({
     to: z.string().min(1, 'to is required'),
@@ -30,13 +35,18 @@ export const sendExternalMessageSchema = z
     contactName: z.string().optional(),
     mediaUrl: z.string().min(1).optional(),
     mediaType: z.string().optional(),
-    messageType: z.enum(['text', 'image', 'video', 'document', 'audio']).optional(),
+    messageType: z.enum(['text', 'image', 'video', 'document', 'audio', 'interactive_buttons']).optional(),
     caption: z.string().optional(),
     fileName: z.string().optional(),
+    buttons: z.array(quickReplyButtonSchema).min(1).max(3).optional(),
   })
   .refine((data) => Boolean(data.text?.trim()) || Boolean(data.mediaUrl), {
     message: 'text or mediaUrl is required',
     path: ['text'],
+  })
+  .refine((data) => data.messageType !== 'interactive_buttons' || Boolean(data.buttons?.length), {
+    message: 'buttons is required when messageType is interactive_buttons',
+    path: ['buttons'],
   });
 
 export const reactMessageSchema = z.object({
