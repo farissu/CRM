@@ -3,11 +3,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { conversationApi, messageApi, complaintApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
-import type { Conversation, ConversationStatusCounts, Message } from '@/types';
+import type { Conversation, ConversationLabelCounts, ConversationStatusCounts, Message } from '@/types';
 
-const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, resolved: 0, all: 0 };
+const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, all: 0 };
+const EMPTY_LABEL_COUNTS: ConversationLabelCounts = { unlabeled: 0, byLabel: {} };
 
 const CONVERSATIONS_PAGE_SIZE = 30;
+const SEARCH_RESULT_LIMIT = 100;
+const SEARCH_DEBOUNCE_MS = 300;
+
+export type ConversationFilter = 'served' | 'unread' | 'all';
+export type ConversationViewMode = 'normal' | 'label';
+
+interface FetchScope {
+  status?: string;
+  unreadOnly?: boolean;
+  labelId?: string;
+}
+
+function scopeKey(scope: FetchScope): string {
+  return `${scope.status ?? ''}|${scope.unreadOnly ? 1 : 0}|${scope.labelId ?? ''}`;
+}
 
 interface UseConversationsParams {
   isAuthenticated: boolean;
@@ -18,6 +34,18 @@ interface UseConversationsParams {
 interface UseConversationsReturn {
   conversations: Conversation[];
   statusCounts: ConversationStatusCounts;
+  labelCounts: ConversationLabelCounts;
+  statusFilter: ConversationFilter;
+  setStatusFilter: (filter: ConversationFilter) => void;
+  viewMode: ConversationViewMode;
+  setViewMode: (mode: ConversationViewMode) => void;
+  activeLabelTab: string;
+  setActiveLabelTab: (labelTab: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  searchResults: Conversation[] | null;
+  searching: boolean;
+  searchError: string | null;
   activeConversation: Conversation | null;
   messages: Message[];
   loadingConversations: boolean;
@@ -42,6 +70,35 @@ interface UseConversationsReturn {
 export function useConversations({ isAuthenticated, agentId, agentName }: UseConversationsParams): UseConversationsReturn {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [statusCounts, setStatusCounts] = useState<ConversationStatusCounts>(EMPTY_STATUS_COUNTS);
+  const [labelCounts, setLabelCounts] = useState<ConversationLabelCounts>(EMPTY_LABEL_COUNTS);
+  const [statusFilter, setStatusFilter] = useState<ConversationFilter>('served');
+  const [viewMode, setViewMode] = useState<ConversationViewMode>('normal');
+  const [activeLabelTab, setActiveLabelTab] = useState<string>('all');
+
+  // "Per Label" always scopes to served (OPEN) conversations; picking a specific label
+  // (or "Tanpa Label") narrows it further via labelId, so the fetched rows — not just
+  // the badge count — match what that tab actually shows.
+  const effectiveScope: FetchScope = viewMode === 'label'
+    ? { status: 'OPEN', labelId: activeLabelTab === 'all' ? undefined : activeLabelTab === 'unlabeled' ? 'UNLABELED' : activeLabelTab }
+    : statusFilter === 'served'
+      ? { status: 'OPEN' }
+      : statusFilter === 'unread'
+        ? { status: 'OPEN', unreadOnly: true }
+        : {};
+  const effectiveScopeKey = scopeKey(effectiveScope);
+  // Always-current scope for callbacks (loadConversations, search) to read without a
+  // stale closure; `activeScopeRef` instead tracks the scope of the page that's
+  // actually loaded, for loadMoreConversations to keep paginating consistently.
+  const desiredScopeRef = useRef(effectiveScope);
+  desiredScopeRef.current = effectiveScope;
+  const activeScopeRef = useRef<FetchScope>(effectiveScope);
+  const loadRequestIdRef = useRef(0);
+  const [searchQueryState, setSearchQueryState] = useState('');
+  const [searchResults, setSearchResults] = useState<Conversation[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRequestIdRef = useRef(0);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -56,16 +113,32 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   const isFetchingMoreRef = useRef(false);
   const messagesPageRef = useRef(1);
 
+  // Scoped server-side to the active tab/label (instead of fetching everything and
+  // filtering client-side), so "load more" on any tab only ever pulls rows that tab
+  // actually shows. Guarded by a request id so a slow response from a tab the user has
+  // since switched away from can't clobber the newer one that already landed.
   const loadConversations = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current;
+    const scope = desiredScopeRef.current;
     try {
       setLoadingConversations(true);
-      const response = await conversationApi.getConversations({ page: 1, limit: CONVERSATIONS_PAGE_SIZE });
+      const response = await conversationApi.getConversations({
+        page: 1,
+        limit: CONVERSATIONS_PAGE_SIZE,
+        status: scope.status,
+        unreadOnly: scope.unreadOnly,
+        labelId: scope.labelId,
+        includeCounts: true
+      });
+      if (loadRequestIdRef.current !== requestId) return;
+      activeScopeRef.current = scope;
       setConversations(response.conversations);
-      setStatusCounts(response.statusCounts);
+      setStatusCounts(response.statusCounts ?? EMPTY_STATUS_COUNTS);
+      setLabelCounts(response.labelCounts ?? EMPTY_LABEL_COUNTS);
       pageRef.current = 1;
       setHasMoreConversations(response.page < response.totalPages);
     } finally {
-      setLoadingConversations(false);
+      if (loadRequestIdRef.current === requestId) setLoadingConversations(false);
     }
   }, []);
 
@@ -73,9 +146,21 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     if (isFetchingMoreRef.current || !hasMoreConversations) return;
     isFetchingMoreRef.current = true;
     setLoadingMoreConversations(true);
+    // Snapshot the load generation so a page-2+ response that resolves after the user
+    // has already switched tabs (which bumps loadRequestIdRef via loadConversations)
+    // gets discarded instead of splicing the wrong tab's rows into the new list.
+    const requestId = loadRequestIdRef.current;
     try {
       const nextPage = pageRef.current + 1;
-      const response = await conversationApi.getConversations({ page: nextPage, limit: CONVERSATIONS_PAGE_SIZE });
+      const scope = activeScopeRef.current;
+      const response = await conversationApi.getConversations({
+        page: nextPage,
+        limit: CONVERSATIONS_PAGE_SIZE,
+        status: scope.status,
+        unreadOnly: scope.unreadOnly,
+        labelId: scope.labelId
+      });
+      if (loadRequestIdRef.current !== requestId) return;
       setConversations(prev => {
         const existingIds = new Set(prev.map(c => c.id));
         const newOnes = response.conversations.filter(c => !existingIds.has(c.id));
@@ -89,9 +174,57 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     }
   }, [hasMoreConversations]);
 
+  // Refetch page 1 whenever the active tab, view mode, or label sub-tab changes.
   useEffect(() => {
     if (isAuthenticated) loadConversations();
-  }, [isAuthenticated, loadConversations]);
+    // effectiveScopeKey is the actual dependency; effectiveScope itself is a fresh
+    // object every render and would defeat this comparison.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, effectiveScopeKey, loadConversations]);
+
+  // Search must query the server across ALL conversations, not just whatever page
+  // has been paginated into `conversations` client-side — otherwise a match outside
+  // the first page silently looks like "no results" until the user scrolls further.
+  const setSearchQuery = useCallback((query: string) => {
+    setSearchQueryState(query);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    const trimmed = query.trim();
+    if (!trimmed) {
+      searchRequestIdRef.current += 1;
+      setSearchResults(null);
+      setSearching(false);
+      setSearchError(null);
+      return;
+    }
+
+    const requestId = ++searchRequestIdRef.current;
+    setSearching(true);
+    setSearchError(null);
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        // Deliberately its own independent query, not scoped to the active tab/label —
+        // searching for a contact should find their conversation regardless of whether
+        // it's currently Served, Unread, or whatever tab happens to be selected.
+        const response = await conversationApi.getConversations({ search: trimmed, page: 1, limit: SEARCH_RESULT_LIMIT });
+        if (searchRequestIdRef.current !== requestId) return;
+        setSearchResults(response.conversations);
+      } catch (err: unknown) {
+        if (searchRequestIdRef.current !== requestId) return;
+        console.error('Conversation search failed:', err);
+        setSearchResults(null);
+        setSearchError('Failed to search conversations. Please try again.');
+      } finally {
+        if (searchRequestIdRef.current === requestId) setSearching(false);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
 
   // Keep activeConversation in sync when conversation list updates (e.g. label changes)
   useEffect(() => {
@@ -134,6 +267,11 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
 
   const handleSelectConversation = async (conversation: Conversation) => {
     setActiveConversation(conversation);
+    // A conversation selected from search results may not be in the paginated
+    // `conversations` list (search spans more rows than a page holds) — without this,
+    // socket updates for it would never find a match and fall back to a full refetch
+    // on every inbound message instead of updating in place.
+    setConversations(prev => (prev.some(c => c.id === conversation.id) ? prev : [conversation, ...prev]));
     await loadMessages(conversation.id);
     socketClient.joinConversation(conversation.id);
   };
@@ -239,7 +377,10 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   }, [isAuthenticated, activeConversation?.id, loadConversations]);
 
   return {
-    conversations, statusCounts, activeConversation, messages, loadingConversations, loadingMoreConversations,
+    conversations, statusCounts, labelCounts,
+    statusFilter, setStatusFilter, viewMode, setViewMode, activeLabelTab, setActiveLabelTab,
+    searchQuery: searchQueryState, setSearchQuery, searchResults, searching, searchError,
+    activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
     typingIndicator, handleSelectConversation,
     handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,

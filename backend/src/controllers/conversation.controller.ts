@@ -7,14 +7,18 @@ export class ConversationController {
    */
   async getConversations(req: Request, res: Response) {
     try {
-      const { agentId, status, page = '1', limit = '20' } = req.query;
+      const { agentId, status, page = '1', limit = '20', search, includeCounts, unreadOnly, labelId } = req.query;
 
-      const result = await conversationService.getConversations(
-        agentId as string,
-        status as string,
-        parseInt(page as string),
-        parseInt(limit as string)
-      );
+      const result = await conversationService.getConversations({
+        agentId: agentId as string,
+        status: status as string,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        search: search as string,
+        includeCounts: includeCounts === 'true',
+        unreadOnly: unreadOnly === 'true',
+        labelId: labelId as string
+      });
 
       res.json(result);
     } catch (err: unknown) {

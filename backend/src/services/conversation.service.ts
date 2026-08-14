@@ -2,27 +2,63 @@ import { Prisma, ConversationStatus } from '@prisma/client';
 import prisma from '../config/database';
 import { io } from '../index';
 
+export interface GetConversationsOptions {
+  agentId?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  includeCounts?: boolean;
+  unreadOnly?: boolean;
+  /** A label id, or the sentinel 'UNLABELED' for contacts with no labels at all. */
+  labelId?: string;
+}
+
 export class ConversationService {
   /**
    * Get all conversations with pagination and filters
    */
-  async getConversations(agentId?: string, status?: string, page = 1, limit = 20) {
+  async getConversations(options: GetConversationsOptions = {}) {
+    const { agentId, status, page = 1, limit = 20, search, includeCounts = false, unreadOnly = false, labelId } = options;
     const skip = (page - 1) * limit;
 
     // Tab badge counts must reflect the true total per status, not just whatever page
     // of rows happens to be loaded — so they're computed against agentId only, never
-    // against the status filter used for the current page's row query below.
-    const baseWhere: Prisma.ConversationWhereInput = {};
-    if (agentId) {
-      baseWhere.assignedAgentId = agentId;
-    }
+    // against the status/unread/label/search filters used for the current page's row
+    // query below.
+    const baseWhere: Prisma.ConversationWhereInput = agentId ? { assignedAgentId: agentId } : {};
 
-    const where: Prisma.ConversationWhereInput = { ...baseWhere };
-    if (status) {
-      where.status = status as ConversationStatus;
-    }
+    const searchTerm = search?.trim();
+    const contactFilter: Prisma.ContactWhereInput | undefined =
+      searchTerm || labelId
+        ? {
+            ...(searchTerm
+              ? {
+                  OR: [
+                    { name: { contains: searchTerm, mode: 'insensitive' as const } },
+                    { phoneNumber: { contains: searchTerm } }
+                  ]
+                }
+              : {}),
+            ...(labelId === 'UNLABELED' ? { labels: { none: {} } } : labelId ? { labels: { some: { labelId } } } : {})
+          }
+        : undefined;
 
-    const [conversations, total, allCount, servedCount, unreadCount, resolvedCount] = await Promise.all([
+    const where: Prisma.ConversationWhereInput = {
+      ...baseWhere,
+      ...(status ? { status: status as ConversationStatus } : {}),
+      ...(unreadOnly ? { unreadCount: { gt: 0 } } : {}),
+      ...(contactFilter ? { contact: contactFilter } : {})
+    };
+
+    // The status/label badge counts only matter to the sidebar's first page load — every
+    // "load more" scroll and search keystroke was otherwise re-running labels.length + 6
+    // extra COUNT queries for numbers nothing on screen would even re-render. `labels`
+    // runs alongside this batch (not before it) so its own latency is hidden behind the
+    // larger queries here; the per-label counts below still need the resolved label ids
+    // first, so they unavoidably add one more round trip on top of this batch.
+    const [labels, conversations, total, allCount, servedCount, unreadCount, unlabeledOpenCount] = await Promise.all([
+      includeCounts ? prisma.label.findMany({ select: { id: true, name: true, color: true } }) : Promise.resolve([]),
       prisma.conversation.findMany({
         where,
         include: {
@@ -60,11 +96,29 @@ export class ConversationService {
         take: limit
       }),
       prisma.conversation.count({ where }),
-      prisma.conversation.count({ where: baseWhere }),
-      prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.OPEN } }),
-      prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.OPEN, unreadCount: { gt: 0 } } }),
-      prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.RESOLVED } })
+      includeCounts ? prisma.conversation.count({ where: baseWhere }) : Promise.resolve(0),
+      includeCounts
+        ? prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.OPEN } })
+        : Promise.resolve(0),
+      includeCounts
+        ? prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.OPEN, unreadCount: { gt: 0 } } })
+        : Promise.resolve(0),
+      includeCounts
+        ? prisma.conversation.count({
+            where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { labels: { none: {} } } }
+          })
+        : Promise.resolve(0)
     ]);
+
+    const perLabelOpenCounts = includeCounts
+      ? await Promise.all(
+          labels.map(label =>
+            prisma.conversation.count({
+              where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { labels: { some: { labelId: label.id } } } }
+            })
+          )
+        )
+      : [];
 
     // Transform conversations to flatten labels
     const transformedConversations = conversations.map(conv => ({
@@ -75,18 +129,29 @@ export class ConversationService {
       }
     }));
 
-    return {
+    const result: {
+      conversations: typeof transformedConversations;
+      total: number;
+      page: number;
+      totalPages: number;
+      statusCounts?: { served: number; unread: number; all: number };
+      labelCounts?: { unlabeled: number; byLabel: Record<string, number> };
+    } = {
       conversations: transformedConversations,
       total,
       page,
-      totalPages: Math.ceil(total / limit),
-      statusCounts: {
-        served: servedCount,
-        unread: unreadCount,
-        resolved: resolvedCount,
-        all: allCount
-      }
+      totalPages: Math.ceil(total / limit)
     };
+
+    if (includeCounts) {
+      result.statusCounts = { served: servedCount, unread: unreadCount, all: allCount };
+      result.labelCounts = {
+        unlabeled: unlabeledOpenCount,
+        byLabel: Object.fromEntries(labels.map((label, i) => [label.id, perLabelOpenCounts[i]]))
+      };
+    }
+
+    return result;
   }
 
   /**

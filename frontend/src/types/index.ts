@@ -214,8 +214,12 @@ export interface BroadcastsResponse {
 export interface ConversationStatusCounts {
   served: number;
   unread: number;
-  resolved: number;
   all: number;
+}
+
+export interface ConversationLabelCounts {
+  unlabeled: number;
+  byLabel: Record<string, number>;
 }
 
 export interface ConversationsResponse {
@@ -223,7 +227,10 @@ export interface ConversationsResponse {
   total: number;
   page: number;
   totalPages: number;
-  statusCounts: ConversationStatusCounts;
+  // Only present when the request opted in via `includeCounts` — computing these is
+  // extra DB work that only the sidebar's first page load actually needs.
+  statusCounts?: ConversationStatusCounts;
+  labelCounts?: ConversationLabelCounts;
 }
 
 export interface MessagesResponse {

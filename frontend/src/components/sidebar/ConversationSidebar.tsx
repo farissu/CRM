@@ -1,16 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import type { Conversation, ConversationStatusCounts, Label } from '@/types';
+import type { Conversation, ConversationLabelCounts, ConversationStatusCounts, Label } from '@/types';
+import type { ConversationFilter, ConversationViewMode } from '@/hooks/useConversations';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { labelApi } from '@/lib/api';
 
-type StatusFilter = 'served' | 'unread' | 'resolved' | 'all';
-type ViewMode = 'normal' | 'label';
-
 interface ConversationSidebarProps {
   conversations: Conversation[];
   statusCounts: ConversationStatusCounts;
+  labelCounts: ConversationLabelCounts;
+  statusFilter: ConversationFilter;
+  onStatusFilterChange: (filter: ConversationFilter) => void;
+  viewMode: ConversationViewMode;
+  onViewModeChange: (mode: ConversationViewMode) => void;
+  activeLabelTab: string;
+  onActiveLabelTabChange: (labelTab: string) => void;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  searchResults: Conversation[] | null;
+  searching: boolean;
+  searchError: string | null;
   activeConversationId?: string;
   onSelectConversation: (conversation: Conversation) => void;
   loading?: boolean;
@@ -24,6 +34,18 @@ interface ConversationSidebarProps {
 export default function ConversationSidebar({
   conversations,
   statusCounts,
+  labelCounts,
+  statusFilter,
+  onStatusFilterChange,
+  viewMode,
+  onViewModeChange,
+  activeLabelTab,
+  onActiveLabelTabChange,
+  searchQuery,
+  onSearchQueryChange,
+  searchResults,
+  searching,
+  searchError,
   activeConversationId,
   onSelectConversation,
   loading,
@@ -33,14 +55,10 @@ export default function ConversationSidebar({
   agentName,
   onLogout,
 }: ConversationSidebarProps) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('served');
-  const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [labels, setLabels] = useState<Label[]>([]);
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [showLabelDropdown, setShowLabelDropdown] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('normal');
-  const [activeLabelTab, setActiveLabelTab] = useState<string>('all');
 
   // Load labels
   useEffect(() => {
@@ -58,8 +76,10 @@ export default function ConversationSidebar({
   // Clear search when closing search box
   useEffect(() => {
     if (!showSearch) {
-      setSearchQuery('');
+      onSearchQueryChange('');
     }
+    // Only reacts to the box being closed, not to identity changes of the callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSearch]);
 
   // Infinite scroll: observe a sentinel at the bottom of the list instead of
@@ -86,20 +106,27 @@ export default function ConversationSidebar({
     return () => observer.disconnect();
   }, [onLoadMore, hasMore, loadingMore]);
 
-  // Search filter applies regardless of view mode
-  const searchFilteredConversations = conversations.filter(conv => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const contactName = (conv.contact.name || '').toLowerCase();
-    const phoneNumber = conv.contact.phoneNumber.toLowerCase();
-    return contactName.includes(query) || phoneNumber.includes(query);
-  });
+  const isSearchActive = !!searchQuery.trim();
 
-  // Normal view: filter by status tab + optional label filter
-  const filteredConversations = searchFilteredConversations.filter(conv => {
+  // While searching, the candidate pool is the server-side search result set (spans
+  // ALL conversations, not just the currently-loaded page). Each match is reconciled
+  // against the live `conversations` state when present, so an already-loaded search
+  // hit keeps reflecting real-time socket updates (new messages, resolves, etc.)
+  // instead of showing the static snapshot from when the search ran.
+  const basePool = isSearchActive
+    ? (() => {
+        const liveById = new Map(conversations.map(c => [c.id, c]));
+        return (searchResults ?? []).map(match => liveById.get(match.id) ?? match);
+      })()
+    : conversations;
+
+  // `conversations` is already fetched server-side scoped to the active tab; this is
+  // just a safety net so an optimistic local mutation (e.g. resolving a conversation
+  // while on the Served tab) disappears from view immediately instead of lingering
+  // until the next refetch reconciles it.
+  const filteredConversations = basePool.filter(conv => {
     if (statusFilter === 'served' && conv.status !== 'OPEN') return false;
     if (statusFilter === 'unread' && (conv.unreadCount === 0 || conv.status !== 'OPEN')) return false;
-    if (statusFilter === 'resolved' && conv.status !== 'RESOLVED') return false;
 
     if (selectedLabelId) {
       const hasLabel = conv.contact.labels?.some(label => label.id === selectedLabelId);
@@ -110,7 +137,7 @@ export default function ConversationSidebar({
   });
 
   // Per-label view: only served (OPEN) conversations, grouped by label
-  const servedForLabelView = searchFilteredConversations.filter(c => c.status === 'OPEN');
+  const servedForLabelView = basePool.filter(c => c.status === 'OPEN');
   const conversationsByLabel = labels.map(label => ({
     label,
     conversations: servedForLabelView.filter(c => c.contact.labels?.some(l => l.id === label.id)),
@@ -125,7 +152,10 @@ export default function ConversationSidebar({
       ? unlabeledConversations
       : conversationsByLabel.find(group => group.label.id === activeLabelTab)?.conversations ?? [];
 
-  const loadMoreFooter = (
+  // Search results aren't paginated (server returns up to SEARCH_RESULT_LIMIT matches
+  // in one shot), so the "load more" sentinel — which drives the *unfiltered* list's
+  // cursor — is meaningless while a search is active.
+  const loadMoreFooter = isSearchActive ? null : (
     <>
       {hasMore && <div ref={sentinelRef} className="h-1" />}
       {loadingMore && (
@@ -267,14 +297,14 @@ export default function ConversationSidebar({
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => onSearchQueryChange(e.target.value)}
               placeholder="Search by name or phone number..."
               className="w-full px-4 py-2.5 pr-10 rounded-xl bg-white/20 backdrop-blur-sm text-white placeholder:text-white/60 border border-white/30 focus:outline-none focus:border-white/50 transition-all duration-200 font-medium"
               autoFocus
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => onSearchQueryChange('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,7 +319,7 @@ export default function ConversationSidebar({
       {/* View Mode Switch */}
       <div className="bg-white border-b border-saas-border px-3 pt-3 pb-2 flex items-center gap-1.5">
         <button
-          onClick={() => setViewMode('normal')}
+          onClick={() => onViewModeChange('normal')}
           className={clsx(
             'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200',
             viewMode === 'normal'
@@ -300,7 +330,7 @@ export default function ConversationSidebar({
           Tampilan Normal
         </button>
         <button
-          onClick={() => setViewMode('label')}
+          onClick={() => onViewModeChange('label')}
           className={clsx(
             'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200',
             viewMode === 'label'
@@ -319,54 +349,47 @@ export default function ConversationSidebar({
             label="Served"
             count={statusCounts.served}
             active={statusFilter === 'served'}
-            onClick={() => setStatusFilter('served')}
+            onClick={() => onStatusFilterChange('served')}
             color="blue"
           />
           <FilterTab
             label="Belum Dibaca"
             count={statusCounts.unread}
             active={statusFilter === 'unread'}
-            onClick={() => setStatusFilter('unread')}
+            onClick={() => onStatusFilterChange('unread')}
             color="red"
-          />
-          <FilterTab
-            label="Resolved"
-            count={statusCounts.resolved}
-            active={statusFilter === 'resolved'}
-            onClick={() => setStatusFilter('resolved')}
-            color="gray"
           />
           <FilterTab
             label="All"
             count={statusCounts.all}
             active={statusFilter === 'all'}
-            onClick={() => setStatusFilter('all')}
+            onClick={() => onStatusFilterChange('all')}
           />
         </div>
       ) : (
         <div className="bg-white border-b border-saas-border px-2 pt-2 pb-2 flex gap-1.5 overflow-x-auto">
           <LabelTab
             name="All"
-            count={servedForLabelView.length}
+            count={statusCounts.served}
             active={activeLabelTab === 'all'}
-            onClick={() => setActiveLabelTab('all')}
+            onClick={() => onActiveLabelTabChange('all')}
           />
-          {conversationsByLabel.map(({ label, conversations: labelConversations }) => (
+          {labels.map((label) => (
             <LabelTab
               key={label.id}
               name={label.name}
               color={label.color}
-              count={labelConversations.length}
+              count={labelCounts.byLabel[label.id] ?? 0}
               active={activeLabelTab === label.id}
-              onClick={() => setActiveLabelTab(label.id)}
+              onClick={() => onActiveLabelTabChange(label.id)}
             />
           ))}
-          {unlabeledConversations.length > 0 && (
+          {labelCounts.unlabeled > 0 && (
             <LabelTab
               name="Tanpa Label"
-              count={unlabeledConversations.length}
+              count={labelCounts.unlabeled}
               active={activeLabelTab === 'unlabeled'}
-              onClick={() => setActiveLabelTab('unlabeled')}
+              onClick={() => onActiveLabelTabChange('unlabeled')}
             />
           )}
         </div>
@@ -374,9 +397,15 @@ export default function ConversationSidebar({
 
       {/* Conversation List */}
       <div ref={listContainerRef} className="flex-1 overflow-y-auto bg-saas-bg">
-        {viewMode === 'normal' ? (
+        {isSearchActive && searching ? (
+          <div className="py-8 flex justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
+          </div>
+        ) : isSearchActive && searchError ? (
+          <div className="p-8 text-center text-red-600 text-sm font-medium">{searchError}</div>
+        ) : viewMode === 'normal' ? (
           filteredConversations.length === 0 ? (
-            <EmptyListState statusFilter={statusFilter} searching={!!searchQuery.trim()} />
+            <EmptyListState statusFilter={statusFilter} searching={isSearchActive} />
           ) : (
             <>
               {filteredConversations.map((conversation) => (
@@ -393,7 +422,7 @@ export default function ConversationSidebar({
         ) : activeLabelTab === 'all' ? (
           servedForLabelView.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {searchQuery.trim() ? 'No results found' : 'Tidak ada percakapan served'}
+              {isSearchActive ? 'No results found' : 'Tidak ada percakapan served'}
             </div>
           ) : (
             <>
@@ -421,7 +450,7 @@ export default function ConversationSidebar({
           )
         ) : activeLabelConversations.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            {searchQuery.trim() ? 'No results found' : 'Tidak ada percakapan pada label ini'}
+            {isSearchActive ? 'No results found' : 'Tidak ada percakapan pada label ini'}
           </div>
         ) : (
           <>
@@ -442,7 +471,7 @@ export default function ConversationSidebar({
 }
 
 interface EmptyListStateProps {
-  statusFilter: StatusFilter;
+  statusFilter: ConversationFilter;
   searching: boolean;
 }
 
@@ -464,7 +493,6 @@ function EmptyListState({ statusFilter, searching }: EmptyListStateProps) {
       {statusFilter === 'all' && 'No conversations yet'}
       {statusFilter === 'served' && 'No served conversations'}
       {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
-      {statusFilter === 'resolved' && 'No resolved conversations'}
     </div>
   );
 }

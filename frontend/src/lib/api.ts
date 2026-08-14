@@ -25,6 +25,10 @@ export const conversationApi = {
     status?: string;
     page?: number;
     limit?: number;
+    search?: string;
+    includeCounts?: boolean;
+    unreadOnly?: boolean;
+    labelId?: string;
   }): Promise<ConversationsResponse> => {
     const response = await api.get('/conversations', { params });
     return response.data;
