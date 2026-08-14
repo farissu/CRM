@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import type { Conversation, Label } from '@/types';
+import type { Conversation, ConversationStatusCounts, Label } from '@/types';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { labelApi } from '@/lib/api';
@@ -10,6 +10,7 @@ type ViewMode = 'normal' | 'label';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
+  statusCounts: ConversationStatusCounts;
   activeConversationId?: string;
   onSelectConversation: (conversation: Conversation) => void;
   loading?: boolean;
@@ -22,6 +23,7 @@ interface ConversationSidebarProps {
 
 export default function ConversationSidebar({
   conversations,
+  statusCounts,
   activeConversationId,
   onSelectConversation,
   loading,
@@ -106,10 +108,6 @@ export default function ConversationSidebar({
 
     return true;
   });
-
-  const servedCount = conversations.filter(c => c.status === 'OPEN').length;
-  const unreadCount = conversations.filter(c => c.status === 'OPEN' && c.unreadCount > 0).length;
-  const resolvedCount = conversations.filter(c => c.status === 'RESOLVED').length;
 
   // Per-label view: only served (OPEN) conversations, grouped by label
   const servedForLabelView = searchFilteredConversations.filter(c => c.status === 'OPEN');
@@ -319,28 +317,28 @@ export default function ConversationSidebar({
         <div className="bg-white border-b border-saas-border flex px-2 pt-2">
           <FilterTab
             label="Served"
-            count={servedCount}
+            count={statusCounts.served}
             active={statusFilter === 'served'}
             onClick={() => setStatusFilter('served')}
             color="blue"
           />
           <FilterTab
             label="Belum Dibaca"
-            count={unreadCount}
+            count={statusCounts.unread}
             active={statusFilter === 'unread'}
             onClick={() => setStatusFilter('unread')}
             color="red"
           />
           <FilterTab
             label="Resolved"
-            count={resolvedCount}
+            count={statusCounts.resolved}
             active={statusFilter === 'resolved'}
             onClick={() => setStatusFilter('resolved')}
             color="gray"
           />
           <FilterTab
             label="All"
-            count={conversations.length}
+            count={statusCounts.all}
             active={statusFilter === 'all'}
             onClick={() => setStatusFilter('all')}
           />

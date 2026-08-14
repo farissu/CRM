@@ -8,16 +8,21 @@ export class ConversationService {
    */
   async getConversations(agentId?: string, status?: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    
-    const where: Prisma.ConversationWhereInput = {};
+
+    // Tab badge counts must reflect the true total per status, not just whatever page
+    // of rows happens to be loaded — so they're computed against agentId only, never
+    // against the status filter used for the current page's row query below.
+    const baseWhere: Prisma.ConversationWhereInput = {};
     if (agentId) {
-      where.assignedAgentId = agentId;
+      baseWhere.assignedAgentId = agentId;
     }
+
+    const where: Prisma.ConversationWhereInput = { ...baseWhere };
     if (status) {
       where.status = status as ConversationStatus;
     }
 
-    const [conversations, total] = await Promise.all([
+    const [conversations, total, allCount, servedCount, unreadCount, resolvedCount] = await Promise.all([
       prisma.conversation.findMany({
         where,
         include: {
@@ -54,7 +59,11 @@ export class ConversationService {
         skip,
         take: limit
       }),
-      prisma.conversation.count({ where })
+      prisma.conversation.count({ where }),
+      prisma.conversation.count({ where: baseWhere }),
+      prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.OPEN } }),
+      prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.OPEN, unreadCount: { gt: 0 } } }),
+      prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.RESOLVED } })
     ]);
 
     // Transform conversations to flatten labels
@@ -70,7 +79,13 @@ export class ConversationService {
       conversations: transformedConversations,
       total,
       page,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
+      statusCounts: {
+        served: servedCount,
+        unread: unreadCount,
+        resolved: resolvedCount,
+        all: allCount
+      }
     };
   }
 

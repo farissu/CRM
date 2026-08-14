@@ -211,11 +211,19 @@ export interface BroadcastsResponse {
   totalPages: number;
 }
 
+export interface ConversationStatusCounts {
+  served: number;
+  unread: number;
+  resolved: number;
+  all: number;
+}
+
 export interface ConversationsResponse {
   conversations: Conversation[];
   total: number;
   page: number;
   totalPages: number;
+  statusCounts: ConversationStatusCounts;
 }
 
 export interface MessagesResponse {

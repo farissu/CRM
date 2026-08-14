@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { conversationApi, messageApi, complaintApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
-import type { Conversation, Message } from '@/types';
+import type { Conversation, ConversationStatusCounts, Message } from '@/types';
+
+const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, resolved: 0, all: 0 };
 
 const CONVERSATIONS_PAGE_SIZE = 30;
 
@@ -15,6 +17,7 @@ interface UseConversationsParams {
 
 interface UseConversationsReturn {
   conversations: Conversation[];
+  statusCounts: ConversationStatusCounts;
   activeConversation: Conversation | null;
   messages: Message[];
   loadingConversations: boolean;
@@ -38,6 +41,7 @@ interface UseConversationsReturn {
 
 export function useConversations({ isAuthenticated, agentId, agentName }: UseConversationsParams): UseConversationsReturn {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [statusCounts, setStatusCounts] = useState<ConversationStatusCounts>(EMPTY_STATUS_COUNTS);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -57,6 +61,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       setLoadingConversations(true);
       const response = await conversationApi.getConversations({ page: 1, limit: CONVERSATIONS_PAGE_SIZE });
       setConversations(response.conversations);
+      setStatusCounts(response.statusCounts);
       pageRef.current = 1;
       setHasMoreConversations(response.page < response.totalPages);
     } finally {
@@ -234,7 +239,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   }, [isAuthenticated, activeConversation?.id, loadConversations]);
 
   return {
-    conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
+    conversations, statusCounts, activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
     typingIndicator, handleSelectConversation,
     handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,

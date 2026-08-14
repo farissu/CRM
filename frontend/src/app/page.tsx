@@ -34,7 +34,7 @@ export default function HomePage() {
   const { isAuthenticated, agent, agentId, agentName, checkingAuth, handleLoginSuccess, handleLogout, refreshAgentData } = useAuth();
 
   const {
-    conversations, activeConversation, messages, loadingConversations, loadingMoreConversations,
+    conversations, statusCounts, activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
     typingIndicator, handleSelectConversation,
     handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
@@ -68,6 +68,7 @@ export default function HomePage() {
         <>
           <ConversationSidebar
             conversations={conversations}
+            statusCounts={statusCounts}
             activeConversationId={activeConversation?.id}
             onSelectConversation={handleSelectConversation}
             loading={loadingConversations}
