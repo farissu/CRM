@@ -8,7 +8,7 @@ import {
 } from '@prisma/client';
 import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
-import { parseBroadcastCsv, buildCsvTemplate, type BroadcastCsvRow } from '../utils/csv.util';
+import { parseBroadcastExcel, buildExcelTemplate, type BroadcastExcelRow } from '../utils/excel.util';
 import { enqueueBroadcast, cancelBroadcastJob } from '../queues/broadcast.queue';
 import { extractHeaderMedia, hasMediaHeader, extractCarouselCardsMedia, hasCarousel } from '../utils/template-media.util';
 
@@ -22,8 +22,7 @@ export interface CreateBroadcastDto {
   phoneNumber?: string;
   recipientName?: string;
   variables?: Record<string, string>;
-  csvBuffer?: Buffer;
-  csvSeparator?: string;
+  excelBuffer?: Buffer;
   scheduledAt?: string;
 }
 
@@ -37,14 +36,14 @@ export class BroadcastService {
       throw new Error('Only APPROVED templates can be used for a broadcast');
     }
 
-    let recipientInputs: BroadcastCsvRow[];
+    let recipientInputs: BroadcastExcelRow[];
     if (dto.audienceType === 'SINGLE_NUMBER') {
       if (!dto.phoneNumber) throw new Error('phoneNumber is required for Single Number audience');
       recipientInputs = [{ phoneNumber: dto.phoneNumber, name: dto.recipientName, variables: dto.variables ?? {} }];
     } else if (dto.audienceType === 'CSV') {
-      if (!dto.csvBuffer) throw new Error('CSV file is required for By CSV audience');
-      const { rows, errors } = parseBroadcastCsv(dto.csvBuffer, dto.csvSeparator || ',', template);
-      if (rows.length === 0) throw new Error(errors.join('; ') || 'CSV has no valid rows');
+      if (!dto.excelBuffer) throw new Error('Excel file is required for By Excel File audience');
+      const { rows, errors } = await parseBroadcastExcel(dto.excelBuffer, template);
+      if (rows.length === 0) throw new Error(errors.join('; ') || 'Excel file has no valid rows');
       recipientInputs = rows;
     } else {
       throw new Error(`Audience type ${dto.audienceType} is not supported yet`);
@@ -169,10 +168,10 @@ export class BroadcastService {
     return { waMessageId };
   }
 
-  async getCsvTemplateContent(templateId: string, companyId: string) {
+  async getExcelTemplateContent(templateId: string, companyId: string) {
     const template = await prisma.messageTemplate.findFirst({ where: { id: templateId, companyId } });
     if (!template) throw new Error('Template not found');
-    return { filename: `${template.name}_broadcast_template.csv`, content: buildCsvTemplate(template) };
+    return { filename: `${template.name}_broadcast_template.xlsx`, content: await buildExcelTemplate(template) };
   }
 
   /**

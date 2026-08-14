@@ -341,8 +341,8 @@ export const broadcastApi = {
     return response.data as { waMessageId: string };
   },
 
-  downloadCsvTemplate: async (templateId: string): Promise<Blob> => {
-    const response = await api.get(`/broadcasts/csv-template/${templateId}`, { responseType: 'blob' });
+  downloadExcelTemplate: async (templateId: string): Promise<Blob> => {
+    const response = await api.get(`/broadcasts/excel-template/${templateId}`, { responseType: 'blob' });
     return response.data as Blob;
   },
 

@@ -53,7 +53,7 @@ export const broadcastController = {
       const companyId = authReq.user?.companyId;
       if (!companyId) return res.status(400).json({ error: 'Company ID required' });
 
-      const { name, label, templateId, audienceType, phoneNumber, recipientName, variables, csvSeparator, scheduledAt } =
+      const { name, label, templateId, audienceType, phoneNumber, recipientName, variables, scheduledAt } =
         req.body as {
           name?: string;
           label?: string;
@@ -62,7 +62,6 @@ export const broadcastController = {
           phoneNumber?: string;
           recipientName?: string;
           variables?: string;
-          csvSeparator?: string;
           scheduledAt?: string;
         };
 
@@ -84,8 +83,7 @@ export const broadcastController = {
         phoneNumber,
         recipientName,
         variables: variables ? (JSON.parse(variables) as Record<string, string>) : undefined,
-        csvBuffer: authReq.file?.buffer,
-        csvSeparator,
+        excelBuffer: authReq.file?.buffer,
         scheduledAt,
       });
 
@@ -116,17 +114,17 @@ export const broadcastController = {
     }
   },
 
-  async downloadCsvTemplate(req: Request, res: Response) {
+  async downloadExcelTemplate(req: Request, res: Response) {
     try {
       const companyId = (req as AuthRequest).user?.companyId;
       if (!companyId) return res.status(400).json({ error: 'Company ID required' });
 
-      const { filename, content } = await broadcastService.getCsvTemplateContent(req.params.templateId, companyId);
-      res.setHeader('Content-Type', 'text/csv');
+      const { filename, content } = await broadcastService.getExcelTemplateContent(req.params.templateId, companyId);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       return res.send(content);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to build CSV template';
+      const message = error instanceof Error ? error.message : 'Failed to build Excel template';
       const status = message === 'Template not found' ? 404 : 500;
       return res.status(status).json({ error: message });
     }

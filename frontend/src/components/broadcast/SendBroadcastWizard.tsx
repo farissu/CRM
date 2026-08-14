@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ExcelJS from 'exceljs';
 import { ChevronLeft, ChevronDown, Check, Info, Upload, CheckCircle2, X } from 'lucide-react';
 import type { MessageTemplate, TemplateCategory } from '@/types';
 import { templateApi, broadcastApi } from '@/lib/api';
@@ -22,20 +23,42 @@ const STEPS: { key: Step; label: string }[] = [
   { key: 'schedule', label: 'Set Schedule & Send' },
 ];
 
-const CSV_PREVIEW_ROW_LIMIT = 10;
+const EXCEL_PREVIEW_ROW_LIMIT = 10;
 
-interface CsvPreviewRow {
+interface ExcelPreviewRow {
   cells: string[];
   missingPhone: boolean;
   hasEmptyVariable: boolean;
 }
 
-interface CsvSummary {
+interface ExcelSummary {
   rowCount: number;
   headers: string[];
-  previewRows: CsvPreviewRow[];
+  previewRows: ExcelPreviewRow[];
   missingPhoneCount: number;
   emptyVariableCount: number;
+}
+
+function cellToString(value: ExcelJS.CellValue): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') {
+    if ('richText' in value) {
+      return (value as { richText: Array<{ text: string }> }).richText.map(part => part.text).join('').trim();
+    }
+    if ('error' in value) return '';
+    if ('text' in value) return String((value as { text: unknown }).text ?? '').trim();
+    if ('result' in value) return String((value as { result: unknown }).result ?? '').trim();
+  }
+  return String(value).trim();
+}
+
+function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 function extractBodyVariableNumbers(template: MessageTemplate | null): string[] {
@@ -76,11 +99,11 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   const [phoneNumber, setPhoneNumber] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [variables, setVariables] = useState<Record<string, string>>({});
-  const [csvSeparator, setCsvSeparator] = useState<',' | ';'>(',');
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvSummary, setCsvSummary] = useState<CsvSummary | null>(null);
-  const [csvErrors, setCsvErrors] = useState<string[]>([]);
-  const [isDraggingCsv, setIsDraggingCsv] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelSummary, setExcelSummary] = useState<ExcelSummary | null>(null);
+  const [excelErrors, setExcelErrors] = useState<string[]>([]);
+  const [isDraggingExcel, setIsDraggingExcel] = useState(false);
+  const excelProcessingIdRef = useRef(0);
 
   const [scheduleMode, setScheduleMode] = useState<'now' | 'later'>('now');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -134,12 +157,12 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
         setError('Phone number is required');
         return;
       }
-      if (audienceType === 'CSV' && !csvFile) {
-        setError('Please upload a CSV file');
+      if (audienceType === 'CSV' && !excelFile) {
+        setError('Please upload an Excel file');
         return;
       }
-      if (audienceType === 'CSV' && csvErrors.length > 0) {
-        setError(csvErrors[0]);
+      if (audienceType === 'CSV' && excelErrors.length > 0) {
+        setError(excelErrors[0]);
         return;
       }
     }
@@ -154,89 +177,107 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
     else onBack();
   };
 
-  const processCsvFile = (file: File) => {
-    setCsvFile(file);
-    setCsvSummary(null);
-    setCsvErrors([]);
+  const processExcelFile = async (file: File) => {
+    const processingId = ++excelProcessingIdRef.current;
+    setExcelFile(file);
+    setExcelSummary(null);
+    setExcelErrors([]);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result ?? '');
-      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-      if (lines.length === 0) {
-        setCsvErrors(['CSV file is empty']);
+    const isStale = () => excelProcessingIdRef.current !== processingId;
+
+    try {
+      const arrayBuffer = await readFileAsArrayBuffer(file);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      if (isStale()) return;
+
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet || worksheet.rowCount === 0) {
+        setExcelErrors(['Excel file is empty']);
         return;
       }
-      const headers = lines[0].split(csvSeparator).map(h => h.trim());
+
+      const headers: string[] = [];
+      worksheet.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        headers[colNumber - 1] = cellToString(cell.value);
+      });
       if (!headers.includes('phone_number')) {
-        setCsvErrors(['CSV is missing the required "phone_number" column']);
+        setExcelErrors(['Excel file is missing the required "phone_number" column']);
         return;
       }
 
       const phoneIndex = headers.indexOf('phone_number');
       const variableIndexes = bodyVariableNumbers.map(n => headers.indexOf(`var${n}`));
-      const dataLines = lines.slice(1);
 
       let missingPhoneCount = 0;
       let emptyVariableCount = 0;
-      const previewRows: CsvPreviewRow[] = [];
+      let rowCount = 0;
+      const previewRows: ExcelPreviewRow[] = [];
 
-      dataLines.forEach((line, i) => {
-        const cells = line.split(csvSeparator).map(c => c.trim());
+      for (let r = 2; r <= worksheet.rowCount; r++) {
+        const row = worksheet.getRow(r);
+        if (row.actualCellCount === 0) continue;
+
+        const cells = headers.map((_, colIdx) => cellToString(row.getCell(colIdx + 1).value));
         const missingPhone = !cells[phoneIndex];
         const hasEmptyVariable = variableIndexes.some(idx => idx === -1 || !cells[idx]);
 
         if (missingPhone) missingPhoneCount += 1;
         if (hasEmptyVariable) emptyVariableCount += 1;
-        if (i < CSV_PREVIEW_ROW_LIMIT) previewRows.push({ cells, missingPhone, hasEmptyVariable });
-      });
+        if (rowCount < EXCEL_PREVIEW_ROW_LIMIT) previewRows.push({ cells, missingPhone, hasEmptyVariable });
+        rowCount += 1;
+      }
 
-      setCsvSummary({ rowCount: dataLines.length, headers, previewRows, missingPhoneCount, emptyVariableCount });
-    };
-    reader.readAsText(file);
+      if (isStale()) return;
+      setExcelSummary({ rowCount, headers, previewRows, missingPhoneCount, emptyVariableCount });
+    } catch {
+      if (isStale()) return;
+      setExcelErrors(['File is not a valid Excel (.xlsx) file']);
+    }
   };
 
-  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (file) processCsvFile(file);
+    if (file) void processExcelFile(file);
   };
 
-  const handleCsvDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleExcelDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
-    setIsDraggingCsv(true);
+    setIsDraggingExcel(true);
   };
 
-  const handleCsvDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleExcelDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
-    setIsDraggingCsv(false);
+    setIsDraggingExcel(false);
   };
 
-  const handleCsvDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+  const handleExcelDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
-    setIsDraggingCsv(false);
+    setIsDraggingExcel(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) processCsvFile(file);
+    if (file) void processExcelFile(file);
   };
 
-  const handleClearCsvFile = () => {
-    setCsvFile(null);
-    setCsvSummary(null);
-    setCsvErrors([]);
+  const handleClearExcelFile = () => {
+    excelProcessingIdRef.current += 1;
+    setExcelFile(null);
+    setExcelSummary(null);
+    setExcelErrors([]);
   };
 
-  const handleDownloadCsvTemplate = async () => {
+  const handleDownloadExcelTemplate = async () => {
     if (!selectedTemplate) return;
     try {
-      const blob = await broadcastApi.downloadCsvTemplate(selectedTemplate.id);
+      const blob = await broadcastApi.downloadExcelTemplate(selectedTemplate.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${selectedTemplate.name}_broadcast_template.csv`;
+      a.download = `${selectedTemplate.name}_broadcast_template.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to download CSV template'));
+      setError(getErrorMessage(err, 'Failed to download Excel template'));
     }
   };
 
@@ -272,9 +313,8 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
         formData.append('phoneNumber', phoneNumber.trim());
         if (recipientName.trim()) formData.append('recipientName', recipientName.trim());
         formData.append('variables', JSON.stringify(variables));
-      } else if (audienceType === 'CSV' && csvFile) {
-        formData.append('csvFile', csvFile);
-        formData.append('csvSeparator', csvSeparator);
+      } else if (audienceType === 'CSV' && excelFile) {
+        formData.append('excelFile', excelFile);
       }
 
       if (scheduleMode === 'later' && scheduledAt) {
@@ -291,8 +331,8 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
   };
 
   const categoryLabel = CATEGORIES.find(c => c.value === category)?.label ?? category;
-  const audienceLabel = audienceType === 'SINGLE_NUMBER' ? 'Single Number' : 'By CSV';
-  const recipientCount = audienceType === 'SINGLE_NUMBER' ? (phoneNumber.trim() ? 1 : 0) : csvSummary?.rowCount ?? 0;
+  const audienceLabel = audienceType === 'SINGLE_NUMBER' ? 'Single Number' : 'By Excel File';
+  const recipientCount = audienceType === 'SINGLE_NUMBER' ? (phoneNumber.trim() ? 1 : 0) : excelSummary?.rowCount ?? 0;
 
   const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
@@ -452,7 +492,7 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
                 >
                   <option value="SINGLE_NUMBER">Single Number</option>
-                  <option value="CSV">By CSV</option>
+                  <option value="CSV">By Excel File</option>
                 </select>
               </div>
 
@@ -505,75 +545,63 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
               {audienceType === 'CSV' && (
                 <div className="space-y-4">
                   <div className="space-y-2 text-sm text-gray-600">
-                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />Send a Broadcast Message from CSV (Max 100,000 customers)</p>
-                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />Please use the correct CSV format. We recommend using Google Sheets for editing.</p>
-                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />To send a broadcast message, please use the downloaded CSV file below. It has been designed according to your template structure.</p>
+                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />Send a Broadcast Message from an Excel file (Max 100,000 customers)</p>
+                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />Enter each recipient in its own row and column — do not paste a whole comma-separated line into a single cell.</p>
+                    <p className="flex gap-2 items-start"><Info className="w-4 h-4 shrink-0 text-[#597ea3] mt-0.5" />To send a broadcast message, please use the downloaded Excel file below. It has been designed according to your template structure.</p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => void handleDownloadCsvTemplate()}
+                    onClick={() => void handleDownloadExcelTemplate()}
                     disabled={!selectedTemplate}
                     className="bg-[#597ea3] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#416180] disabled:opacity-50 transition-all"
                   >
-                    Download CSV Template
+                    Download Excel Template
                   </button>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Type of Separator CSV File</label>
-                    <select
-                      value={csvSeparator}
-                      onChange={e => setCsvSeparator(e.target.value as ',' | ';')}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#597ea3] focus:outline-none text-sm"
-                    >
-                      <option value=",">Comma ( , )</option>
-                      <option value=";">Semicolon ( ; )</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Upload CSV File</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Upload Excel File</label>
                     <label
-                      onDragOver={handleCsvDragOver}
-                      onDragLeave={handleCsvDragLeave}
-                      onDrop={handleCsvDrop}
+                      onDragOver={handleExcelDragOver}
+                      onDragLeave={handleExcelDragLeave}
+                      onDrop={handleExcelDrop}
                       className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 cursor-pointer transition-colors ${
-                        isDraggingCsv ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-[#597ea3]/40 hover:bg-[#f0faf9]'
+                        isDraggingExcel ? 'border-[#597ea3] bg-[#f0faf9]' : 'border-[#597ea3]/40 hover:bg-[#f0faf9]'
                       }`}
                     >
                       <Upload className="w-5 h-5 text-gray-400 mb-2" />
                       <span className="text-sm text-gray-600">Drag and Drop file here or <span className="text-[#597ea3] font-semibold">Choose File</span></span>
-                      <input type="file" accept=".csv" className="hidden" onChange={handleCsvFileChange} />
+                      <input type="file" accept=".xlsx" className="hidden" onChange={handleExcelFileChange} />
                     </label>
-                    <p className="text-xs text-gray-400 mt-1">Supported File: CSV</p>
+                    <p className="text-xs text-gray-400 mt-1">Supported File: XLSX (.xlsx)</p>
                   </div>
 
-                  {csvFile && (
+                  {excelFile && (
                     <div className="border border-gray-200 rounded-lg p-3 text-sm flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold text-gray-700">{csvFile.name}</p>
-                        {csvSummary && <p className="text-xs text-gray-500 mt-1">{csvSummary.rowCount} recipients detected</p>}
-                        {csvErrors.length > 0 && <p className="text-xs text-red-600 mt-1">{csvErrors[0]}</p>}
+                        <p className="font-semibold text-gray-700">{excelFile.name}</p>
+                        {excelSummary && <p className="text-xs text-gray-500 mt-1">{excelSummary.rowCount} recipients detected</p>}
+                        {excelErrors.length > 0 && <p className="text-xs text-red-600 mt-1">{excelErrors[0]}</p>}
                       </div>
                       <button
                         type="button"
-                        onClick={handleClearCsvFile}
+                        onClick={handleClearExcelFile}
                         className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-                        aria-label="Cancel CSV file"
+                        aria-label="Cancel Excel file"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   )}
 
-                  {csvSummary && csvSummary.previewRows.length > 0 && (
+                  {excelSummary && excelSummary.previewRows.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="block text-sm font-semibold text-gray-700">Preview</label>
-                        {(csvSummary.missingPhoneCount > 0 || csvSummary.emptyVariableCount > 0) && (
+                        {(excelSummary.missingPhoneCount > 0 || excelSummary.emptyVariableCount > 0) && (
                           <span className="text-xs font-semibold text-red-600">
-                            {csvSummary.missingPhoneCount > 0 && `${csvSummary.missingPhoneCount} missing phone_number`}
-                            {csvSummary.missingPhoneCount > 0 && csvSummary.emptyVariableCount > 0 && ' · '}
-                            {csvSummary.emptyVariableCount > 0 && `${csvSummary.emptyVariableCount} row(s) with empty variable`}
+                            {excelSummary.missingPhoneCount > 0 && `${excelSummary.missingPhoneCount} missing phone_number`}
+                            {excelSummary.missingPhoneCount > 0 && excelSummary.emptyVariableCount > 0 && ' · '}
+                            {excelSummary.emptyVariableCount > 0 && `${excelSummary.emptyVariableCount} row(s) with empty variable`}
                           </span>
                         )}
                       </div>
@@ -582,18 +610,18 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                           <thead className="bg-gray-50 text-gray-500">
                             <tr>
                               <th className="px-3 py-2 text-left font-semibold">#</th>
-                              {csvSummary.headers.map(h => (
+                              {excelSummary.headers.map(h => (
                                 <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {csvSummary.previewRows.map((row, i) => {
+                            {excelSummary.previewRows.map((row, i) => {
                               const hasIssue = row.missingPhone || row.hasEmptyVariable;
                               return (
                                 <tr key={i} className={hasIssue ? 'bg-red-50' : undefined}>
                                   <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                                  {csvSummary.headers.map((h, colIdx) => (
+                                  {excelSummary.headers.map((h, colIdx) => (
                                     <td key={h} className={`px-3 py-2 whitespace-nowrap ${!row.cells[colIdx] ? 'text-red-500 italic' : 'text-gray-700'}`}>
                                       {row.cells[colIdx] || 'empty'}
                                     </td>
@@ -604,9 +632,9 @@ export default function SendBroadcastWizard({ draft, onBack, onSuccess }: SendBr
                           </tbody>
                         </table>
                       </div>
-                      {csvSummary.rowCount > CSV_PREVIEW_ROW_LIMIT && (
+                      {excelSummary.rowCount > EXCEL_PREVIEW_ROW_LIMIT && (
                         <p className="text-xs text-gray-400 mt-1">
-                          Showing first {CSV_PREVIEW_ROW_LIMIT} of {csvSummary.rowCount} recipients
+                          Showing first {EXCEL_PREVIEW_ROW_LIMIT} of {excelSummary.rowCount} recipients
                         </p>
                       )}
                     </div>
