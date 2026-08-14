@@ -3,6 +3,7 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
 import { MessageStatus } from '@prisma/client';
+import { dedupeCaseInsensitive } from '../utils/error-format.util';
 import { messageService } from '../services/message.service';
 import { mediaService } from '../services/media.service';
 import { storageService } from '../services/storage.service';
@@ -147,8 +148,7 @@ async function processWhatsAppStatus(status: WhatsAppStatus) {
     // is part of an experiment...", only show up when Meta bothers to populate
     // error_data.details distinctly. Dedupe rather than showing the same phrase 3 times,
     // and always lead with the numeric code so it's identifiable/searchable.
-    const parts = [err.title, err.message, err.error_data?.details].filter(Boolean) as string[];
-    const uniqueParts = Array.from(new Set(parts));
+    const uniqueParts = dedupeCaseInsensitive([err.title, err.message, err.error_data?.details]);
     errorReason = `Error ${err.code}: ${uniqueParts.join(' — ')}`;
     console.error(`[WhatsApp] Delivery failed for message ${status.id}:`, JSON.stringify(status.errors));
   }

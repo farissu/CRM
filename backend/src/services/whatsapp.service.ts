@@ -1,5 +1,6 @@
 import axios from 'axios';
 import FormData from 'form-data';
+import { dedupeCaseInsensitive } from '../utils/error-format.util';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v19.0';
 
@@ -72,8 +73,7 @@ interface MetaApiError {
 // in `error_data.details`, plus a numeric `code` worth surfacing to whoever is debugging
 // a failed broadcast recipient — none of which the plain axios error message carries.
 function formatMetaApiError(status: number, metaError: MetaApiError | undefined, fallback: string): string {
-  const parts = [metaError?.message ?? fallback, metaError?.error_data?.details].filter(Boolean) as string[];
-  const uniqueParts = Array.from(new Set(parts));
+  const uniqueParts = dedupeCaseInsensitive([metaError?.message ?? fallback, metaError?.error_data?.details]);
   return `Meta API error ${status} (code: ${metaError?.code ?? 'unknown'}): ${uniqueParts.join(' — ')}`;
 }
 
