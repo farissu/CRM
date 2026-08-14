@@ -79,9 +79,14 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
   }, [broadcastId]);
 
   const recipients = broadcast?.recipients ?? [];
-  const successful = (broadcast?.deliveredCount ?? 0) + (broadcast?.readCount ?? 0);
+  // deliveredCount is already a cumulative "reached delivered-or-better" total — a read
+  // message was necessarily delivered first, so it's counted there too. Adding readCount
+  // on top double-counts every recipient who progressed past delivered to read.
+  const successful = broadcast?.deliveredCount ?? 0;
   const failed = broadcast?.failedCount ?? 0;
-  const inProgress = Math.max(0, (broadcast?.sentCount ?? 0) - successful - failed);
+  // failedCount recipients were already excluded from sentCount when they failed (moved
+  // out via decrement), so subtracting `failed` again here would double-subtract them.
+  const inProgress = Math.max(0, (broadcast?.sentCount ?? 0) - successful);
 
   const handleDownloadLog = () => {
     if (!broadcast) return;

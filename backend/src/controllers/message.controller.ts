@@ -142,7 +142,14 @@ async function processWhatsAppStatus(status: WhatsAppStatus) {
   let errorReason: string | undefined;
   if (status.errors?.length) {
     const err = status.errors[0];
-    errorReason = [err.title, err.message, err.error_data?.details].filter(Boolean).join(' — ');
+    // Meta often repeats the same generic text in title/message/error_data.details (e.g.
+    // "Message undeliverable" x3) — the actually-useful specifics, like "User's number
+    // is part of an experiment...", only show up when Meta bothers to populate
+    // error_data.details distinctly. Dedupe rather than showing the same phrase 3 times,
+    // and always lead with the numeric code so it's identifiable/searchable.
+    const parts = [err.title, err.message, err.error_data?.details].filter(Boolean) as string[];
+    const uniqueParts = Array.from(new Set(parts));
+    errorReason = `Error ${err.code}: ${uniqueParts.join(' — ')}`;
     console.error(`[WhatsApp] Delivery failed for message ${status.id}:`, JSON.stringify(status.errors));
   }
 

@@ -61,6 +61,22 @@ interface MetaMediaUploadResponse {
   id: string;
 }
 
+interface MetaApiError {
+  message?: string;
+  code?: number;
+  error_data?: { details?: string };
+}
+
+// Meta's `message` field is often a generic title (e.g. "Message undeliverable") with
+// the actually-useful specifics (e.g. "User's number is part of an experiment...") only
+// in `error_data.details`, plus a numeric `code` worth surfacing to whoever is debugging
+// a failed broadcast recipient — none of which the plain axios error message carries.
+function formatMetaApiError(status: number, metaError: MetaApiError | undefined, fallback: string): string {
+  const parts = [metaError?.message ?? fallback, metaError?.error_data?.details].filter(Boolean) as string[];
+  const uniqueParts = Array.from(new Set(parts));
+  return `Meta API error ${status} (code: ${metaError?.code ?? 'unknown'}): ${uniqueParts.join(' — ')}`;
+}
+
 export class WhatsAppService {
   private get phoneNumberId(): string {
     return process.env.WHATSAPP_PHONE_NUMBER_ID || '';
@@ -94,9 +110,7 @@ export class WhatsAppService {
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         const metaError = err.response.data?.error;
-        throw new Error(
-          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
-        );
+        throw new Error(formatMetaApiError(err.response.status, metaError, err.message));
       }
       throw err;
     }
@@ -163,9 +177,7 @@ export class WhatsAppService {
           resolvedMimeType: mimeType,
           metaResponse: err.response.data,
         });
-        throw new Error(
-          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
-        );
+        throw new Error(formatMetaApiError(err.response.status, metaError, err.message));
       }
       throw err;
     }
@@ -195,9 +207,7 @@ export class WhatsAppService {
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         const metaError = err.response.data?.error;
-        throw new Error(
-          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
-        );
+        throw new Error(formatMetaApiError(err.response.status, metaError, err.message));
       }
       throw err;
     }
@@ -258,9 +268,7 @@ export class WhatsAppService {
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         const metaError = err.response.data?.error;
-        throw new Error(
-          `Meta API error ${err.response.status}: ${metaError?.message ?? err.message} (code: ${metaError?.code ?? 'unknown'})`
-        );
+        throw new Error(formatMetaApiError(err.response.status, metaError, err.message));
       }
       throw err;
     }

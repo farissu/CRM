@@ -202,19 +202,11 @@ export class BroadcastService {
 
   /**
    * Called by the worker once all recipients in a broadcast have been processed.
+   * Always FINISHED at that point — every recipient was attempted, whether or not some
+   * failed; per-recipient failures are visible in the Broadcast Logs, not the headline status.
    */
   async finalizeBroadcastStatus(broadcastId: string) {
-    const broadcast = await prisma.broadcast.findUnique({ where: { id: broadcastId } });
-    if (!broadcast) return;
-
-    const status =
-      broadcast.failedCount === 0
-        ? BroadcastStatus.FINISHED
-        : broadcast.sentCount === 0
-          ? BroadcastStatus.FAILED
-          : BroadcastStatus.UNFINISHED;
-
-    await prisma.broadcast.update({ where: { id: broadcastId }, data: { status } });
+    await prisma.broadcast.update({ where: { id: broadcastId }, data: { status: BroadcastStatus.FINISHED } });
   }
 
   /**
@@ -258,8 +250,24 @@ export class BroadcastService {
       return;
     }
 
-    const field = recipientStatus === BroadcastRecipientStatus.DELIVERED ? 'deliveredCount' : 'readCount';
-    await prisma.broadcast.update({ where: { id: recipient.broadcastId }, data: { [field]: { increment: 1 } } });
+    if (recipientStatus === BroadcastRecipientStatus.READ) {
+      // deliveredCount is a cumulative "reached delivered-or-better" counter — a message
+      // that's been read was necessarily delivered first — so a recipient that skipped
+      // straight from SENT to READ (Meta's delivered webhook lost/reordered) still needs
+      // to be counted there, or it silently falls out of that total. One that already
+      // went through DELIVERED was counted then; don't double it.
+      const alreadyCountedAsDelivered = recipient.status === BroadcastRecipientStatus.DELIVERED;
+      await prisma.broadcast.update({
+        where: { id: recipient.broadcastId },
+        data: {
+          readCount: { increment: 1 },
+          ...(alreadyCountedAsDelivered ? {} : { deliveredCount: { increment: 1 } })
+        }
+      });
+      return;
+    }
+
+    await prisma.broadcast.update({ where: { id: recipient.broadcastId }, data: { deliveredCount: { increment: 1 } } });
   }
 }
 
