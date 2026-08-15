@@ -127,6 +127,7 @@ export default function ConversationSidebar({
   const filteredConversations = basePool.filter(conv => {
     if (statusFilter === 'served' && conv.status !== 'OPEN') return false;
     if (statusFilter === 'unread' && (conv.unreadCount === 0 || conv.status !== 'OPEN')) return false;
+    if (statusFilter === 'awaiting_reply' && (conv.lastMessageDirection !== 'INBOUND' || conv.status !== 'OPEN')) return false;
 
     if (selectedLabelId) {
       const hasLabel = conv.contact.labels?.some(label => label.id === selectedLabelId);
@@ -360,6 +361,13 @@ export default function ConversationSidebar({
             color="red"
           />
           <FilterTab
+            label="Belum Dibalas"
+            count={statusCounts.awaitingReply}
+            active={statusFilter === 'awaiting_reply'}
+            onClick={() => onStatusFilterChange('awaiting_reply')}
+            color="red"
+          />
+          <FilterTab
             label="All"
             count={statusCounts.all}
             active={statusFilter === 'all'}
@@ -493,6 +501,7 @@ function EmptyListState({ statusFilter, searching }: EmptyListStateProps) {
       {statusFilter === 'all' && 'No conversations yet'}
       {statusFilter === 'served' && 'No served conversations'}
       {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
+      {statusFilter === 'awaiting_reply' && 'Semua percakapan sudah dibalas'}
     </div>
   );
 }

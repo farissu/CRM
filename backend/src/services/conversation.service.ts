@@ -1,4 +1,4 @@
-import { Prisma, ConversationStatus } from '@prisma/client';
+import { Prisma, ConversationStatus, MessageDirection } from '@prisma/client';
 import prisma from '../config/database';
 import { io } from '../index';
 
@@ -10,6 +10,7 @@ export interface GetConversationsOptions {
   search?: string;
   includeCounts?: boolean;
   unreadOnly?: boolean;
+  awaitingReply?: boolean;
   /** A label id, or the sentinel 'UNLABELED' for contacts with no labels at all. */
   labelId?: string;
 }
@@ -19,7 +20,17 @@ export class ConversationService {
    * Get all conversations with pagination and filters
    */
   async getConversations(options: GetConversationsOptions = {}) {
-    const { agentId, status, page = 1, limit = 20, search, includeCounts = false, unreadOnly = false, labelId } = options;
+    const {
+      agentId,
+      status,
+      page = 1,
+      limit = 20,
+      search,
+      includeCounts = false,
+      unreadOnly = false,
+      awaitingReply = false,
+      labelId
+    } = options;
     const skip = (page - 1) * limit;
 
     // Tab badge counts must reflect the true total per status, not just whatever page
@@ -48,6 +59,7 @@ export class ConversationService {
       ...baseWhere,
       ...(status ? { status: status as ConversationStatus } : {}),
       ...(unreadOnly ? { unreadCount: { gt: 0 } } : {}),
+      ...(awaitingReply ? { lastMessageDirection: MessageDirection.INBOUND } : {}),
       ...(contactFilter ? { contact: contactFilter } : {})
     };
 
@@ -57,7 +69,7 @@ export class ConversationService {
     // runs alongside this batch (not before it) so its own latency is hidden behind the
     // larger queries here; the per-label counts below still need the resolved label ids
     // first, so they unavoidably add one more round trip on top of this batch.
-    const [labels, conversations, total, allCount, servedCount, unreadCount, unlabeledOpenCount] = await Promise.all([
+    const [labels, conversations, total, allCount, servedCount, unreadCount, awaitingReplyCount, unlabeledOpenCount] = await Promise.all([
       includeCounts ? prisma.label.findMany({ select: { id: true, name: true, color: true } }) : Promise.resolve([]),
       prisma.conversation.findMany({
         where,
@@ -105,6 +117,11 @@ export class ConversationService {
         : Promise.resolve(0),
       includeCounts
         ? prisma.conversation.count({
+            where: { ...baseWhere, status: ConversationStatus.OPEN, lastMessageDirection: MessageDirection.INBOUND }
+          })
+        : Promise.resolve(0),
+      includeCounts
+        ? prisma.conversation.count({
             where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { labels: { none: {} } } }
           })
         : Promise.resolve(0)
@@ -134,7 +151,7 @@ export class ConversationService {
       total: number;
       page: number;
       totalPages: number;
-      statusCounts?: { served: number; unread: number; all: number };
+      statusCounts?: { served: number; unread: number; awaitingReply: number; all: number };
       labelCounts?: { unlabeled: number; byLabel: Record<string, number> };
     } = {
       conversations: transformedConversations,
@@ -144,7 +161,7 @@ export class ConversationService {
     };
 
     if (includeCounts) {
-      result.statusCounts = { served: servedCount, unread: unreadCount, all: allCount };
+      result.statusCounts = { served: servedCount, unread: unreadCount, awaitingReply: awaitingReplyCount, all: allCount };
       result.labelCounts = {
         unlabeled: unlabeledOpenCount,
         byLabel: Object.fromEntries(labels.map((label, i) => [label.id, perLabelOpenCounts[i]]))
@@ -370,12 +387,13 @@ export class ConversationService {
   /**
    * Update last message info
    */
-  async updateLastMessage(conversationId: string, text: string) {
+  async updateLastMessage(conversationId: string, text: string, direction: MessageDirection) {
     return await prisma.conversation.update({
       where: { id: conversationId },
       data: {
         lastMessageText: text,
-        lastMessageAt: new Date()
+        lastMessageAt: new Date(),
+        lastMessageDirection: direction
       }
     });
   }

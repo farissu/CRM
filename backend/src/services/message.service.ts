@@ -240,7 +240,7 @@ export class MessageService {
       const lastMessageText = messageType && messageType !== 'text'
         ? (caption || text || `📎 ${messageType}`)
         : (text || caption || '');
-      await conversationService.updateLastMessage(conversationId, lastMessageText);
+      await conversationService.updateLastMessage(conversationId, lastMessageText, MessageDirection.OUTBOUND);
       // A reply just went out (manual or automated/external) — nothing is left pending.
       await conversationService.markAsRead(conversationId);
 
@@ -315,7 +315,7 @@ export class MessageService {
     const lastMessageText = resolvedType !== MessageType.TEXT
       ? `📎 ${messageType}`
       : (text || caption || '');
-    await conversationService.updateLastMessage(conversation.id, lastMessageText);
+    await conversationService.updateLastMessage(conversation.id, lastMessageText, MessageDirection.INBOUND);
     await conversationService.incrementUnreadCount(conversation.id);
 
     // Emit socket event

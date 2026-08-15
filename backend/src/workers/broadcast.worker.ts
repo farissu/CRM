@@ -93,7 +93,7 @@ async function sendToRecipient(
         metadata: { waMessageId, broadcastId: broadcast.id },
       },
     });
-    await conversationService.updateLastMessage(conversation.id, lastMessageText);
+    await conversationService.updateLastMessage(conversation.id, lastMessageText, MessageDirection.OUTBOUND);
 
     io.emit('message_received', {
       conversationId: conversation.id,

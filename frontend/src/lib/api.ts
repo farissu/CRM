@@ -28,6 +28,7 @@ export const conversationApi = {
     search?: string;
     includeCounts?: boolean;
     unreadOnly?: boolean;
+    awaitingReply?: boolean;
     labelId?: string;
   }): Promise<ConversationsResponse> => {
     const response = await api.get('/conversations', { params });

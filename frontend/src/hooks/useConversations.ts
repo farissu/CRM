@@ -5,24 +5,25 @@ import { conversationApi, messageApi, complaintApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
 import type { Conversation, ConversationLabelCounts, ConversationStatusCounts, Message } from '@/types';
 
-const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, all: 0 };
+const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, awaitingReply: 0, all: 0 };
 const EMPTY_LABEL_COUNTS: ConversationLabelCounts = { unlabeled: 0, byLabel: {} };
 
 const CONVERSATIONS_PAGE_SIZE = 30;
 const SEARCH_RESULT_LIMIT = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
-export type ConversationFilter = 'served' | 'unread' | 'all';
+export type ConversationFilter = 'served' | 'unread' | 'awaiting_reply' | 'all';
 export type ConversationViewMode = 'normal' | 'label';
 
 interface FetchScope {
   status?: string;
   unreadOnly?: boolean;
+  awaitingReply?: boolean;
   labelId?: string;
 }
 
 function scopeKey(scope: FetchScope): string {
-  return `${scope.status ?? ''}|${scope.unreadOnly ? 1 : 0}|${scope.labelId ?? ''}`;
+  return `${scope.status ?? ''}|${scope.unreadOnly ? 1 : 0}|${scope.awaitingReply ? 1 : 0}|${scope.labelId ?? ''}`;
 }
 
 interface UseConversationsParams {
@@ -84,7 +85,9 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       ? { status: 'OPEN' }
       : statusFilter === 'unread'
         ? { status: 'OPEN', unreadOnly: true }
-        : {};
+        : statusFilter === 'awaiting_reply'
+          ? { status: 'OPEN', awaitingReply: true }
+          : {};
   const effectiveScopeKey = scopeKey(effectiveScope);
   // Always-current scope for callbacks (loadConversations, search) to read without a
   // stale closure; `activeScopeRef` instead tracks the scope of the page that's
@@ -127,6 +130,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
         limit: CONVERSATIONS_PAGE_SIZE,
         status: scope.status,
         unreadOnly: scope.unreadOnly,
+        awaitingReply: scope.awaitingReply,
         labelId: scope.labelId,
         includeCounts: true
       });
@@ -158,6 +162,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
         limit: CONVERSATIONS_PAGE_SIZE,
         status: scope.status,
         unreadOnly: scope.unreadOnly,
+        awaitingReply: scope.awaitingReply,
         labelId: scope.labelId
       });
       if (loadRequestIdRef.current !== requestId) return;
@@ -346,6 +351,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
           ...c,
           lastMessageText: message.text ?? c.lastMessageText,
           lastMessageAt: message.timestamp as string,
+          lastMessageDirection: message.direction,
           unreadCount: isActive ? 0 : (shouldCountUnread ? c.unreadCount + 1 : c.unreadCount),
         } as Conversation : c);
       });

@@ -73,6 +73,7 @@ export interface Conversation {
   unreadCount: number;
   lastMessageAt: string;
   lastMessageText?: string;
+  lastMessageDirection?: MessageDirection;
   createdAt: string;
   updatedAt: string;
   contact: Contact;
@@ -214,6 +215,7 @@ export interface BroadcastsResponse {
 export interface ConversationStatusCounts {
   served: number;
   unread: number;
+  awaitingReply: number;
   all: number;
 }
 

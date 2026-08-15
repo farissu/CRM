@@ -180,15 +180,16 @@ model ContactLabel {
 }
 
 model Conversation {
-  id              String             @id @default(uuid())
-  contactId       String
-  assignedAgentId String?
-  status          ConversationStatus @default(OPEN)
-  unreadCount     Int                @default(0)
-  lastMessageAt   DateTime           @default(now())
-  lastMessageText String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                   String             @id @default(uuid())
+  contactId            String
+  assignedAgentId      String?
+  status               ConversationStatus @default(OPEN)
+  unreadCount          Int                @default(0)
+  lastMessageAt        DateTime           @default(now())
+  lastMessageText      String?
+  lastMessageDirection MessageDirection?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   assignedAgent Agent?    @relation(fields: [assignedAgentId], references: [id], onDelete: SetNull)
@@ -197,6 +198,7 @@ model Conversation {
   @@index([contactId])
   @@index([assignedAgentId])
   @@index([status, lastMessageAt])
+  @@index([status, lastMessageDirection])
   @@map("conversations")
 }
 

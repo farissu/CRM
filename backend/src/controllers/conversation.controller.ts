@@ -7,7 +7,7 @@ export class ConversationController {
    */
   async getConversations(req: Request, res: Response) {
     try {
-      const { agentId, status, page = '1', limit = '20', search, includeCounts, unreadOnly, labelId } = req.query;
+      const { agentId, status, page = '1', limit = '20', search, includeCounts, unreadOnly, awaitingReply, labelId } = req.query;
 
       const result = await conversationService.getConversations({
         agentId: agentId as string,
@@ -17,6 +17,7 @@ export class ConversationController {
         search: search as string,
         includeCounts: includeCounts === 'true',
         unreadOnly: unreadOnly === 'true',
+        awaitingReply: awaitingReply === 'true',
         labelId: labelId as string
       });
 
