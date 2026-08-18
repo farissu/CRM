@@ -90,9 +90,8 @@ export default function BroadcastDetail({ broadcastId, onBack }: BroadcastDetail
 
   const handleDownloadLog = () => {
     if (!broadcast) return;
-    const headers = ['No', 'Customer Name', 'Phone Number', 'Broadcast Time', 'Status', 'Reason', 'Variable', 'WhatsApp Message ID'];
-    const rows = recipients.map((r, i) => [
-      String(i + 1),
+    const headers = ['Customer Name', 'Phone Number', 'Broadcast Time', 'Status', 'Reason', 'Variable', 'WhatsApp Message ID'];
+    const rows = recipients.map(r => [
       r.name ?? '',
       r.phoneNumber,
       r.sentAt ? format(new Date(r.sentAt), 'dd/MM/yyyy HH:mm') : '',
