@@ -87,7 +87,7 @@ export default function HomePage() {
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {activeTab === 'conversations' && (
           <>
-            <div className={clsx('h-full', mobileView === 'chat' ? 'hidden md:block' : 'block')}>
+            <div className={clsx('h-full min-w-0', mobileView === 'chat' ? 'hidden md:block' : 'block')}>
               <ConversationSidebar
                 conversations={conversations}
                 statusCounts={statusCounts}
@@ -116,7 +116,7 @@ export default function HomePage() {
                 onLogout={handleLogout}
               />
             </div>
-            <div className={clsx('flex-1 h-full', mobileView === 'list' ? 'hidden md:flex' : 'flex')}>
+            <div className={clsx('flex-1 min-w-0 h-full', mobileView === 'list' ? 'hidden md:flex' : 'flex')}>
               <ChatPanel
                 conversation={activeConversation}
                 messages={messages}
