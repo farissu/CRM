@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import MainNavigation from '@/components/layout/MainNavigation';
 import ConversationSidebar from '@/components/sidebar/ConversationSidebar';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -19,6 +20,13 @@ const VALID_TABS: ActiveTab[] = ['conversations', 'dashboard', 'broadcast', 'set
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('conversations');
+  // On mobile the sidebar and chat panel occupy the full screen one at a
+  // time (WhatsApp-style); on desktop both are always visible side by side.
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+
+  useEffect(() => {
+    setMobileView('list');
+  }, [activeTab]);
 
   useEffect(() => {
     const stored = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
@@ -63,61 +71,80 @@ export default function HomePage() {
     return <ForceChangePasswordPage onPasswordChanged={refreshAgentData} />;
   }
 
+  const isMobileChatOpen = activeTab === 'conversations' && mobileView === 'chat';
+
   return (
-    <div className="flex h-screen bg-saas-bg">
-      <MainNavigation activeTab={activeTab} onTabChange={setActiveTab} onLogout={handleLogout} agentName={agentName} agentRole={agent?.role} />
+    <div className="flex flex-col md:flex-row h-screen bg-saas-bg">
+      <MainNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onLogout={handleLogout}
+        agentName={agentName}
+        agentRole={agent?.role}
+        hideMobileNav={isMobileChatOpen}
+      />
 
-      {activeTab === 'conversations' && (
-        <>
-          <ConversationSidebar
-            conversations={conversations}
-            statusCounts={statusCounts}
-            labelCounts={labelCounts}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            activeLabelTab={activeLabelTab}
-            onActiveLabelTabChange={setActiveLabelTab}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            searchResults={searchResults}
-            searching={searching}
-            searchError={searchError}
-            activeConversationId={activeConversation?.id}
-            onSelectConversation={handleSelectConversation}
-            loading={loadingConversations}
-            hasMore={hasMoreConversations}
-            loadingMore={loadingMoreConversations}
-            onLoadMore={loadMoreConversations}
-            agentName={agentName}
-            onLogout={handleLogout}
-          />
-          <ChatPanel
-            conversation={activeConversation}
-            messages={messages}
-            loading={loadingMessages}
-            hasMoreMessages={hasMoreMessages}
-            loadingMoreMessages={loadingMoreMessages}
-            onLoadMoreMessages={loadMoreMessages}
-            onSendMessage={handleSendMessage}
-            onTypingStart={handleTypingStart}
-            onTypingStop={handleTypingStop}
-            onResolveConversation={handleResolveConversation}
-            onConversationUpdate={loadConversations}
-            onSendCsat={handleSendCsat}
-            typingIndicator={typingIndicator}
-          />
-        </>
-      )}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {activeTab === 'conversations' && (
+          <>
+            <div className={clsx('h-full', mobileView === 'chat' ? 'hidden md:block' : 'block')}>
+              <ConversationSidebar
+                conversations={conversations}
+                statusCounts={statusCounts}
+                labelCounts={labelCounts}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                activeLabelTab={activeLabelTab}
+                onActiveLabelTabChange={setActiveLabelTab}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                searchResults={searchResults}
+                searching={searching}
+                searchError={searchError}
+                activeConversationId={activeConversation?.id}
+                onSelectConversation={(conversation) => {
+                  handleSelectConversation(conversation);
+                  setMobileView('chat');
+                }}
+                loading={loadingConversations}
+                hasMore={hasMoreConversations}
+                loadingMore={loadingMoreConversations}
+                onLoadMore={loadMoreConversations}
+                agentName={agentName}
+                onLogout={handleLogout}
+              />
+            </div>
+            <div className={clsx('flex-1 h-full', mobileView === 'list' ? 'hidden md:flex' : 'flex')}>
+              <ChatPanel
+                conversation={activeConversation}
+                messages={messages}
+                loading={loadingMessages}
+                hasMoreMessages={hasMoreMessages}
+                loadingMoreMessages={loadingMoreMessages}
+                onLoadMoreMessages={loadMoreMessages}
+                onSendMessage={handleSendMessage}
+                onTypingStart={handleTypingStart}
+                onTypingStop={handleTypingStop}
+                onResolveConversation={handleResolveConversation}
+                onConversationUpdate={loadConversations}
+                onSendCsat={handleSendCsat}
+                typingIndicator={typingIndicator}
+                onBack={() => setMobileView('list')}
+              />
+            </div>
+          </>
+        )}
 
-      {activeTab === 'dashboard' && <DashboardPanel />}
+        {activeTab === 'dashboard' && <DashboardPanel />}
 
-      {activeTab === 'broadcast' && <BroadcastPanel />}
+        {activeTab === 'broadcast' && <BroadcastPanel />}
 
-      {activeTab === 'settings' && (
-        <SettingsPanel agentName={agentName} agent={agent || undefined} onProfileUpdate={refreshAgentData} />
-      )}
+        {activeTab === 'settings' && (
+          <SettingsPanel agentName={agentName} agent={agent || undefined} onProfileUpdate={refreshAgentData} />
+        )}
+      </div>
     </div>
   );
 }

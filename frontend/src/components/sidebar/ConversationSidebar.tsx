@@ -169,14 +169,14 @@ export default function ConversationSidebar({
 
   if (loading) {
     return (
-      <div className="w-80 bg-white border-r border-gray-200 flex items-center justify-center">
+      <div className="w-full md:w-96 bg-white border-r border-gray-200 flex items-center justify-center h-full">
         <div className="text-gray-500">Loading conversations...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-96 bg-white border-r border-saas-border flex flex-col h-full shadow-soft-sm">
+    <div className="w-full md:w-96 bg-white border-r border-saas-border flex flex-col h-full shadow-soft-sm">
       {/* Header */}
       <div className="bg-saas-secondary-blue text-white px-6 py-5">
         <div className="flex items-center justify-between">
@@ -277,11 +277,11 @@ export default function ConversationSidebar({
               )}
             </div>
 
-            {/* Search Button */}
+            {/* Search Button (desktop: click to expand search field) */}
             <button
               onClick={() => setShowSearch(!showSearch)}
               className={clsx(
-                "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 flex-shrink-0",
+                "hidden md:flex w-10 h-10 rounded-2xl items-center justify-center transition-all duration-200 hover:scale-105 flex-shrink-0",
                 showSearch ? "bg-white/20" : "hover:bg-white/10"
               )}
             >
@@ -292,9 +292,33 @@ export default function ConversationSidebar({
           </div>
         </div>
 
-        {/* Search Input */}
+        {/* Search Input (mobile: always visible, WhatsApp-style) */}
+        <div className="md:hidden mt-4 relative">
+          <svg className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchQueryChange(e.target.value)}
+            placeholder="Cari nama atau nomor..."
+            className="w-full pl-10 pr-10 py-2.5 rounded-full bg-white/20 backdrop-blur-sm text-white placeholder:text-white/60 border border-white/30 focus:outline-none focus:border-white/50 transition-all duration-200 font-medium"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchQueryChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Search Input (desktop: toggled by the search button above) */}
         {showSearch && (
-          <div className="mt-4 relative">
+          <div className="hidden md:block mt-4 relative">
             <input
               type="text"
               value={searchQuery}
@@ -549,13 +573,13 @@ function FilterTab({ label, count, active, onClick, color }: FilterTabProps) {
     <button
       onClick={onClick}
       className={clsx(
-        'flex-1 py-3 px-3 text-sm font-semibold transition-all duration-200 text-center rounded-t-xl',
+        'flex-1 py-2 px-1 md:py-3 md:px-3 text-xs md:text-sm font-semibold transition-all duration-200 text-center rounded-t-xl',
         active
           ? 'text-saas-primary-blue bg-white border-b-2 border-saas-primary-blue shadow-soft-sm'
           : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
       )}
     >
-      <div className="flex flex-col items-center gap-1.5">
+      <div className="flex flex-col items-center gap-1 md:gap-1.5">
         <span>{label}</span>
         {count > 0 && (
           <span className={clsx(
@@ -617,15 +641,15 @@ function ConversationItem({ conversation, isActive, onClick }: ConversationItemP
     <div
       onClick={onClick}
       className={clsx(
-        'm-2 p-4 rounded-2xl cursor-pointer transition-all duration-200',
+        'px-4 py-3 md:m-2 md:p-4 cursor-pointer transition-all duration-200 border-b border-saas-border/60 md:border-b-0 md:rounded-2xl',
         isActive
-          ? 'bg-gradient-to-br from-saas-primary-blue/10 to-saas-accent-blue/10 border-2 border-saas-primary-blue shadow-soft-sm scale-[1.02]'
-          : 'bg-white hover:bg-gray-50 hover:shadow-soft-sm border border-transparent hover:border-saas-border'
+          ? 'bg-saas-primary-blue/10 md:bg-gradient-to-br md:from-saas-primary-blue/10 md:to-saas-accent-blue/10 md:border-2 md:border-saas-primary-blue md:shadow-soft-sm md:scale-[1.02]'
+          : 'bg-white hover:bg-gray-50 md:hover:shadow-soft-sm md:border md:border-transparent md:hover:border-saas-border'
       )}
     >
       <div className="flex items-center gap-3">
         {/* Avatar */}
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-saas-secondary-blue to-saas-accent-blue flex items-center justify-center flex-shrink-0 shadow-soft-sm">
+        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full md:rounded-2xl bg-gradient-to-br from-saas-secondary-blue to-saas-accent-blue flex items-center justify-center flex-shrink-0 shadow-soft-sm">
           <span className="text-white font-bold text-lg">
             {displayName.charAt(0).toUpperCase()}
           </span>
@@ -645,17 +669,22 @@ function ConversationItem({ conversation, isActive, onClick }: ConversationItemP
                 {lastMessageTime.replace('about ', '').replace(' ago', '')}
               </span>
               {conversation.unreadCount > 0 && (
-                <span className="bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[28px] text-center shadow-soft-sm tabular-nums">
+                <span className="hidden md:inline-flex bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white text-xs font-bold px-2.5 py-1 rounded-full min-w-[28px] text-center shadow-soft-sm tabular-nums">
                   {conversation.unreadCount}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600 truncate flex-1 pr-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-gray-600 truncate flex-1">
               {conversation.lastMessageText || 'No messages yet'}
             </p>
+            {conversation.unreadCount > 0 && (
+              <span className="md:hidden flex-shrink-0 bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] h-5 text-center shadow-soft-sm tabular-nums">
+                {conversation.unreadCount}
+              </span>
+            )}
           </div>
 
           {/* Labels */}

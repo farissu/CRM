@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Tag, Star } from 'lucide-react';
+import { MoreVertical, Tag, Star, ChevronLeft, CheckCircle } from 'lucide-react';
 import type { Conversation, Message } from '@/types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -75,6 +75,7 @@ interface ChatPanelProps {
   onConversationUpdate?: () => void;
   onSendCsat?: () => Promise<void>;
   typingIndicator?: { agentName: string } | null;
+  onBack?: () => void;
 }
 
 export default function ChatPanel({
@@ -91,6 +92,7 @@ export default function ChatPanel({
   onConversationUpdate,
   onSendCsat,
   typingIndicator,
+  onBack,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -206,16 +208,25 @@ export default function ChatPanel({
   return (
     <div className="flex-1 flex flex-col h-full bg-saas-bg">
       {/* Header */}
-      <div className="bg-saas-secondary-blue text-white px-6 py-4 flex items-center justify-between shadow-soft">
-        <div className="flex items-center gap-4">
+      <div className="bg-saas-secondary-blue text-white px-3 md:px-6 py-4 flex items-center justify-between shadow-soft">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="md:hidden p-2 -ml-1 hover:bg-white/10 rounded-xl transition-all duration-200 flex-shrink-0"
+              aria-label="Back to conversation list"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 shadow-soft-sm">
             <span className="text-xl font-bold">
               {contactName.charAt(0).toUpperCase()}
             </span>
           </div>
-          <div className="flex flex-col justify-center">
-            <h2 className="font-bold text-lg leading-tight">{contactName}</h2>
-            <p className="text-sm text-white/80 font-medium leading-tight">{conversation.contact.phoneNumber}</p>
+          <div className="flex flex-col justify-center min-w-0">
+            <h2 className="font-bold text-lg leading-tight truncate">{contactName}</h2>
+            <p className="text-sm text-white/80 font-medium leading-tight truncate">{conversation.contact.phoneNumber}</p>
             {/* Labels */}
             {conversation.contact.labels && conversation.contact.labels.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -238,18 +249,19 @@ export default function ChatPanel({
               onClick={() => setShowCsatConfirm(true)}
               disabled={sendingCsat || isWindowExpired}
               title={isWindowExpired ? 'Customer service window sudah lewat 24 jam, tidak bisa kirim pesan baru' : undefined}
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-2.5 sm:px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
             >
               <Star className="w-4 h-4" />
-              {sendingCsat ? 'Mengirim...' : 'Kirim Penilaian'}
+              <span className="hidden sm:inline">{sendingCsat ? 'Mengirim...' : 'Kirim Penilaian'}</span>
             </button>
           )}
           {conversation.status === 'OPEN' && onResolveConversation && (
             <button
               onClick={onResolveConversation}
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm"
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-2.5 sm:px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm flex items-center gap-2"
             >
-              Resolve
+              <CheckCircle className="w-4 h-4 sm:hidden" />
+              <span className="hidden sm:inline">Resolve</span>
             </button>
           )}
           <div className="relative" ref={menuRef}>
@@ -283,7 +295,7 @@ export default function ChatPanel({
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-6"
+        className="flex-1 overflow-y-auto p-3 sm:p-6"
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">

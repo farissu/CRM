@@ -39,18 +39,18 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-saas-primary-blue via-saas-secondary-blue to-saas-accent-blue">
-      <div className="bg-white rounded-3xl shadow-soft p-10 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-saas-primary-blue via-saas-secondary-blue to-saas-accent-blue px-4 py-8">
+      <div className="bg-white rounded-3xl shadow-soft p-6 sm:p-10 w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 ">
-            <img 
+          <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24">
+            <img
               src="/logo.svg"
-              alt="Logo" 
+              alt="Logo"
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-4xl font-bold text-saas-text-primary mb-2">Waku</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-saas-text-primary mb-2">Waku</h1>
           <p className="text-gray-600 font-semibold">Agent Login</p>
         </div>
 
