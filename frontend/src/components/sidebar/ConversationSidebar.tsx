@@ -428,7 +428,7 @@ export default function ConversationSidebar({
       )}
 
       {/* Conversation List */}
-      <div ref={listContainerRef} className="flex-1 overflow-y-auto bg-saas-bg">
+      <div ref={listContainerRef} className="flex-1 min-h-0 overflow-y-auto bg-saas-bg">
         {isSearchActive && searching ? (
           <div className="py-8 flex justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>

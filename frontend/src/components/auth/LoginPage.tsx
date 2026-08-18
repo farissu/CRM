@@ -39,7 +39,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-saas-primary-blue via-saas-secondary-blue to-saas-accent-blue px-4 py-8">
+    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-saas-primary-blue via-saas-secondary-blue to-saas-accent-blue px-4 py-8">
       <div className="bg-white rounded-3xl shadow-soft p-6 sm:p-10 w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">

@@ -295,7 +295,7 @@ export default function ChatPanel({
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-3 sm:p-6"
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6"
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">

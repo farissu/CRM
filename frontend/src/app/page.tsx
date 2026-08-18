@@ -54,7 +54,7 @@ export default function HomePage() {
 
   if (checkingAuth) {
     return (
-      <div className="flex h-screen items-center justify-center bg-saas-bg">
+      <div className="flex h-dvh items-center justify-center bg-saas-bg">
         <div className="text-center">
           <div className="animate-spin rounded-full h-14 w-14 border-4 border-saas-primary-blue border-t-transparent mx-auto mb-4"></div>
           <p className="text-saas-text-primary font-semibold">Loading...</p>
@@ -74,7 +74,7 @@ export default function HomePage() {
   const isMobileChatOpen = activeTab === 'conversations' && mobileView === 'chat';
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-saas-bg">
+    <div className="flex flex-col md:flex-row h-dvh bg-saas-bg">
       <MainNavigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
