@@ -1,10 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { MessageSquare, Clock, CheckCircle, TrendingUp, Users, Activity, Tag } from 'lucide-react';
-import { conversationApi, messageApi, labelApi } from '@/lib/api';
+import { MessageSquare, Clock, CheckCircle, TrendingUp, Users, Activity, Tag, Download } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { conversationApi, messageApi, labelApi, contactApi } from '@/lib/api';
 import type { Conversation, Message, Label } from '@/types';
+
+interface ContactRow {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  labels: Label[];
+  lastMessageAt: string;
+}
+
+const MAX_VISIBLE_CONTACTS = 8;
 
 interface DashboardStats {
   totalConversations: number;
@@ -32,10 +43,41 @@ export default function DashboardPanel() {
   const [labelDistribution, setLabelDistribution] = useState<Array<{ name: string; value: number; color: string }>>([]);
   const [messageVolumeData, setMessageVolumeData] = useState<Array<{ day: string; messages: number }>>([]);
   const [peakHoursData, setPeakHoursData] = useState<Array<{ hour: string; messages: number }>>([]);
+  const [exportLabelId, setExportLabelId] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // One row per contact (a contact can have several conversations over time), keeping
+  // each contact's most recent conversation for the "last activity" column, then
+  // filtered client-side by the same label the Download Contacts button will export.
+  const contactRows = useMemo<ContactRow[]>(() => {
+    const byContact = new Map<string, ContactRow>();
+    for (const conv of conversations) {
+      const contact = conv.contact;
+      if (!contact) continue;
+      const existing = byContact.get(contact.id);
+      if (!existing || new Date(conv.lastMessageAt) > new Date(existing.lastMessageAt)) {
+        byContact.set(contact.id, {
+          id: contact.id,
+          name: contact.name || contact.phoneNumber,
+          phoneNumber: contact.phoneNumber,
+          labels: contact.labels || [],
+          lastMessageAt: conv.lastMessageAt,
+        });
+      }
+    }
+
+    const rows = Array.from(byContact.values()).sort(
+      (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+    );
+
+    if (!exportLabelId) return rows;
+    if (exportLabelId === 'UNLABELED') return rows.filter(row => row.labels.length === 0);
+    return rows.filter(row => row.labels.some(label => label.id === exportLabelId));
+  }, [conversations, exportLabelId]);
 
   const loadDashboardData = async () => {
     try {
@@ -140,6 +182,23 @@ export default function DashboardPanel() {
       console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadContacts = async () => {
+    try {
+      setExporting(true);
+      const blob = await contactApi.exportContacts(exportLabelId || undefined);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contacts_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export contacts:', error);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -318,48 +377,81 @@ export default function DashboardPanel() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Contacts */}
         <div className="bg-white rounded-3xl shadow-soft p-6">
-          <h3 className="text-xl font-bold text-saas-text-primary mb-4">Recent Conversations</h3>
-          {conversations.length > 0 ? (
-            <div className="space-y-3">
-              {conversations.slice(0, 5).map((conv) => (
-                <div key={conv.id} className="flex items-center justify-between p-4 bg-saas-bg rounded-2xl hover:shadow-soft-sm transition-shadow">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      conv.status === 'OPEN' ? 'bg-blue-100' : 'bg-green-100'
-                    }`}>
-                      <Users className={`w-6 h-6 ${
-                        conv.status === 'OPEN' ? 'text-blue-600' : 'text-green-600'
-                      }`} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-saas-text-primary">
-                        {conv.contact?.name || conv.contact?.phoneNumber || 'Unknown'}
-                      </p>
-                      <p className="text-sm text-gray-500 truncate max-w-md">
-                        {conv.lastMessageText || 'No messages yet'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      conv.status === 'OPEN' 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'bg-green-100 text-green-700'
-                    }`}>
-                      {conv.status}
-                    </span>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {conv.unreadCount > 0 && `${conv.unreadCount} unread`}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h3 className="text-xl font-bold text-saas-text-primary">Contacts</h3>
+            <div className="flex items-center gap-2">
+              <select
+                value={exportLabelId}
+                onChange={(e) => setExportLabelId(e.target.value)}
+                className="text-sm border border-gray-200 rounded-xl px-3 py-2 text-saas-text-primary focus:outline-none focus:ring-2 focus:ring-saas-primary-blue"
+              >
+                <option value="">All Contacts</option>
+                <option value="UNLABELED">Unlabeled</option>
+                {labels.map((label) => (
+                  <option key={label.id} value={label.id}>{label.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleDownloadContacts}
+                disabled={exporting}
+                className="flex items-center gap-2 text-sm font-semibold bg-saas-primary-blue text-white px-4 py-2 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exporting ? 'Exporting...' : 'Download Contacts'}
+              </button>
             </div>
+          </div>
+          {contactRows.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {contactRows.slice(0, MAX_VISIBLE_CONTACTS).map((row) => (
+                  <div
+                    key={row.id}
+                    className="flex items-center justify-between gap-4 p-4 bg-saas-bg rounded-2xl hover:shadow-soft-sm transition-shadow"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        {row.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-saas-text-primary truncate">{row.name}</p>
+                        <p className="text-sm text-gray-500">{row.phoneNumber}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="hidden sm:flex flex-wrap gap-1.5 max-w-[220px] justify-end">
+                        {row.labels.length > 0 ? (
+                          row.labels.map((label) => (
+                            <span
+                              key={label.id}
+                              className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                              style={{ backgroundColor: `${label.color}20`, color: label.color }}
+                            >
+                              {label.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No label</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        {formatDistanceToNow(new Date(row.lastMessageAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {contactRows.length > MAX_VISIBLE_CONTACTS && (
+                <p className="text-xs text-gray-400 mt-3 text-center">
+                  Showing {MAX_VISIBLE_CONTACTS} of {contactRows.length} contacts — use Download Contacts above for the full list.
+                </p>
+              )}
+            </>
           ) : (
             <div className="flex items-center justify-center py-12">
-              <p className="text-gray-500">No conversations yet</p>
+              <p className="text-gray-500">No contacts match this filter</p>
             </div>
           )}
         </div>

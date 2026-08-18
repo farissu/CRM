@@ -102,6 +102,34 @@ export async function parseBroadcastExcel(
   return { rows, errors };
 }
 
+export interface ContactExportRow {
+  name: string;
+  phoneNumber: string;
+  labels: string;
+  lastMessageAt: string;
+  contactSince: string;
+}
+
+export async function buildContactsExcel(rows: ContactExportRow[]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Contacts');
+  worksheet.columns = [
+    { header: 'Name', key: 'name', width: 28 },
+    { header: 'Phone Number', key: 'phoneNumber', width: 20 },
+    { header: 'Labels', key: 'labels', width: 28 },
+    { header: 'Last Message At', key: 'lastMessageAt', width: 22 },
+    { header: 'Contact Since', key: 'contactSince', width: 22 },
+  ];
+  rows.forEach(row => worksheet.addRow(row));
+  worksheet.getRow(1).font = { bold: true };
+  // Force text format so Excel doesn't auto-convert the phone number to a number
+  // and silently drop a leading zero.
+  worksheet.getColumn('phoneNumber').numFmt = '@';
+
+  const arrayBuffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
 export async function buildExcelTemplate(template: Pick<MessageTemplate, 'components'>): Promise<Buffer> {
   const varCount = extractBodyVariableCount(template);
   const headers = ['phone_number', 'name', ...Array.from({ length: varCount }, (_, i) => `var${i + 1}`)];

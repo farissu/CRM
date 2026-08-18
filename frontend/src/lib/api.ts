@@ -139,6 +139,16 @@ export const labelApi = {
   },
 };
 
+export const contactApi = {
+  exportContacts: async (labelId?: string): Promise<Blob> => {
+    const response = await api.get('/contacts/export', {
+      params: labelId ? { labelId } : undefined,
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+};
+
 export const quickReplyApi = {
   getQuickReplies: async (params?: { active?: boolean }): Promise<{ quickReplies: QuickReply[] }> => {
     const response = await api.get('/quick-replies', { params });
