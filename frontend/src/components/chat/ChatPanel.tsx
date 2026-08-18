@@ -206,7 +206,7 @@ export default function ChatPanel({
     : messages.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-saas-bg">
+    <div className="flex-1 min-w-0 flex flex-col h-full bg-saas-bg">
       {/* Header */}
       <div className="bg-saas-secondary-blue text-white px-3 md:px-6 py-4 flex items-center justify-between shadow-soft">
         <div className="flex items-center gap-2 md:gap-4 min-w-0">
