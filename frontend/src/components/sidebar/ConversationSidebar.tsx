@@ -104,7 +104,12 @@ export default function ConversationSidebar({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [onLoadMore, hasMore, loadingMore]);
+    // The sentinel <div> lives at the end of whichever list branch is active. Switching
+    // view mode or label sub-tab swaps the rendered branch, which recreates that node —
+    // leaving a stale observer pointing at a detached element (infinite scroll silently
+    // stops). viewMode/activeLabelTab are the signals that the sentinel was replaced, so
+    // re-run and re-observe the current node.
+  }, [onLoadMore, hasMore, loadingMore, viewMode, activeLabelTab]);
 
   // Switching tabs/view/labels re-scopes the list to a different set of rows; jump
   // back to the top so the user doesn't land mid-list (or at the bottom of a shorter
