@@ -106,6 +106,13 @@ export default function ConversationSidebar({
     return () => observer.disconnect();
   }, [onLoadMore, hasMore, loadingMore]);
 
+  // Switching tabs/view/labels re-scopes the list to a different set of rows; jump
+  // back to the top so the user doesn't land mid-list (or at the bottom of a shorter
+  // tab) and think the list "can't scroll" or wasn't reloaded.
+  useEffect(() => {
+    if (listContainerRef.current) listContainerRef.current.scrollTop = 0;
+  }, [statusFilter, viewMode, activeLabelTab, searchQuery]);
+
   const isSearchActive = !!searchQuery.trim();
 
   // While searching, the candidate pool is the server-side search result set (spans
@@ -166,14 +173,6 @@ export default function ConversationSidebar({
       )}
     </>
   );
-
-  if (loading) {
-    return (
-      <div className="w-full md:w-96 bg-white border-r border-gray-200 flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading conversations...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full md:w-96 bg-white border-r border-saas-border flex flex-col h-full shadow-soft-sm">
@@ -429,7 +428,11 @@ export default function ConversationSidebar({
 
       {/* Conversation List */}
       <div ref={listContainerRef} className="flex-1 min-h-0 overflow-y-auto bg-saas-bg">
-        {isSearchActive && searching ? (
+        {loading && !isSearchActive && filteredConversations.length === 0 ? (
+          <div className="py-8 flex justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
+          </div>
+        ) : isSearchActive && searching ? (
           <div className="py-8 flex justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
           </div>
