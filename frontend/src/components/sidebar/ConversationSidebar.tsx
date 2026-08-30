@@ -160,6 +160,18 @@ export default function ConversationSidebar({
       ? unlabeledConversations
       : conversationsByLabel.find(group => group.label.id === activeLabelTab)?.conversations ?? [];
 
+  // The inline "loading" indicator replace whichever body the active view actually
+  // renders, so base the emptiness check on that view: Normal uses the status-filtered
+  // pool, Per Label's "All" uses the grouped pool, and a specific label sub-tab uses
+  // its own conversation array. Using only `filteredConversations` would wrongly gate
+  // the spinner in Per Label (it's a Normal-view concept) and hide/show it at the wrong
+  // time.
+  const listEmpty = viewMode === 'normal'
+    ? filteredConversations.length === 0
+    : activeLabelTab === 'all'
+      ? servedForLabelView.length === 0
+      : activeLabelConversations.length === 0;
+
   // Search results aren't paginated (server returns up to SEARCH_RESULT_LIMIT matches
   // in one shot), so the "load more" sentinel — which drives the *unfiltered* list's
   // cursor — is meaningless while a search is active.
@@ -428,7 +440,7 @@ export default function ConversationSidebar({
 
       {/* Conversation List */}
       <div ref={listContainerRef} className="flex-1 min-h-0 overflow-y-auto bg-saas-bg">
-        {loading && !isSearchActive && filteredConversations.length === 0 ? (
+        {loading && !isSearchActive && listEmpty ? (
           <div className="py-8 flex justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
           </div>
