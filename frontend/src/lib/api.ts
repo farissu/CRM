@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -364,5 +364,12 @@ export const broadcastApi = {
   cancelBroadcast: async (id: string): Promise<{ broadcast: Broadcast }> => {
     const response = await api.delete(`/broadcasts/${id}`);
     return response.data as { broadcast: Broadcast };
+  },
+};
+
+export const dashboardApi = {
+  getStats: async (): Promise<DashboardStats> => {
+    const response = await api.get('/dashboard/stats');
+    return response.data as DashboardStats;
   },
 };

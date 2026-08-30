@@ -241,3 +241,16 @@ export interface MessagesResponse {
   page: number;
   totalPages: number;
 }
+
+export interface DashboardStats {
+  totalConversations: number;
+  openConversations: number;
+  resolvedConversations: number;
+  totalMessages: number;
+  todayMessages: number;
+  totalContacts: number;
+  newContactsToday: number;
+  messageVolume: Array<{ day: string; messages: number }>;
+  peakHours: Array<{ hour: string; messages: number }>;
+  labelDistribution: Array<{ id: string; name: string; color: string; value: number }>;
+}

@@ -10,6 +10,7 @@ import templateRoutes from './template.routes';
 import complaintRoutes from './complaint.routes';
 import broadcastRoutes from './broadcast.routes';
 import quickReplyRoutes from './quickReply.routes';
+import dashboardRoutes from './dashboard.routes';
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.use('/templates', templateRoutes);
 router.use('/complaints', complaintRoutes);
 router.use('/broadcasts', broadcastRoutes);
 router.use('/quick-replies', quickReplyRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 // Add messages routes under conversations for RESTful structure
 router.use('/conversations/:id/messages', (req, res, next) => {
