@@ -97,12 +97,26 @@ export class MessageService {
   async getMessages(conversationId: string, page = 1, limit = 50) {
     const skip = (page - 1) * limit;
 
+    // A contact's history can span several Conversation rows over time (resolving one
+    // and messaging again later starts a new row rather than reopening the old one), so
+    // messages are scoped by the contact behind this conversation, not this row alone —
+    // opening any one of a contact's threads shows their full history from start to end.
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { contactId: true }
+    });
+    if (!conversation) {
+      return { messages: [], total: 0, page, totalPages: 0 };
+    }
+
+    const where: Prisma.MessageWhereInput = { conversation: { contactId: conversation.contactId } };
+
     // Page through from the newest message backward so page 1 always contains
     // the most recent activity (what a chat UI should open on), then reverse
     // back to chronological order for display.
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
-        where: { conversationId },
+        where,
         include: MESSAGE_INCLUDE,
         orderBy: {
           timestamp: 'desc'
@@ -110,7 +124,7 @@ export class MessageService {
         skip,
         take: limit
       }),
-      prisma.message.count({ where: { conversationId } })
+      prisma.message.count({ where })
     ]);
 
     return {
