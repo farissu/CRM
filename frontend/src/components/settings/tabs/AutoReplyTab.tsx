@@ -4,13 +4,13 @@ import { autoReplyApi } from '@/lib/api';
 import type { AutoReplySettings } from '@/types';
 
 const DAY_OPTIONS = [
-  { value: 1, label: 'Senin' },
-  { value: 2, label: 'Selasa' },
-  { value: 3, label: 'Rabu' },
-  { value: 4, label: 'Kamis' },
-  { value: 5, label: "Jum'at" },
-  { value: 6, label: 'Sabtu' },
-  { value: 0, label: 'Minggu' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+  { value: 0, label: 'Sunday' },
 ];
 
 const EMPTY_SETTINGS: AutoReplySettings = {
@@ -78,16 +78,16 @@ export default function AutoReplyTab() {
   };
 
   if (loading) {
-    return <p className="text-gray-500 text-sm">Memuat pengaturan...</p>;
+    return <p className="text-gray-500 text-sm">Loading settings...</p>;
   }
 
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-saas-text-primary">Balas Otomatis di Luar Jam Kerja</h2>
+        <h2 className="text-2xl font-bold text-saas-text-primary">Auto-Reply Outside Business Hours</h2>
         <p className="text-gray-600 mt-1">
-          Kirim balasan otomatis ke pelanggan yang chat di luar jam kerja. Percakapan tetap muncul di tab
-          &quot;Belum Dibalas&quot; supaya admin tetap bisa menindaklanjuti.
+          Send an automatic reply to customers who message outside business hours. The conversation still
+          appears under the &quot;Awaiting Reply&quot; tab so admins can follow up.
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export default function AutoReplyTab() {
 
       {saved && (
         <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
-          <p className="text-green-800 font-semibold">Pengaturan berhasil disimpan</p>
+          <p className="text-green-800 font-semibold">Settings saved successfully</p>
         </div>
       )}
 
@@ -113,11 +113,11 @@ export default function AutoReplyTab() {
             onChange={(e) => setSettings((prev) => ({ ...prev, isEnabled: e.target.checked }))}
             className="w-5 h-5 accent-saas-primary-blue"
           />
-          <span className="font-semibold text-saas-text-primary">Aktifkan balas otomatis</span>
+          <span className="font-semibold text-saas-text-primary">Enable auto-reply</span>
         </label>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Hari Kerja</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Working Days</label>
           <div className="flex flex-wrap gap-2">
             {DAY_OPTIONS.map((day) => (
               <button
@@ -138,7 +138,7 @@ export default function AutoReplyTab() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Jam Mulai</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time</label>
             <div className="relative">
               <Clock className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
@@ -150,7 +150,7 @@ export default function AutoReplyTab() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Jam Selesai</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">End Time</label>
             <div className="relative">
               <Clock className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
@@ -163,15 +163,15 @@ export default function AutoReplyTab() {
           </div>
         </div>
         <p className="text-xs text-gray-500 -mt-3">
-          Di luar hari &amp; jam ini, pesan masuk akan dibalas otomatis (maksimal sekali per 24 jam per percakapan).
+          Outside these days &amp; hours, incoming messages will be replied to automatically (at most once per 24 hours per conversation).
         </p>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Narasi Balasan Otomatis</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Auto-Reply Message</label>
           <textarea
             value={settings.message}
             onChange={(e) => setSettings((prev) => ({ ...prev, message: e.target.value }))}
-            placeholder="Contoh: Terima kasih telah menghubungi kami. Saat ini di luar jam operasional kami (09:00-17:00 WIB, Senin-Jumat). Tim kami akan membalas pesan Anda secepatnya."
+            placeholder="Example: Thank you for contacting us. We're currently outside our business hours (09:00-17:00, Monday-Friday). Our team will reply to your message as soon as possible."
             rows={5}
             className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium resize-none"
           />
@@ -182,7 +182,7 @@ export default function AutoReplyTab() {
           disabled={saving || (settings.isEnabled && !settings.message.trim())}
           className="bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white px-6 py-3 rounded-xl font-semibold hover:scale-102 transition-all duration-200 shadow-soft-sm disabled:opacity-50 disabled:hover:scale-100"
         >
-          {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+          {saving ? 'Saving...' : 'Save Settings'}
         </button>
       </div>
     </div>

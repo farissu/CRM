@@ -45,7 +45,7 @@ export default function SettingsPanel({ agent, onProfileUpdate, defaultTab }: Se
             )}
             <TabButton icon={<Tag className="w-5 h-5" />} label="Labels" active={activeTab === 'labels'} onClick={() => setActiveTab('labels')} />
             <TabButton icon={<MessageSquareText className="w-5 h-5" />} label="Quick Reply" active={activeTab === 'quick-reply'} onClick={() => setActiveTab('quick-reply')} />
-            <TabButton icon={<Clock className="w-5 h-5" />} label="Balas Otomatis" active={activeTab === 'auto-reply'} onClick={() => setActiveTab('auto-reply')} />
+            <TabButton icon={<Clock className="w-5 h-5" />} label="Auto Reply" active={activeTab === 'auto-reply'} onClick={() => setActiveTab('auto-reply')} />
             {!isPlainAgent && (
               <TabButton icon={<Zap className="w-5 h-5" />} label="API Integration" active={activeTab === 'api-integration'} onClick={() => setActiveTab('api-integration')} />
             )}

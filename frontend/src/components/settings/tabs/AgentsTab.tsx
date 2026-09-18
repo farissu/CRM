@@ -223,7 +223,7 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
                   onChange={(e) => setFormData({ ...formData, isBot: e.target.checked })}
                   className="w-4 h-4 accent-saas-primary-blue"
                 />
-                <span className="text-sm font-semibold text-gray-700">AI Bot (bukan agent manusia)</span>
+                <span className="text-sm font-semibold text-gray-700">AI Bot</span>
               </label>
               {isEditing && (
                 <label className="flex items-center gap-2.5 cursor-pointer w-fit">

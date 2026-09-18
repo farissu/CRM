@@ -559,7 +559,7 @@ function EmptyListState({ statusFilter, searching }: EmptyListStateProps) {
       {statusFilter === 'served' && 'No served conversations'}
       {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
       {statusFilter === 'awaiting_reply' && 'Semua percakapan sudah dibalas'}
-      {statusFilter === 'resolved' && 'Belum ada percakapan yang selesai'}
+      {statusFilter === 'resolved' && 'No resolved conversations yet'}
     </div>
   );
 }

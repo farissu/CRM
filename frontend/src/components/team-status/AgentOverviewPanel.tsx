@@ -14,9 +14,9 @@ const EMPTY_STATS: AgentPerformanceStats = {
 };
 
 const PERIOD_OPTIONS: { value: DashboardPeriod; label: string }[] = [
-  { value: 'today', label: 'Hari Ini' },
-  { value: 'week', label: 'Minggu Ini' },
-  { value: 'month', label: 'Bulan Ini' },
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
   { value: 'custom', label: 'Custom' },
 ];
 
@@ -27,7 +27,7 @@ function formatMinutes(minutes: number | null): string {
   if (minutes < 1) return '<1m';
   const hours = Math.floor(minutes / 60);
   const mins = Math.round(minutes % 60);
-  return hours > 0 ? `${hours}j ${mins}m` : `${mins}m`;
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 }
 
 function todayIsoDate(): string {
@@ -92,7 +92,7 @@ export default function AgentOverviewPanel() {
   }, [stats.agents, sort]);
 
   const messagesChartData = useMemo(
-    () => [...stats.agents].sort((a, b) => b.messagesSent - a.messagesSent).slice(0, 8).map((a) => ({ name: a.name, Pesan: a.messagesSent })),
+    () => [...stats.agents].sort((a, b) => b.messagesSent - a.messagesSent).slice(0, 8).map((a) => ({ name: a.name, Messages: a.messagesSent })),
     [stats.agents]
   );
 
@@ -105,7 +105,7 @@ export default function AgentOverviewPanel() {
     [stats.agents]
   );
 
-  const periodLabel = period === 'today' ? 'hari ini' : period === 'week' ? 'minggu ini' : period === 'month' ? 'bulan ini' : `${customStart} s/d ${customEnd}`;
+  const periodLabel = period === 'today' ? 'today' : period === 'week' ? 'this week' : period === 'month' ? 'this month' : `${customStart} to ${customEnd}`;
 
   return (
     <div className="space-y-6">
@@ -132,7 +132,7 @@ export default function AgentOverviewPanel() {
               onChange={(e) => setCustomStart(e.target.value)}
               className="px-3 py-2 border-2 border-saas-border rounded-lg text-sm font-medium focus:border-saas-primary-blue focus:outline-none"
             />
-            <span className="text-gray-400 text-sm">s/d</span>
+            <span className="text-gray-400 text-sm">to</span>
             <input
               type="date"
               value={customEnd}
@@ -149,66 +149,66 @@ export default function AgentOverviewPanel() {
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-medium">{error}</div>
       )}
 
-      {loading && <p className="text-gray-500 text-sm">Memuat data performa agent...</p>}
+      {loading && <p className="text-gray-500 text-sm">Loading agent performance data...</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard
           icon={<Users className="w-6 h-6" />}
-          label="Active Sekarang"
+          label="Active Now"
           value={`${stats.summary.activeNow}/${stats.summary.totalAgents}`}
-          subtitle="agent online"
+          subtitle="agents online"
           color="bg-gradient-to-br from-green-500 to-green-600"
         />
         <StatCard
           icon={<MessageSquare className="w-6 h-6" />}
-          label="Pesan Terkirim"
-          value={stats.summary.messagesSent.toLocaleString('id-ID')}
-          subtitle={`${stats.summary.messagesSentByHuman.toLocaleString('id-ID')} agent · ${stats.summary.messagesSentByBot.toLocaleString('id-ID')} AI`}
+          label="Messages Sent"
+          value={stats.summary.messagesSent.toLocaleString('en-US')}
+          subtitle={`${stats.summary.messagesSentByHuman.toLocaleString('en-US')} agent · ${stats.summary.messagesSentByBot.toLocaleString('en-US')} AI`}
           color="bg-gradient-to-br from-blue-500 to-blue-600"
         />
         <StatCard
           icon={<CheckCircle2 className="w-6 h-6" />}
-          label="Percakapan Selesai"
-          value={stats.summary.resolvedInRange.toLocaleString('id-ID')}
+          label="Conversations Resolved"
+          value={stats.summary.resolvedInRange.toLocaleString('en-US')}
           subtitle={periodLabel}
           color="bg-gradient-to-br from-purple-500 to-purple-600"
         />
         <StatCard
           icon={<Clock className="w-6 h-6" />}
-          label="Rata-rata Respon"
+          label="Average Response"
           value={formatMinutes(stats.summary.avgResponseMinutes)}
           subtitle={periodLabel}
           color="bg-gradient-to-br from-orange-500 to-orange-600"
         />
         <StatCard
           icon={<Timer className="w-6 h-6" />}
-          label="Total Jam Aktif"
-          value={`${stats.summary.totalActiveHours}j`}
-          subtitle={`${periodLabel}, semua agent`}
+          label="Total Active Hours"
+          value={`${stats.summary.totalActiveHours}h`}
+          subtitle={`${periodLabel}, all agents`}
           color="bg-gradient-to-br from-teal-500 to-teal-600"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-3xl shadow-soft p-6">
-          <h3 className="text-lg font-bold text-saas-text-primary mb-4">Pesan Terkirim per Agent ({periodLabel})</h3>
-          {messagesChartData.some((d) => d.Pesan > 0) ? (
+          <h3 className="text-lg font-bold text-saas-text-primary mb-4">Messages Sent per Agent ({periodLabel})</h3>
+          {messagesChartData.some((d) => d.Messages > 0) ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={messagesChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" stroke="#6B7280" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#6B7280" allowDecimals={false} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="Pesan" fill="#3B82F6" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="Messages" fill="#3B82F6" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-400 text-sm text-center py-16">Belum ada pesan pada periode ini</p>
+            <p className="text-gray-400 text-sm text-center py-16">No messages in this period</p>
           )}
         </div>
 
         <div className="bg-white rounded-3xl shadow-soft p-6">
-          <h3 className="text-lg font-bold text-saas-text-primary mb-4">Beban Kerja Percakapan</h3>
+          <h3 className="text-lg font-bold text-saas-text-primary mb-4">Conversation Workload</h3>
           {workloadChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={workloadChartData}>
@@ -222,14 +222,14 @@ export default function AgentOverviewPanel() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-gray-400 text-sm text-center py-16">Belum ada percakapan yang ditugaskan</p>
+            <p className="text-gray-400 text-sm text-center py-16">No conversations assigned yet</p>
           )}
         </div>
       </div>
 
       <div className="bg-white rounded-3xl shadow-soft overflow-hidden">
         <div className="px-6 py-4 border-b border-saas-border">
-          <h3 className="text-lg font-bold text-saas-text-primary">Detail Performa Agent ({periodLabel})</h3>
+          <h3 className="text-lg font-bold text-saas-text-primary">Agent Performance Detail ({periodLabel})</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -238,11 +238,11 @@ export default function AgentOverviewPanel() {
                 <SortableHeader label="Agent" sortKey="name" sort={sort} onSort={toggleSort} />
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold text-right">Open</th>
-                <th className="px-4 py-3 font-semibold text-right">Selesai</th>
+                <th className="px-4 py-3 font-semibold text-right">Resolved</th>
                 <SortableHeader label="Total" sortKey="totalConversations" sort={sort} onSort={toggleSort} align="right" />
-                <SortableHeader label="Pesan" sortKey="messagesSent" sort={sort} onSort={toggleSort} align="right" />
-                <SortableHeader label="Rata Respon" sortKey="avgResponseMinutes" sort={sort} onSort={toggleSort} align="right" />
-                <SortableHeader label="Aktif" sortKey="activeMinutes" sort={sort} onSort={toggleSort} align="right" />
+                <SortableHeader label="Messages" sortKey="messagesSent" sort={sort} onSort={toggleSort} align="right" />
+                <SortableHeader label="Avg Response" sortKey="avgResponseMinutes" sort={sort} onSort={toggleSort} align="right" />
+                <SortableHeader label="Active" sortKey="activeMinutes" sort={sort} onSort={toggleSort} align="right" />
               </tr>
             </thead>
             <tbody>
@@ -255,7 +255,7 @@ export default function AgentOverviewPanel() {
         {!loading && stats.agents.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-500 text-sm">Belum ada data agent</p>
+            <p className="text-gray-500 text-sm">No agent data yet</p>
           </div>
         )}
       </div>

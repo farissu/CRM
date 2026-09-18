@@ -56,7 +56,7 @@ export default function TeamStatusPanel() {
     <div className="flex-1 flex flex-col bg-saas-bg overflow-y-auto">
       <div className="bg-saas-secondary-blue text-white px-8 py-6 shadow-soft">
         <h1 className="text-3xl font-bold leading-none">Agent Dashboard</h1>
-        <p className="text-sm text-white/80 font-medium mt-1">{activeCount} dari {agents.length} agent sedang active</p>
+        <p className="text-sm text-white/80 font-medium mt-1">{activeCount} of {agents.length} agents active</p>
       </div>
 
       <div className="p-8 space-y-8">
@@ -69,7 +69,7 @@ export default function TeamStatusPanel() {
             <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm font-medium">{error}</div>
           )}
 
-          {loading && <p className="text-gray-500 text-sm">Memuat data agent...</p>}
+          {loading && <p className="text-gray-500 text-sm">Loading agent data...</p>}
 
           <div className="space-y-3">
             {sortedAgents.map((item) => (
@@ -95,7 +95,7 @@ export default function TeamStatusPanel() {
                     <p className="text-sm text-gray-500">
                       {item.status === 'ACTIVE' ? 'Active' : 'Offline'}
                       {item.statusUpdatedAt && (
-                        <> &middot; sejak {formatDistanceToNow(new Date(item.statusUpdatedAt), { addSuffix: true })}</>
+                        <> &middot; since {formatDistanceToNow(new Date(item.statusUpdatedAt), { addSuffix: true })}</>
                       )}
                     </p>
                   </div>
@@ -105,7 +105,7 @@ export default function TeamStatusPanel() {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-saas-border text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0"
                 >
                   <History className="w-4 h-4" />
-                  Riwayat
+                  History
                 </button>
               </div>
             ))}
@@ -114,7 +114,7 @@ export default function TeamStatusPanel() {
           {!loading && agents.length === 0 && (
             <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-saas-border">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 font-medium">Belum ada agent</p>
+              <p className="text-gray-600 font-medium">No agents yet</p>
             </div>
           )}
         </div>
