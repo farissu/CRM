@@ -293,6 +293,8 @@ export interface DashboardStats {
   labelDistribution: Array<{ id: string; name: string; color: string; value: number }>;
 }
 
+export type DashboardPeriod = 'today' | 'week' | 'month' | 'custom';
+
 export interface AgentPerformanceRow {
   id: string;
   name: string;
@@ -304,22 +306,23 @@ export interface AgentPerformanceRow {
   openConversations: number;
   resolvedConversations: number;
   totalConversations: number;
-  messagesSentToday: number;
+  messagesSent: number;
   messagesSentTotal: number;
   avgResponseMinutes: number | null;
-  activeMinutesToday: number;
+  activeMinutes: number;
 }
 
 export interface AgentPerformanceStats {
+  range: { start: string; end: string };
   summary: {
     totalAgents: number;
     activeNow: number;
-    messagesSentToday: number;
-    messagesSentTodayByBot: number;
-    messagesSentTodayByHuman: number;
-    resolvedToday: number;
+    messagesSent: number;
+    messagesSentByBot: number;
+    messagesSentByHuman: number;
+    resolvedInRange: number;
     avgResponseMinutes: number | null;
-    totalActiveHoursToday: number;
+    totalActiveHours: number;
   };
   agents: AgentPerformanceRow[];
 }

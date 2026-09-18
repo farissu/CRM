@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { dashboardService } from '../services/dashboard.service';
-import { agentPerformanceService } from '../services/agentPerformance.service';
+import { agentPerformanceService, DashboardPeriod } from '../services/agentPerformance.service';
+
+const VALID_PERIODS: DashboardPeriod[] = ['today', 'week', 'month', 'custom'];
 
 export class DashboardController {
   /**
@@ -23,7 +25,15 @@ export class DashboardController {
    */
   async getAgentStats(req: Request, res: Response) {
     try {
-      const stats = await agentPerformanceService.getStats(req.user!.role, req.user!.companyId);
+      const { period, startDate, endDate } = req.query;
+      const resolvedPeriod = VALID_PERIODS.includes(period as DashboardPeriod) ? (period as DashboardPeriod) : 'today';
+      const stats = await agentPerformanceService.getStats(
+        req.user!.role,
+        req.user!.companyId,
+        resolvedPeriod,
+        typeof startDate === 'string' ? startDate : undefined,
+        typeof endDate === 'string' ? endDate : undefined
+      );
       res.json(stats);
     } catch (err: unknown) {
       res.status(500).json({

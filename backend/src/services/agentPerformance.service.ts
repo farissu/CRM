@@ -4,11 +4,12 @@ const MS_DAY = 86_400_000;
 // Same convention as dashboard.service.ts: timestamps are stored as naive UTC,
 // interpreted here in the Asia/Jakarta business timezone.
 const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
-// First-response time is only meaningful within a recent window, and gaps longer
-// than this are almost always "agent was offline overnight" rather than a real
-// response-time problem, so they're excluded to keep the average meaningful.
-const RESPONSE_WINDOW_DAYS = 30;
+// Response-time gaps longer than this are almost always "agent was offline
+// overnight" rather than a real response-time problem, so they're excluded
+// to keep the average meaningful.
 const MAX_RESPONSE_GAP_MINUTES = 4 * 60;
+
+export type DashboardPeriod = 'today' | 'week' | 'month' | 'custom';
 
 export interface AgentPerformanceRow {
   id: string;
@@ -21,41 +22,74 @@ export interface AgentPerformanceRow {
   openConversations: number;
   resolvedConversations: number;
   totalConversations: number;
-  messagesSentToday: number;
+  messagesSent: number;
   messagesSentTotal: number;
   avgResponseMinutes: number | null;
-  activeMinutesToday: number;
+  activeMinutes: number;
 }
 
 export interface AgentPerformanceStats {
+  range: { start: string; end: string };
   summary: {
     totalAgents: number;
     activeNow: number;
-    messagesSentToday: number;
-    messagesSentTodayByBot: number;
-    messagesSentTodayByHuman: number;
-    resolvedToday: number;
+    messagesSent: number;
+    messagesSentByBot: number;
+    messagesSentByHuman: number;
+    resolvedInRange: number;
     avgResponseMinutes: number | null;
-    totalActiveHoursToday: number;
+    totalActiveHours: number;
   };
   agents: AgentPerformanceRow[];
 }
 
-function startOfTodayJakarta(now: Date): Date {
-  const jktWall = new Date(now.getTime() + TZ_OFFSET_MS);
+function startOfDayJakarta(date: Date): Date {
+  const jktWall = new Date(date.getTime() + TZ_OFFSET_MS);
   return new Date(Date.UTC(jktWall.getUTCFullYear(), jktWall.getUTCMonth(), jktWall.getUTCDate()) - TZ_OFFSET_MS);
 }
 
+function resolveRange(period: DashboardPeriod, customStart?: string, customEnd?: string): { start: Date; end: Date } {
+  const now = new Date();
+  const todayStart = startOfDayJakarta(now);
+  const todayEnd = new Date(todayStart.getTime() + MS_DAY);
+
+  if (period === 'custom' && customStart && customEnd) {
+    const start = startOfDayJakarta(new Date(customStart));
+    const end = new Date(startOfDayJakarta(new Date(customEnd)).getTime() + MS_DAY);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start) {
+      return { start, end };
+    }
+  }
+
+  if (period === 'week') {
+    const jktWall = new Date(todayStart.getTime() + TZ_OFFSET_MS);
+    const daysSinceMonday = (jktWall.getUTCDay() + 6) % 7; // Monday = 0
+    return { start: new Date(todayStart.getTime() - daysSinceMonday * MS_DAY), end: todayEnd };
+  }
+
+  if (period === 'month') {
+    const jktWall = new Date(todayStart.getTime() + TZ_OFFSET_MS);
+    const start = new Date(Date.UTC(jktWall.getUTCFullYear(), jktWall.getUTCMonth(), 1) - TZ_OFFSET_MS);
+    return { start, end: todayEnd };
+  }
+
+  return { start: todayStart, end: todayEnd };
+}
+
 class AgentPerformanceService {
-  async getStats(role: string, companyId: string): Promise<AgentPerformanceStats> {
+  async getStats(
+    role: string,
+    companyId: string,
+    period: DashboardPeriod = 'today',
+    customStart?: string,
+    customEnd?: string
+  ): Promise<AgentPerformanceStats> {
     const now = new Date();
-    const startToday = startOfTodayJakarta(now);
-    const endToday = new Date(startToday.getTime() + MS_DAY);
-    const responseWindowStart = new Date(startToday.getTime() - RESPONSE_WINDOW_DAYS * MS_DAY);
+    const { start: rangeStart, end: rangeEnd } = resolveRange(period, customStart, customEnd);
 
     const agentWhere = role === 'SUPER_ADMIN' ? { isActive: true } : { isActive: true, companyId };
 
-    const [agents, conversationCounts, resolvedToday, messagesTotal, messagesToday, activeLogsToday, responseRows] = await Promise.all([
+    const [agents, conversationCounts, resolvedInRange, messagesTotal, messagesInRange, activeLogsInRange, responseRows] = await Promise.all([
       prisma.agent.findMany({
         where: agentWhere,
         select: { id: true, name: true, role: true, avatar: true, isBot: true, status: true, statusUpdatedAt: true },
@@ -66,7 +100,7 @@ class AgentPerformanceService {
         where: { assignedAgentId: { not: null } },
         _count: { _all: true },
       }),
-      prisma.conversation.count({ where: { status: 'RESOLVED', updatedAt: { gte: startToday } } }),
+      prisma.conversation.count({ where: { status: 'RESOLVED', updatedAt: { gte: rangeStart, lt: rangeEnd } } }),
       prisma.message.groupBy({
         by: ['senderId'],
         where: { direction: 'OUTBOUND', senderId: { not: null } },
@@ -74,14 +108,14 @@ class AgentPerformanceService {
       }),
       prisma.message.groupBy({
         by: ['senderId'],
-        where: { direction: 'OUTBOUND', senderId: { not: null }, timestamp: { gte: startToday } },
+        where: { direction: 'OUTBOUND', senderId: { not: null }, timestamp: { gte: rangeStart, lt: rangeEnd } },
         _count: { _all: true },
       }),
       prisma.agentStatusLog.findMany({
         where: {
           status: 'ACTIVE',
-          startedAt: { lt: endToday },
-          OR: [{ endedAt: null }, { endedAt: { gt: startToday } }],
+          startedAt: { lt: rangeEnd },
+          OR: [{ endedAt: null }, { endedAt: { gt: rangeStart } }],
         },
         select: { agentId: true, startedAt: true, endedAt: true },
       }),
@@ -94,7 +128,7 @@ class AgentPerformanceService {
             LAG(direction) OVER (PARTITION BY "conversationId" ORDER BY "timestamp") AS prev_direction,
             LAG("timestamp") OVER (PARTITION BY "conversationId" ORDER BY "timestamp") AS prev_timestamp
           FROM messages
-          WHERE "timestamp" >= ${responseWindowStart}
+          WHERE "timestamp" >= ${rangeStart} AND "timestamp" < ${rangeEnd}
         )
         SELECT
           "senderId" AS "agentId",
@@ -122,12 +156,12 @@ class AgentPerformanceService {
     }
 
     const messagesTotalByAgent = new Map(messagesTotal.map((r) => [r.senderId as string, r._count._all]));
-    const messagesTodayByAgent = new Map(messagesToday.map((r) => [r.senderId as string, r._count._all]));
+    const messagesInRangeByAgent = new Map(messagesInRange.map((r) => [r.senderId as string, r._count._all]));
 
     const activeMinutesByAgent = new Map<string, number>();
-    for (const log of activeLogsToday) {
-      const segStart = Math.max(log.startedAt.getTime(), startToday.getTime());
-      const segEnd = Math.min((log.endedAt ?? now).getTime(), endToday.getTime());
+    for (const log of activeLogsInRange) {
+      const segStart = Math.max(log.startedAt.getTime(), rangeStart.getTime());
+      const segEnd = Math.min((log.endedAt ?? now).getTime(), rangeEnd.getTime());
       const minutes = Math.max(0, (segEnd - segStart) / 60_000);
       activeMinutesByAgent.set(log.agentId, (activeMinutesByAgent.get(log.agentId) ?? 0) + minutes);
     }
@@ -145,10 +179,10 @@ class AgentPerformanceService {
       openConversations: openByAgent.get(a.id) ?? 0,
       resolvedConversations: resolvedByAgent.get(a.id) ?? 0,
       totalConversations: totalByAgent.get(a.id) ?? 0,
-      messagesSentToday: messagesTodayByAgent.get(a.id) ?? 0,
+      messagesSent: messagesInRangeByAgent.get(a.id) ?? 0,
       messagesSentTotal: messagesTotalByAgent.get(a.id) ?? 0,
       avgResponseMinutes: responseByAgent.get(a.id)?.avg ?? null,
-      activeMinutesToday: Math.round(activeMinutesByAgent.get(a.id) ?? 0),
+      activeMinutes: Math.round(activeMinutesByAgent.get(a.id) ?? 0),
     }));
 
     const responseSamples = agentRows
@@ -160,15 +194,16 @@ class AgentPerformanceService {
       : null;
 
     return {
+      range: { start: rangeStart.toISOString(), end: rangeEnd.toISOString() },
       summary: {
         totalAgents: agentRows.length,
         activeNow: agentRows.filter((a) => a.status === 'ACTIVE').length,
-        messagesSentToday: agentRows.reduce((sum, a) => sum + a.messagesSentToday, 0),
-        messagesSentTodayByBot: agentRows.filter((a) => a.isBot).reduce((sum, a) => sum + a.messagesSentToday, 0),
-        messagesSentTodayByHuman: agentRows.filter((a) => !a.isBot).reduce((sum, a) => sum + a.messagesSentToday, 0),
-        resolvedToday,
+        messagesSent: agentRows.reduce((sum, a) => sum + a.messagesSent, 0),
+        messagesSentByBot: agentRows.filter((a) => a.isBot).reduce((sum, a) => sum + a.messagesSent, 0),
+        messagesSentByHuman: agentRows.filter((a) => !a.isBot).reduce((sum, a) => sum + a.messagesSent, 0),
+        resolvedInRange,
         avgResponseMinutes,
-        totalActiveHoursToday: Math.round((agentRows.reduce((sum, a) => sum + a.activeMinutesToday, 0) / 60) * 10) / 10,
+        totalActiveHours: Math.round((agentRows.reduce((sum, a) => sum + a.activeMinutes, 0) / 60) * 10) / 10,
       },
       agents: agentRows,
     };
