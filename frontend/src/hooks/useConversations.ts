@@ -244,7 +244,9 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     try {
       setLoadingMessages(true);
       messagesPageRef.current = 1;
-      const response = await messageApi.getMessages(conversationId, { page: 1, limit: 100 });
+      // Only the "All" tab shows a contact's full history merged across resolved
+      // sessions — every other tab (Served, Resolve, etc.) stays scoped to this one row.
+      const response = await messageApi.getMessages(conversationId, { page: 1, limit: 100, mergeHistory: statusFilter === 'all' });
       setMessages(response.messages);
       setHasMoreMessages(response.page < response.totalPages);
       await conversationApi.markAsRead(conversationId);
@@ -259,7 +261,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     setLoadingMoreMessages(true);
     try {
       const nextPage = messagesPageRef.current + 1;
-      const response = await messageApi.getMessages(activeConversation.id, { page: nextPage, limit: 100 });
+      const response = await messageApi.getMessages(activeConversation.id, { page: nextPage, limit: 100, mergeHistory: statusFilter === 'all' });
       setMessages(prev => {
         const existingIds = new Set(prev.map(m => m.id));
         const older = response.messages.filter(m => !existingIds.has(m.id));

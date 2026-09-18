@@ -113,8 +113,7 @@ export default function HomePage() {
                 hasMore={hasMoreConversations}
                 loadingMore={loadingMoreConversations}
                 onLoadMore={loadMoreConversations}
-                agentName={agentName}
-                onLogout={handleLogout}
+                agent={agent || undefined}
               />
             </div>
             <div className={clsx('flex-1 min-w-0 h-full', mobileView === 'list' ? 'hidden md:flex' : 'flex')}>
@@ -142,7 +141,7 @@ export default function HomePage() {
 
         {activeTab === 'broadcast' && <BroadcastPanel />}
 
-        {activeTab === 'team-status' && <TeamStatusPanel agent={agent || undefined} />}
+        {activeTab === 'team-status' && <TeamStatusPanel />}
 
         {activeTab === 'settings' && (
           <SettingsPanel agentName={agentName} agent={agent || undefined} onProfileUpdate={refreshAgentData} />

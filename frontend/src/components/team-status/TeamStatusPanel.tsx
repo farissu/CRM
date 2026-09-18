@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, History, Power } from 'lucide-react';
+import { Users, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { agentApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
@@ -10,19 +10,14 @@ import StatusHistoryModal from './StatusHistoryModal';
 import AgentOverviewPanel from './AgentOverviewPanel';
 import type { Agent, AgentStatusSummary } from '@/types';
 
-interface TeamStatusPanelProps {
-  agent?: Agent;
-}
-
 function mergeStatus(agents: Agent[], update: AgentStatusSummary): Agent[] {
   return agents.map((a) => (a.id === update.id ? { ...a, status: update.status, statusUpdatedAt: update.statusUpdatedAt } : a));
 }
 
-export default function TeamStatusPanel({ agent }: TeamStatusPanelProps) {
+export default function TeamStatusPanel() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [togglingMyStatus, setTogglingMyStatus] = useState(false);
   const [historyAgent, setHistoryAgent] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -57,40 +52,11 @@ export default function TeamStatusPanel({ agent }: TeamStatusPanelProps) {
 
   const activeCount = agents.filter((a) => a.status === 'ACTIVE').length;
 
-  const myStatus = agents.find((a) => a.id === agent?.id)?.status ?? 'OFFLINE';
-
-  const handleToggleMyStatus = async () => {
-    const nextStatus = myStatus === 'ACTIVE' ? 'OFFLINE' : 'ACTIVE';
-    try {
-      setTogglingMyStatus(true);
-      const response = await agentApi.updateMyStatus(nextStatus);
-      setAgents((prev) => mergeStatus(prev, response.agent));
-    } catch {
-      setError('Failed to update your status');
-    } finally {
-      setTogglingMyStatus(false);
-    }
-  };
-
   return (
     <div className="flex-1 flex flex-col bg-saas-bg overflow-y-auto">
-      <div className="bg-saas-secondary-blue text-white px-8 py-6 shadow-soft flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold leading-none">Agent Dashboard</h1>
-          <p className="text-sm text-white/80 font-medium mt-1">{activeCount} dari {agents.length} agent sedang active</p>
-        </div>
-        {agent && (
-          <button
-            onClick={() => void handleToggleMyStatus()}
-            disabled={togglingMyStatus}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-soft-sm transition-all duration-200 disabled:opacity-50 ${
-              myStatus === 'ACTIVE' ? 'bg-white text-saas-secondary-blue hover:bg-white/90' : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            <Power className="w-4 h-4" />
-            {myStatus === 'ACTIVE' ? 'Set Offline' : 'Set Active'}
-          </button>
-        )}
+      <div className="bg-saas-secondary-blue text-white px-8 py-6 shadow-soft">
+        <h1 className="text-3xl font-bold leading-none">Agent Dashboard</h1>
+        <p className="text-sm text-white/80 font-medium mt-1">{activeCount} dari {agents.length} agent sedang active</p>
       </div>
 
       <div className="p-8 space-y-8">

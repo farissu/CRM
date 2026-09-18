@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import type { Conversation, ConversationLabelCounts, ConversationStatusCounts, Label } from '@/types';
+import type { Agent, Conversation, ConversationLabelCounts, ConversationStatusCounts, Label } from '@/types';
 import type { ConversationFilter, ConversationViewMode } from '@/hooks/useConversations';
 import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { labelApi } from '@/lib/api';
+import AgentProfileBar from './AgentProfileBar';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -27,8 +28,7 @@ interface ConversationSidebarProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
-  agentName?: string;
-  onLogout?: () => void;
+  agent?: Agent;
 }
 
 export default function ConversationSidebar({
@@ -52,8 +52,7 @@ export default function ConversationSidebar({
   hasMore,
   loadingMore,
   onLoadMore,
-  agentName,
-  onLogout,
+  agent,
 }: ConversationSidebarProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -357,6 +356,9 @@ export default function ConversationSidebar({
           </div>
         )}
       </div>
+
+      {/* Agent Profile + Online/Offline Toggle */}
+      {agent && <AgentProfileBar agent={agent} />}
 
       {/* View Mode Switch */}
       <div className="bg-white border-b border-saas-border px-3 pt-3 pb-2 flex items-center gap-1.5">

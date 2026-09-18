@@ -206,8 +206,8 @@ export class MessageController {
   async getMessages(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { page = '1', limit = '50' } = req.query;
-      const result = await messageService.getMessages(id, parseInt(page as string), parseInt(limit as string));
+      const { page = '1', limit = '50', mergeHistory } = req.query;
+      const result = await messageService.getMessages(id, parseInt(page as string), parseInt(limit as string), mergeHistory === 'true');
       res.json(result);
     } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to fetch messages', message: err instanceof Error ? err.message : 'Unknown error' });

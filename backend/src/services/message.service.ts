@@ -94,22 +94,27 @@ export class MessageService {
   /**
    * Get messages for a conversation
    */
-  async getMessages(conversationId: string, page = 1, limit = 50) {
+  async getMessages(conversationId: string, page = 1, limit = 50, mergeHistory = false) {
     const skip = (page - 1) * limit;
 
     // A contact's history can span several Conversation rows over time (resolving one
-    // and messaging again later starts a new row rather than reopening the old one), so
-    // messages are scoped by the contact behind this conversation, not this row alone —
-    // opening any one of a contact's threads shows their full history from start to end.
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
-      select: { contactId: true }
-    });
-    if (!conversation) {
-      return { messages: [], total: 0, page, totalPages: 0 };
-    }
+    // and messaging again later starts a new row rather than reopening the old one).
+    // Opened from a specific tab (Served/Resolve/etc.) a thread stays scoped to that one
+    // row, so each resolved session reads as its own case; only the "All" tab asks for
+    // `mergeHistory`, joining across every row for the contact to show one continuous
+    // history from start to end.
+    let where: Prisma.MessageWhereInput = { conversationId };
 
-    const where: Prisma.MessageWhereInput = { conversation: { contactId: conversation.contactId } };
+    if (mergeHistory) {
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { contactId: true }
+      });
+      if (!conversation) {
+        return { messages: [], total: 0, page, totalPages: 0 };
+      }
+      where = { conversation: { contactId: conversation.contactId } };
+    }
 
     // Page through from the newest message backward so page 1 always contains
     // the most recent activity (what a chat UI should open on), then reverse
