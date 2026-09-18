@@ -109,7 +109,7 @@ export default function QuickReplyTab() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-saas-text-primary">Quick Reply</h2>
-          <p className="text-gray-600 mt-1">Buat balasan cepat yang bisa langsung dipilih saat membalas percakapan</p>
+          <p className="text-gray-600 mt-1">Create quick replies you can select instantly when replying to a conversation</p>
         </div>
         {!isEditing && (
           <button
@@ -142,18 +142,18 @@ export default function QuickReplyTab() {
                 type="text"
                 value={form.title}
                 onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))}
-                placeholder="e.g., Salam Pembuka, Info Rekening"
+                placeholder="e.g., Opening Greeting, Bank Account Info"
                 className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium"
                 autoFocus
               />
-              <p className="text-xs text-gray-500 mt-1">Ini yang akan ditampilkan di tombol pilihan Quick Reply</p>
+              <p className="text-xs text-gray-500 mt-1">This is what will be shown on the Quick Reply selection button</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Text</label>
               <textarea
                 value={form.text}
                 onChange={(e) => setForm(p => ({ ...p, text: e.target.value }))}
-                placeholder="Isi pesan yang akan masuk ke kolom chat"
+                placeholder="The message that will be inserted into the chat box"
                 rows={4}
                 className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium resize-none"
               />
@@ -190,8 +190,8 @@ export default function QuickReplyTab() {
         {quickReplies.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-saas-border">
             <MessageSquareText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600 font-medium">Belum ada quick reply</p>
-            <p className="text-gray-500 text-sm mt-1">Buat quick reply pertamamu untuk mempercepat balasan</p>
+            <p className="text-gray-600 font-medium">No quick replies yet</p>
+            <p className="text-gray-500 text-sm mt-1">Create your first quick reply to speed up your responses</p>
           </div>
         ) : (
           quickReplies.map((quickReply) => (
@@ -237,10 +237,10 @@ export default function QuickReplyTab() {
 
       <ConfirmDialog
         isOpen={quickReplyToDelete !== null}
-        title="Hapus Quick Reply"
-        message={`Yakin ingin menghapus quick reply "${quickReplyToDelete?.title}"? Tindakan ini tidak dapat dibatalkan.`}
-        confirmText="Hapus"
-        cancelText="Batal"
+        title="Delete Quick Reply"
+        message={`Are you sure you want to delete the quick reply "${quickReplyToDelete?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
         onConfirm={() => quickReplyToDelete && void handleDelete(quickReplyToDelete.id)}
         onCancel={() => setQuickReplyToDelete(null)}
       />
