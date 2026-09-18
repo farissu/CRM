@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { createServer } from 'http';
 import { connectDatabase } from './config/database';
 import routes from './routes';
+import { registerPresenceHandlers } from './sockets/presence.socket';
 import './workers/broadcast.worker';
 
 // Load environment variables
@@ -59,6 +60,10 @@ app.use('/uploads', (req, res, next) => {
 
 // API routes
 app.use('/api', routes);
+
+// Presence tracking (agent online/offline status) — must be registered before
+// other connection handlers since it installs the socket auth middleware.
+registerPresenceHandlers(io);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

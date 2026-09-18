@@ -1,9 +1,9 @@
 import React from 'react';
 import clsx from 'clsx';
-import { MessageSquare, Settings, LogOut, Radio, LayoutDashboard } from 'lucide-react';
+import { MessageSquare, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
 import type { Role } from '@/types';
 
-type Tab = 'conversations' | 'dashboard' | 'broadcast' | 'settings';
+type Tab = 'conversations' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
 
 interface MainNavigationProps {
   activeTab: Tab;
@@ -60,6 +60,13 @@ export default function MainNavigation({
           onClick={() => onTabChange('broadcast')}
         />
 
+        <NavItem
+          icon={<Users className="w-6 h-6" />}
+          label="Team Status"
+          active={activeTab === 'team-status'}
+          onClick={() => onTabChange('team-status')}
+        />
+
         {/* Hide Settings for AGENT role */}
         {showSettings && (
           <NavItem
@@ -111,6 +118,12 @@ export default function MainNavigation({
           label="Broadcast"
           active={activeTab === 'broadcast'}
           onClick={() => onTabChange('broadcast')}
+        />
+        <MobileNavItem
+          icon={<Users className="w-5 h-5" />}
+          label="Team"
+          active={activeTab === 'team-status'}
+          onClick={() => onTabChange('team-status')}
         />
         {showSettings && (
           <MobileNavItem

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
+import { presenceService } from '../services/presence.service';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
@@ -23,6 +24,7 @@ export class AuthController {
       if (!isPasswordValid) return res.status(401).json({ error: 'Invalid credentials' });
 
       await prisma.agent.update({ where: { id: agent.id }, data: { lastLoginAt: new Date() } });
+      await presenceService.setStatus(agent.id, 'ACTIVE', 'AUTO');
 
       const token = jwt.sign(
         { id: agent.id, email: agent.email, name: agent.name, role: agent.role, companyId: agent.companyId },
@@ -48,6 +50,9 @@ export class AuthController {
   }
 
   async logout(req: Request, res: Response) {
+    if (req.user?.id) {
+      await presenceService.setStatus(req.user.id, 'OFFLINE', 'AUTO');
+    }
     res.json({ message: 'Logged out successfully', agentId: req.user?.id });
   }
 }

@@ -10,13 +10,14 @@ import ForceChangePasswordPage from '@/components/auth/ForceChangePasswordPage';
 import SettingsPanel from '@/components/settings/SettingsPanel';
 import DashboardPanel from '@/components/dashboard/DashboardPanel';
 import BroadcastPanel from '@/components/broadcast/BroadcastPanel';
+import TeamStatusPanel from '@/components/team-status/TeamStatusPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
 
-type ActiveTab = 'conversations' | 'dashboard' | 'broadcast' | 'settings';
+type ActiveTab = 'conversations' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
 
 const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
-const VALID_TABS: ActiveTab[] = ['conversations', 'dashboard', 'broadcast', 'settings'];
+const VALID_TABS: ActiveTab[] = ['conversations', 'dashboard', 'broadcast', 'team-status', 'settings'];
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('conversations');
@@ -140,6 +141,8 @@ export default function HomePage() {
         {activeTab === 'dashboard' && <DashboardPanel />}
 
         {activeTab === 'broadcast' && <BroadcastPanel />}
+
+        {activeTab === 'team-status' && <TeamStatusPanel agent={agent || undefined} />}
 
         {activeTab === 'settings' && (
           <SettingsPanel agentName={agentName} agent={agent || undefined} onProfileUpdate={refreshAgentData} />

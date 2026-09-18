@@ -103,6 +103,10 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, 'New password must be at least 8 characters'),
 });
 
+export const updateStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'OFFLINE']),
+});
+
 export const createComplaintSchema = z.object({
   conversationId: z.string().min(1, 'conversationId is required'),
   type: z.string().min(1, 'type is required'),

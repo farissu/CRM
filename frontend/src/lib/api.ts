@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -230,6 +230,16 @@ export const agentApi = {
     const response = await api.delete(`/agents/${agentId}`);
     return response.data;
   },
+
+  updateMyStatus: async (status: AgentStatus): Promise<{ agent: AgentStatusSummary }> => {
+    const response = await api.patch('/agents/me/status', { status });
+    return response.data;
+  },
+
+  getStatusHistory: async (agentId: string, page = 1, limit = 20): Promise<AgentStatusHistoryResponse> => {
+    const response = await api.get(`/agents/${agentId}/status-history`, { params: { page, limit } });
+    return response.data;
+  },
 };
 
 export const companyApi = {
@@ -371,5 +381,10 @@ export const dashboardApi = {
   getStats: async (): Promise<DashboardStats> => {
     const response = await api.get('/dashboard/stats');
     return response.data as DashboardStats;
+  },
+
+  getAgentStats: async (): Promise<AgentPerformanceStats> => {
+    const response = await api.get('/dashboard/agents');
+    return response.data as AgentPerformanceStats;
   },
 };

@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { Message, Conversation, MessageStatus } from '@/types';
+import type { Message, Conversation, MessageStatus, AgentStatusSummary } from '@/types';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
 
@@ -12,6 +12,7 @@ class SocketClient {
     }
 
     this.socket = io(WS_URL, {
+      auth: { token: localStorage.getItem('token') },
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
@@ -89,6 +90,10 @@ class SocketClient {
     this.socket?.on('message_reaction_updated', callback);
   }
 
+  onAgentStatusUpdated(callback: (agent: AgentStatusSummary) => void) {
+    this.socket?.on('agent_status_updated', callback);
+  }
+
   offMessageReceived(callback: (data: { conversationId: string; message: Message }) => void) {
     this.socket?.off('message_received', callback);
   }
@@ -115,6 +120,10 @@ class SocketClient {
 
   offMessageReactionUpdated(callback: (data: { conversationId: string; message: Message }) => void) {
     this.socket?.off('message_reaction_updated', callback);
+  }
+
+  offAgentStatusUpdated(callback: (agent: AgentStatusSummary) => void) {
+    this.socket?.off('agent_status_updated', callback);
   }
 }
 

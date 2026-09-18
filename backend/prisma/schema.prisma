@@ -13,6 +13,16 @@ enum Role {
   AGENT
 }
 
+enum AgentStatus {
+  ACTIVE  @map("active")
+  OFFLINE @map("offline")
+}
+
+enum StatusChangeSource {
+  AUTO   @map("auto")
+  MANUAL @map("manual")
+}
+
 enum ConversationStatus {
   OPEN     @map("open")
   RESOLVED @map("resolved")
@@ -116,16 +126,34 @@ model Agent {
   isActive    Boolean   @default(true)
   mustChangePassword Boolean @default(false)
   lastLoginAt DateTime?
+  status          AgentStatus @default(OFFLINE)
+  statusUpdatedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  company       Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
   conversations Conversation[]
   messages      Message[]
   broadcasts    Broadcast[]
+  statusLogs    AgentStatusLog[]
 
   @@index([companyId])
   @@map("agents")
+}
+
+model AgentStatusLog {
+  id        String             @id @default(uuid())
+  agentId   String
+  status    AgentStatus
+  source    StatusChangeSource @default(AUTO)
+  startedAt DateTime           @default(now())
+  endedAt   DateTime?
+  createdAt DateTime           @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, startedAt])
+  @@map("agent_status_logs")
 }
 
 model Contact {

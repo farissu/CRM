@@ -118,6 +118,8 @@ export const getAllAgents = async (req: Request, res: Response) => {
         avatar: true,
         phone: true,
         isActive: true,
+        status: true,
+        statusUpdatedAt: true,
         createdAt: true,
         companyId: true,
         company: {

@@ -17,6 +17,9 @@ export interface Company {
   updatedAt: string;
 }
 
+export type AgentStatus = 'ACTIVE' | 'OFFLINE';
+export type StatusChangeSource = 'AUTO' | 'MANUAL';
+
 export interface Agent {
   id: string;
   email: string;
@@ -31,7 +34,31 @@ export interface Agent {
   phone?: string;
   isActive?: boolean;
   mustChangePassword?: boolean;
+  status?: AgentStatus;
+  statusUpdatedAt?: string;
   createdAt?: string;
+}
+
+export interface AgentStatusSummary {
+  id: string;
+  name: string;
+  status: AgentStatus;
+  statusUpdatedAt: string;
+}
+
+export interface AgentStatusLog {
+  id: string;
+  status: AgentStatus;
+  source: StatusChangeSource;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export interface AgentStatusHistoryResponse {
+  logs: AgentStatusLog[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface Label {
@@ -253,4 +280,32 @@ export interface DashboardStats {
   messageVolume: Array<{ day: string; messages: number }>;
   peakHours: Array<{ hour: string; messages: number }>;
   labelDistribution: Array<{ id: string; name: string; color: string; value: number }>;
+}
+
+export interface AgentPerformanceRow {
+  id: string;
+  name: string;
+  role: Role;
+  avatar: string | null;
+  status: AgentStatus;
+  statusUpdatedAt: string | null;
+  openConversations: number;
+  resolvedConversations: number;
+  totalConversations: number;
+  messagesSentToday: number;
+  messagesSentTotal: number;
+  avgResponseMinutes: number | null;
+  activeMinutesToday: number;
+}
+
+export interface AgentPerformanceStats {
+  summary: {
+    totalAgents: number;
+    activeNow: number;
+    messagesSentToday: number;
+    resolvedToday: number;
+    avgResponseMinutes: number | null;
+    totalActiveHoursToday: number;
+  };
+  agents: AgentPerformanceRow[];
 }
