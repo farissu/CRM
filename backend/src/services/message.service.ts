@@ -43,7 +43,7 @@ interface QuickReplyButton {
 interface SendMessageParams {
   conversationId: string;
   text?: string;
-  senderId: string;
+  senderId?: string;
   messageType?: string;
   mediaUrl?: string;
   mediaType?: string;
@@ -171,7 +171,7 @@ export class MessageService {
     return this.sendToConversation(conversation, {
       conversationId: conversation.id,
       text: params.text,
-      senderId: undefined as unknown as string,
+      senderId: process.env.DEFAULT_API_SENDER_AGENT_ID,
       messageType: params.messageType,
       mediaUrl: params.mediaUrl,
       mediaType: params.mediaType,
