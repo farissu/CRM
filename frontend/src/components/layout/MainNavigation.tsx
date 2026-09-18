@@ -1,7 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
 import { MessageSquare, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
-import type { Role } from '@/types';
 
 type Tab = 'conversations' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
 
@@ -10,7 +9,6 @@ interface MainNavigationProps {
   onTabChange: (tab: Tab) => void;
   onLogout: () => void;
   agentName?: string;
-  agentRole?: Role;
   hideMobileNav?: boolean;
 }
 
@@ -19,11 +17,8 @@ export default function MainNavigation({
   onTabChange,
   onLogout,
   agentName,
-  agentRole,
   hideMobileNav,
 }: MainNavigationProps) {
-  const showSettings = agentRole !== 'AGENT';
-
   return (
     <>
       {/* Desktop side rail */}
@@ -67,15 +62,12 @@ export default function MainNavigation({
           onClick={() => onTabChange('team-status')}
         />
 
-        {/* Hide Settings for AGENT role */}
-        {showSettings && (
-          <NavItem
-            icon={<Settings className="w-6 h-6" />}
-            label="Settings"
-            active={activeTab === 'settings'}
-            onClick={() => onTabChange('settings')}
-          />
-        )}
+        <NavItem
+          icon={<Settings className="w-6 h-6" />}
+          label="Settings"
+          active={activeTab === 'settings'}
+          onClick={() => onTabChange('settings')}
+        />
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -125,14 +117,12 @@ export default function MainNavigation({
           active={activeTab === 'team-status'}
           onClick={() => onTabChange('team-status')}
         />
-        {showSettings && (
-          <MobileNavItem
-            icon={<Settings className="w-5 h-5" />}
-            label="Settings"
-            active={activeTab === 'settings'}
-            onClick={() => onTabChange('settings')}
-          />
-        )}
+        <MobileNavItem
+          icon={<Settings className="w-5 h-5" />}
+          label="Settings"
+          active={activeTab === 'settings'}
+          onClick={() => onTabChange('settings')}
+        />
         <MobileNavItem
           icon={<LogOut className="w-5 h-5" />}
           label="Logout"

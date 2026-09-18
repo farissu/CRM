@@ -81,7 +81,6 @@ export default function HomePage() {
         onTabChange={setActiveTab}
         onLogout={handleLogout}
         agentName={agentName}
-        agentRole={agent?.role}
         hideMobileNav={isMobileChatOpen}
       />
 

@@ -19,7 +19,10 @@ interface SettingsPanelProps {
 }
 
 export default function SettingsPanel({ agent, onProfileUpdate, defaultTab }: SettingsPanelProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab || 'profile');
+  // AGENT only manages the day-to-day inbox settings — everything administrative
+  // (own profile, companies, agents, API keys, notifications) stays ADMIN+ only.
+  const isPlainAgent = agent?.role === 'AGENT';
+  const [activeTab, setActiveTab] = useState<SettingsTab>(defaultTab || (isPlainAgent ? 'labels' : 'profile'));
 
   return (
     <div className="flex-1 flex flex-col bg-saas-bg">
@@ -31,26 +34,36 @@ export default function SettingsPanel({ agent, onProfileUpdate, defaultTab }: Se
       <div className="flex-1 flex overflow-hidden">
         <div className="w-64 bg-white border-r border-saas-border p-4">
           <nav className="space-y-1">
-            <TabButton icon={<User className="w-5 h-5" />} label="Account Management" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
-            <TabButton icon={<Building2 className="w-5 h-5" />} label="Companies" active={activeTab === 'companies'} onClick={() => setActiveTab('companies')} />
-            <TabButton icon={<Users className="w-5 h-5" />} label="Agents" active={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
+            {!isPlainAgent && (
+              <TabButton icon={<User className="w-5 h-5" />} label="Account Management" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+            )}
+            {!isPlainAgent && (
+              <TabButton icon={<Building2 className="w-5 h-5" />} label="Companies" active={activeTab === 'companies'} onClick={() => setActiveTab('companies')} />
+            )}
+            {!isPlainAgent && (
+              <TabButton icon={<Users className="w-5 h-5" />} label="Agents" active={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
+            )}
             <TabButton icon={<Tag className="w-5 h-5" />} label="Labels" active={activeTab === 'labels'} onClick={() => setActiveTab('labels')} />
             <TabButton icon={<MessageSquareText className="w-5 h-5" />} label="Quick Reply" active={activeTab === 'quick-reply'} onClick={() => setActiveTab('quick-reply')} />
             <TabButton icon={<Clock className="w-5 h-5" />} label="Balas Otomatis" active={activeTab === 'auto-reply'} onClick={() => setActiveTab('auto-reply')} />
-            <TabButton icon={<Zap className="w-5 h-5" />} label="API Integration" active={activeTab === 'api-integration'} onClick={() => setActiveTab('api-integration')} />
-            <TabButton icon={<Bell className="w-5 h-5" />} label="Notifications" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
+            {!isPlainAgent && (
+              <TabButton icon={<Zap className="w-5 h-5" />} label="API Integration" active={activeTab === 'api-integration'} onClick={() => setActiveTab('api-integration')} />
+            )}
+            {!isPlainAgent && (
+              <TabButton icon={<Bell className="w-5 h-5" />} label="Notifications" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
+            )}
           </nav>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'profile' && <ProfileTab agent={agent} onProfileUpdate={onProfileUpdate} />}
-          {activeTab === 'companies' && <CompaniesTab agent={agent} />}
-          {activeTab === 'agents' && <AgentsTab agent={agent} />}
+          {!isPlainAgent && activeTab === 'profile' && <ProfileTab agent={agent} onProfileUpdate={onProfileUpdate} />}
+          {!isPlainAgent && activeTab === 'companies' && <CompaniesTab agent={agent} />}
+          {!isPlainAgent && activeTab === 'agents' && <AgentsTab agent={agent} />}
           {activeTab === 'labels' && <LabelsTab />}
           {activeTab === 'quick-reply' && <QuickReplyTab />}
           {activeTab === 'auto-reply' && <AutoReplyTab />}
-          {activeTab === 'api-integration' && <ApiIntegrationTab agent={agent} />}
-          {activeTab === 'notifications' && (
+          {!isPlainAgent && activeTab === 'api-integration' && <ApiIntegrationTab agent={agent} />}
+          {!isPlainAgent && activeTab === 'notifications' && (
             <div className="max-w-3xl">
               <h2 className="text-2xl font-bold text-saas-text-primary mb-6">Notification Preferences</h2>
               <div className="bg-white rounded-2xl p-6 border border-saas-border">
