@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Agent, Conversation, ConversationLabelCounts, ConversationStatusCounts, Label } from '@/types';
 import type { ConversationFilter, ConversationViewMode } from '@/hooks/useConversations';
@@ -84,13 +84,21 @@ export default function ConversationSidebar({
   // Infinite scroll: observe a sentinel at the bottom of the list instead of
   // listening to scroll events, so no work happens until the sentinel is near view.
   const listContainerRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const sentinelObserverRef = useRef<IntersectionObserver | null>(null);
 
-  useEffect(() => {
-    if (!onLoadMore || !hasMore) return;
-    const sentinel = sentinelRef.current;
+  // A callback ref (not a useEffect keyed on "what changed") because the sentinel <div>
+  // gets torn down and recreated as a brand new DOM node for many reasons — switching
+  // view mode/label tab, but also just the loading spinner briefly replacing the whole
+  // list on any status-filter switch (stale rows filtered by the new tab look empty for
+  // one render). A useEffect has to know every one of those triggers up front to
+  // re-observe; guessing that list is exactly how this broke before. A callback ref
+  // fires on every real attach/detach regardless of *why*, so it can't go stale.
+  const sentinelCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    sentinelObserverRef.current?.disconnect();
+    sentinelObserverRef.current = null;
+
     const root = listContainerRef.current;
-    if (!sentinel || !root) return;
+    if (!node || !root || !onLoadMore || !hasMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -101,14 +109,9 @@ export default function ConversationSidebar({
       { root, rootMargin: '200px' }
     );
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-    // The sentinel <div> lives at the end of whichever list branch is active. Switching
-    // view mode or label sub-tab swaps the rendered branch, which recreates that node —
-    // leaving a stale observer pointing at a detached element (infinite scroll silently
-    // stops). viewMode/activeLabelTab are the signals that the sentinel was replaced, so
-    // re-run and re-observe the current node.
-  }, [onLoadMore, hasMore, loadingMore, viewMode, activeLabelTab]);
+    observer.observe(node);
+    sentinelObserverRef.current = observer;
+  }, [onLoadMore, hasMore]);
 
   // Switching tabs/view/labels re-scopes the list to a different set of rows; jump
   // back to the top so the user doesn't land mid-list (or at the bottom of a shorter
@@ -182,7 +185,7 @@ export default function ConversationSidebar({
   // cursor — is meaningless while a search is active.
   const loadMoreFooter = isSearchActive ? null : (
     <>
-      {hasMore && <div ref={sentinelRef} className="h-1" />}
+      {hasMore && <div ref={sentinelCallbackRef} className="h-1" />}
       {loadingMore && (
         <div className="py-4 flex justify-center">
           <div className="animate-spin rounded-full h-6 w-6 border-2 border-saas-primary-blue border-t-transparent"></div>
