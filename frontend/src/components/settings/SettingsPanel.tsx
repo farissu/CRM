@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Bell, Tag, Building2, Users, Zap, MessageSquareText } from 'lucide-react';
+import { User, Bell, Tag, Building2, Users, Zap, MessageSquareText, Clock } from 'lucide-react';
 import type { Agent } from '@/types';
 import TabButton from './TabButton';
 import ProfileTab from './tabs/ProfileTab';
@@ -8,7 +8,8 @@ import AgentsTab from './tabs/AgentsTab';
 import LabelsTab from './tabs/LabelsTab';
 import QuickReplyTab from './tabs/QuickReplyTab';
 import ApiIntegrationTab from './tabs/ApiIntegrationTab';
-type SettingsTab = 'profile' | 'companies' | 'agents' | 'labels' | 'quick-reply' | 'api-integration' | 'notifications';
+import AutoReplyTab from './tabs/AutoReplyTab';
+type SettingsTab = 'profile' | 'companies' | 'agents' | 'labels' | 'quick-reply' | 'auto-reply' | 'api-integration' | 'notifications';
 
 interface SettingsPanelProps {
   agentName?: string;
@@ -35,6 +36,7 @@ export default function SettingsPanel({ agent, onProfileUpdate, defaultTab }: Se
             <TabButton icon={<Users className="w-5 h-5" />} label="Agents" active={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
             <TabButton icon={<Tag className="w-5 h-5" />} label="Labels" active={activeTab === 'labels'} onClick={() => setActiveTab('labels')} />
             <TabButton icon={<MessageSquareText className="w-5 h-5" />} label="Quick Reply" active={activeTab === 'quick-reply'} onClick={() => setActiveTab('quick-reply')} />
+            <TabButton icon={<Clock className="w-5 h-5" />} label="Balas Otomatis" active={activeTab === 'auto-reply'} onClick={() => setActiveTab('auto-reply')} />
             <TabButton icon={<Zap className="w-5 h-5" />} label="API Integration" active={activeTab === 'api-integration'} onClick={() => setActiveTab('api-integration')} />
             <TabButton icon={<Bell className="w-5 h-5" />} label="Notifications" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
           </nav>
@@ -46,6 +48,7 @@ export default function SettingsPanel({ agent, onProfileUpdate, defaultTab }: Se
           {activeTab === 'agents' && <AgentsTab agent={agent} />}
           {activeTab === 'labels' && <LabelsTab />}
           {activeTab === 'quick-reply' && <QuickReplyTab />}
+          {activeTab === 'auto-reply' && <AutoReplyTab />}
           {activeTab === 'api-integration' && <ApiIntegrationTab agent={agent} />}
           {activeTab === 'notifications' && (
             <div className="max-w-3xl">

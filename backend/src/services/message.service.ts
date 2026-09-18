@@ -7,6 +7,7 @@ import { storageService } from './storage.service';
 import { mediaService } from './media.service';
 import { io } from '../index';
 import { broadcastService } from './broadcast.service';
+import { autoReplyService } from './autoReply.service';
 
 function resolveOutboundMediaUrl(mediaUrl?: string): Promise<string | undefined> {
   if (!mediaUrl) return Promise.resolve(undefined);
@@ -342,6 +343,10 @@ export class MessageService {
       conversationId: conversation.id,
       message
     });
+
+    // Fire-and-forget: an auto-reply failure or slow WhatsApp API call must never
+    // delay or break the webhook's response to Meta.
+    void autoReplyService.maybeSendAutoReply(conversation.id, phoneNumber, text || caption || '');
 
     return message;
   }

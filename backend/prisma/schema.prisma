@@ -194,6 +194,22 @@ model QuickReply {
   @@map("quick_replies")
 }
 
+// Single-row settings for the outside-business-hours auto-reply feature — one
+// deployment serves one business (see DEPLOYMENT_GUIDE.md), so there is no
+// per-company scoping here, matching how conversations/messages are queried elsewhere.
+model AutoReplySettings {
+  id          String   @id @default("singleton")
+  isEnabled   Boolean  @default(false)
+  message     String   @default("")
+  // ISO weekday numbers that count as working days: 0 = Sunday .. 6 = Saturday.
+  workingDays Int[]    @default([1, 2, 3, 4, 5])
+  startTime   String   @default("09:00")
+  endTime     String   @default("17:00")
+  updatedAt   DateTime @updatedAt
+
+  @@map("auto_reply_settings")
+}
+
 model ContactLabel {
   contactId String
   labelId   String
@@ -216,6 +232,7 @@ model Conversation {
   lastMessageAt        DateTime           @default(now())
   lastMessageText      String?
   lastMessageDirection MessageDirection?
+  lastAutoReplyAt      DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 

@@ -107,6 +107,16 @@ export const updateStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'OFFLINE']),
 });
 
+const timeStringSchema = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Must be in HH:MM format');
+
+export const updateAutoReplySettingsSchema = z.object({
+  isEnabled: z.boolean(),
+  message: z.string().max(4096),
+  workingDays: z.array(z.number().int().min(0).max(6)).max(7),
+  startTime: timeStringSchema,
+  endTime: timeStringSchema,
+});
+
 export const createComplaintSchema = z.object({
   conversationId: z.string().min(1, 'conversationId is required'),
   type: z.string().min(1, 'type is required'),

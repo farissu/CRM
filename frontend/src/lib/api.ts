@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats, AutoReplySettings } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -167,6 +167,24 @@ export const quickReplyApi = {
 
   deleteQuickReply: async (id: string): Promise<{ message: string }> => {
     const response = await api.delete(`/quick-replies/${id}`);
+    return response.data;
+  },
+};
+
+export const autoReplyApi = {
+  getSettings: async (): Promise<{ settings: AutoReplySettings }> => {
+    const response = await api.get('/auto-reply/settings');
+    return response.data;
+  },
+
+  updateSettings: async (data: {
+    isEnabled: boolean;
+    message: string;
+    workingDays: number[];
+    startTime: string;
+    endTime: string;
+  }): Promise<{ settings: AutoReplySettings }> => {
+    const response = await api.put('/auto-reply/settings', data);
     return response.data;
   },
 };

@@ -79,6 +79,15 @@ export interface QuickReply {
   updatedAt: string;
 }
 
+export interface AutoReplySettings {
+  isEnabled: boolean;
+  message: string;
+  workingDays: number[];
+  startTime: string;
+  endTime: string;
+  updatedAt: string | null;
+}
+
 export interface Contact {
   id: string;
   phoneNumber: string;
