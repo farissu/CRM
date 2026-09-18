@@ -88,3 +88,13 @@ export const requireSuperAdmin = (req: Request, res: Response, next: NextFunctio
   next();
 };
 
+/**
+ * Middleware to block plain AGENT role (ADMIN and SUPER_ADMIN pass through)
+ */
+export const requireNonAgent = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user?.role === 'AGENT') {
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+  next();
+};
+

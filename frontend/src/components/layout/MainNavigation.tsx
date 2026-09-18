@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import { MessageSquare, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
+import type { Role } from '@/types';
 
 type Tab = 'conversations' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
 
@@ -9,6 +10,7 @@ interface MainNavigationProps {
   onTabChange: (tab: Tab) => void;
   onLogout: () => void;
   agentName?: string;
+  agentRole?: Role;
   hideMobileNav?: boolean;
 }
 
@@ -17,8 +19,12 @@ export default function MainNavigation({
   onTabChange,
   onLogout,
   agentName,
+  agentRole,
   hideMobileNav,
 }: MainNavigationProps) {
+  // AGENT has no access to either dashboard — just Inbox, Broadcast, and Settings.
+  const showDashboards = agentRole !== 'AGENT';
+
   return (
     <>
       {/* Desktop side rail */}
@@ -48,19 +54,23 @@ export default function MainNavigation({
           onClick={() => onTabChange('broadcast')}
         />
 
-        <NavItem
-          icon={<LayoutDashboard className="w-6 h-6" />}
-          label="Dashboard"
-          active={activeTab === 'dashboard'}
-          onClick={() => onTabChange('dashboard')}
-        />
+        {showDashboards && (
+          <NavItem
+            icon={<LayoutDashboard className="w-6 h-6" />}
+            label="Dashboard"
+            active={activeTab === 'dashboard'}
+            onClick={() => onTabChange('dashboard')}
+          />
+        )}
 
-        <NavItem
-          icon={<Users className="w-6 h-6" />}
-          label="Agent Dashboard"
-          active={activeTab === 'team-status'}
-          onClick={() => onTabChange('team-status')}
-        />
+        {showDashboards && (
+          <NavItem
+            icon={<Users className="w-6 h-6" />}
+            label="Agent Dashboard"
+            active={activeTab === 'team-status'}
+            onClick={() => onTabChange('team-status')}
+          />
+        )}
 
         <NavItem
           icon={<Settings className="w-6 h-6" />}
@@ -105,18 +115,22 @@ export default function MainNavigation({
           active={activeTab === 'broadcast'}
           onClick={() => onTabChange('broadcast')}
         />
-        <MobileNavItem
-          icon={<LayoutDashboard className="w-5 h-5" />}
-          label="Dashboard"
-          active={activeTab === 'dashboard'}
-          onClick={() => onTabChange('dashboard')}
-        />
-        <MobileNavItem
-          icon={<Users className="w-5 h-5" />}
-          label="Agent"
-          active={activeTab === 'team-status'}
-          onClick={() => onTabChange('team-status')}
-        />
+        {showDashboards && (
+          <MobileNavItem
+            icon={<LayoutDashboard className="w-5 h-5" />}
+            label="Dashboard"
+            active={activeTab === 'dashboard'}
+            onClick={() => onTabChange('dashboard')}
+          />
+        )}
+        {showDashboards && (
+          <MobileNavItem
+            icon={<Users className="w-5 h-5" />}
+            label="Agent"
+            active={activeTab === 'team-status'}
+            onClick={() => onTabChange('team-status')}
+          />
+        )}
         <MobileNavItem
           icon={<Settings className="w-5 h-5" />}
           label="Settings"

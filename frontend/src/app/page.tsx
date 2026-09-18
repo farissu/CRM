@@ -42,6 +42,15 @@ export default function HomePage() {
 
   const { isAuthenticated, agent, agentId, agentName, checkingAuth, handleLoginSuccess, handleLogout, refreshAgentData } = useAuth();
 
+  // AGENT has no dashboard access — if a stale localStorage tab (from before this
+  // restriction, or a role change) points there, bounce back to the inbox instead of
+  // rendering a hidden-nav-item page with no way back via the tab bar.
+  useEffect(() => {
+    if (agent?.role === 'AGENT' && (activeTab === 'dashboard' || activeTab === 'team-status')) {
+      setActiveTab('conversations');
+    }
+  }, [agent?.role, activeTab]);
+
   const {
     conversations, statusCounts, labelCounts,
     statusFilter, setStatusFilter, viewMode, setViewMode, activeLabelTab, setActiveLabelTab,
@@ -81,6 +90,7 @@ export default function HomePage() {
         onTabChange={setActiveTab}
         onLogout={handleLogout}
         agentName={agentName}
+        agentRole={agent?.role}
         hideMobileNav={isMobileChatOpen}
       />
 
@@ -136,11 +146,11 @@ export default function HomePage() {
           </>
         )}
 
-        {activeTab === 'dashboard' && <DashboardPanel />}
+        {activeTab === 'dashboard' && agent?.role !== 'AGENT' && <DashboardPanel />}
 
         {activeTab === 'broadcast' && <BroadcastPanel />}
 
-        {activeTab === 'team-status' && <TeamStatusPanel />}
+        {activeTab === 'team-status' && agent?.role !== 'AGENT' && <TeamStatusPanel />}
 
         {activeTab === 'settings' && (
           <SettingsPanel agentName={agentName} agent={agent || undefined} onProfileUpdate={refreshAgentData} />
