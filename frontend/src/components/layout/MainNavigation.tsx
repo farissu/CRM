@@ -47,13 +47,6 @@ export default function MainNavigation({
         />
 
         <NavItem
-          icon={<LayoutDashboard className="w-6 h-6" />}
-          label="Dashboard"
-          active={activeTab === 'dashboard'}
-          onClick={() => onTabChange('dashboard')}
-        />
-
-        <NavItem
           icon={<Radio className="w-6 h-6" />}
           label="Broadcast"
           active={activeTab === 'broadcast'}
@@ -61,8 +54,15 @@ export default function MainNavigation({
         />
 
         <NavItem
+          icon={<LayoutDashboard className="w-6 h-6" />}
+          label="Dashboard"
+          active={activeTab === 'dashboard'}
+          onClick={() => onTabChange('dashboard')}
+        />
+
+        <NavItem
           icon={<Users className="w-6 h-6" />}
-          label="Team Status"
+          label="Agent Dashboard"
           active={activeTab === 'team-status'}
           onClick={() => onTabChange('team-status')}
         />
@@ -108,20 +108,20 @@ export default function MainNavigation({
           onClick={() => onTabChange('conversations')}
         />
         <MobileNavItem
-          icon={<LayoutDashboard className="w-5 h-5" />}
-          label="Dashboard"
-          active={activeTab === 'dashboard'}
-          onClick={() => onTabChange('dashboard')}
-        />
-        <MobileNavItem
           icon={<Radio className="w-5 h-5" />}
           label="Broadcast"
           active={activeTab === 'broadcast'}
           onClick={() => onTabChange('broadcast')}
         />
         <MobileNavItem
+          icon={<LayoutDashboard className="w-5 h-5" />}
+          label="Dashboard"
+          active={activeTab === 'dashboard'}
+          onClick={() => onTabChange('dashboard')}
+        />
+        <MobileNavItem
           icon={<Users className="w-5 h-5" />}
-          label="Team"
+          label="Agent"
           active={activeTab === 'team-status'}
           onClick={() => onTabChange('team-status')}
         />

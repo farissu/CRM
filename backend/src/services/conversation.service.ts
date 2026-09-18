@@ -69,7 +69,7 @@ export class ConversationService {
     // runs alongside this batch (not before it) so its own latency is hidden behind the
     // larger queries here; the per-label counts below still need the resolved label ids
     // first, so they unavoidably add one more round trip on top of this batch.
-    const [labels, conversations, total, allCount, servedCount, unreadCount, awaitingReplyCount, unlabeledOpenCount] = await Promise.all([
+    const [labels, conversations, total, allCount, servedCount, unreadCount, awaitingReplyCount, resolvedCount, unlabeledOpenCount] = await Promise.all([
       includeCounts ? prisma.label.findMany({ select: { id: true, name: true, color: true } }) : Promise.resolve([]),
       prisma.conversation.findMany({
         where,
@@ -121,6 +121,9 @@ export class ConversationService {
           })
         : Promise.resolve(0),
       includeCounts
+        ? prisma.conversation.count({ where: { ...baseWhere, status: ConversationStatus.RESOLVED } })
+        : Promise.resolve(0),
+      includeCounts
         ? prisma.conversation.count({
             where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { labels: { none: {} } } }
           })
@@ -151,7 +154,7 @@ export class ConversationService {
       total: number;
       page: number;
       totalPages: number;
-      statusCounts?: { served: number; unread: number; awaitingReply: number; all: number };
+      statusCounts?: { served: number; unread: number; awaitingReply: number; resolved: number; all: number };
       labelCounts?: { unlabeled: number; byLabel: Record<string, number> };
     } = {
       conversations: transformedConversations,
@@ -161,7 +164,7 @@ export class ConversationService {
     };
 
     if (includeCounts) {
-      result.statusCounts = { served: servedCount, unread: unreadCount, awaitingReply: awaitingReplyCount, all: allCount };
+      result.statusCounts = { served: servedCount, unread: unreadCount, awaitingReply: awaitingReplyCount, resolved: resolvedCount, all: allCount };
       result.labelCounts = {
         unlabeled: unlabeledOpenCount,
         byLabel: Object.fromEntries(labels.map((label, i) => [label.id, perLabelOpenCounts[i]]))

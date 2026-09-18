@@ -140,6 +140,7 @@ export default function ConversationSidebar({
     if (statusFilter === 'served' && conv.status !== 'OPEN') return false;
     if (statusFilter === 'unread' && (conv.unreadCount === 0 || conv.status !== 'OPEN')) return false;
     if (statusFilter === 'awaiting_reply' && (conv.lastMessageDirection !== 'INBOUND' || conv.status !== 'OPEN')) return false;
+    if (statusFilter === 'resolved' && conv.status !== 'RESOLVED') return false;
 
     if (selectedLabelId) {
       const hasLabel = conv.contact.labels?.some(label => label.id === selectedLabelId);
@@ -408,6 +409,13 @@ export default function ConversationSidebar({
             color="red"
           />
           <FilterTab
+            label="Resolve"
+            count={statusCounts.resolved}
+            active={statusFilter === 'resolved'}
+            onClick={() => onStatusFilterChange('resolved')}
+            color="green"
+          />
+          <FilterTab
             label="All"
             count={statusCounts.all}
             active={statusFilter === 'all'}
@@ -546,6 +554,7 @@ function EmptyListState({ statusFilter, searching }: EmptyListStateProps) {
       {statusFilter === 'served' && 'No served conversations'}
       {statusFilter === 'unread' && 'Semua pesan sudah dibaca'}
       {statusFilter === 'awaiting_reply' && 'Semua percakapan sudah dibalas'}
+      {statusFilter === 'resolved' && 'Belum ada percakapan yang selesai'}
     </div>
   );
 }
@@ -583,7 +592,7 @@ interface FilterTabProps {
   count: number;
   active: boolean;
   onClick: () => void;
-  color?: 'red' | 'blue' | 'gray';
+  color?: 'red' | 'blue' | 'gray' | 'green';
 }
 
 function FilterTab({ label, count, active, onClick, color }: FilterTabProps) {
@@ -607,6 +616,7 @@ function FilterTab({ label, count, active, onClick, color }: FilterTabProps) {
             active && color === 'red' && 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-soft-sm',
             active && color === 'blue' && 'bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white shadow-soft-sm',
             active && color === 'gray' && 'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-soft-sm',
+            active && color === 'green' && 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-soft-sm',
             !active && 'bg-gray-100 text-gray-600'
           )}>
             {badgeText}
@@ -669,10 +679,22 @@ function ConversationItem({ conversation, isActive, onClick }: ConversationItemP
     >
       <div className="flex items-center gap-3">
         {/* Avatar */}
-        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full md:rounded-2xl bg-gradient-to-br from-saas-secondary-blue to-saas-accent-blue flex items-center justify-center flex-shrink-0 shadow-soft-sm">
-          <span className="text-white font-bold text-lg">
-            {displayName.charAt(0).toUpperCase()}
-          </span>
+        <div className="relative flex-shrink-0">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-full md:rounded-2xl bg-gradient-to-br from-saas-secondary-blue to-saas-accent-blue flex items-center justify-center shadow-soft-sm">
+            <span className="text-white font-bold text-lg">
+              {displayName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          {conversation.assignedAgent && (
+            <div
+              className="absolute -bottom-1 -right-1 w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue border-2 border-white flex items-center justify-center shadow-soft-sm"
+              title={`Ditangani oleh ${conversation.assignedAgent.name}`}
+            >
+              <span className="text-white text-[9px] md:text-[10px] font-bold leading-none">
+                {conversation.assignedAgent.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Content */}

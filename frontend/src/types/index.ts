@@ -243,6 +243,7 @@ export interface ConversationStatusCounts {
   served: number;
   unread: number;
   awaitingReply: number;
+  resolved: number;
   all: number;
 }
 

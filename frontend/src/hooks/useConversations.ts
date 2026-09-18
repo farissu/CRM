@@ -5,14 +5,14 @@ import { conversationApi, messageApi, complaintApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
 import type { Conversation, ConversationLabelCounts, ConversationStatusCounts, Message } from '@/types';
 
-const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, awaitingReply: 0, all: 0 };
+const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, awaitingReply: 0, resolved: 0, all: 0 };
 const EMPTY_LABEL_COUNTS: ConversationLabelCounts = { unlabeled: 0, byLabel: {} };
 
 const CONVERSATIONS_PAGE_SIZE = 30;
 const SEARCH_RESULT_LIMIT = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
-export type ConversationFilter = 'served' | 'unread' | 'awaiting_reply' | 'all';
+export type ConversationFilter = 'served' | 'unread' | 'awaiting_reply' | 'resolved' | 'all';
 export type ConversationViewMode = 'normal' | 'label';
 
 interface FetchScope {
@@ -87,7 +87,9 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
         ? { status: 'OPEN', unreadOnly: true }
         : statusFilter === 'awaiting_reply'
           ? { status: 'OPEN', awaitingReply: true }
-          : {};
+          : statusFilter === 'resolved'
+            ? { status: 'RESOLVED' }
+            : {};
   const effectiveScopeKey = scopeKey(effectiveScope);
   // Always-current scope for callbacks (loadConversations, search) to read without a
   // stale closure; `activeScopeRef` instead tracks the scope of the page that's
