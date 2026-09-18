@@ -8,7 +8,7 @@ import { getRoleBadgeColor, getRoleLabel } from '../settings/settingsUtils';
 import type { AgentPerformanceStats, AgentPerformanceRow } from '@/types';
 
 const EMPTY_STATS: AgentPerformanceStats = {
-  summary: { totalAgents: 0, activeNow: 0, messagesSentToday: 0, resolvedToday: 0, avgResponseMinutes: null, totalActiveHoursToday: 0 },
+  summary: { totalAgents: 0, activeNow: 0, messagesSentToday: 0, messagesSentTodayByBot: 0, messagesSentTodayByHuman: 0, resolvedToday: 0, avgResponseMinutes: null, totalActiveHoursToday: 0 },
   agents: [],
 };
 
@@ -106,7 +106,7 @@ export default function AgentOverviewPanel() {
           icon={<MessageSquare className="w-6 h-6" />}
           label="Pesan Terkirim"
           value={stats.summary.messagesSentToday.toLocaleString('id-ID')}
-          subtitle="hari ini"
+          subtitle={`${stats.summary.messagesSentTodayByHuman.toLocaleString('id-ID')} agent · ${stats.summary.messagesSentTodayByBot.toLocaleString('id-ID')} AI`}
           color="bg-gradient-to-br from-blue-500 to-blue-600"
         />
         <StatCard
@@ -230,7 +230,12 @@ function AgentRow({ row }: { row: AgentPerformanceRow }) {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-saas-text-primary truncate">{row.name}</p>
-            <span className={`${getRoleBadgeColor(row.role)} text-white px-2 py-0.5 rounded-md text-[10px] font-bold`}>{getRoleLabel(row.role)}</span>
+            <div className="flex items-center gap-1">
+              <span className={`${getRoleBadgeColor(row.role)} text-white px-2 py-0.5 rounded-md text-[10px] font-bold`}>{getRoleLabel(row.role)}</span>
+              {row.isBot && (
+                <span className="bg-gradient-to-br from-teal-500 to-teal-600 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">AI</span>
+              )}
+            </div>
           </div>
         </div>
       </td>

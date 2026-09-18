@@ -128,6 +128,9 @@ model Agent {
   lastLoginAt DateTime?
   status          AgentStatus @default(OFFLINE)
   statusUpdatedAt DateTime?
+  // Flags an account as an AI/automation integration rather than a human agent, so
+  // dashboards can report "replied by AI" vs "replied by a real agent" separately.
+  isBot       Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

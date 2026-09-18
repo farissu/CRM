@@ -33,6 +33,7 @@ export interface Agent {
   avatar?: string;
   phone?: string;
   isActive?: boolean;
+  isBot?: boolean;
   mustChangePassword?: boolean;
   status?: AgentStatus;
   statusUpdatedAt?: string;
@@ -297,6 +298,7 @@ export interface AgentPerformanceRow {
   name: string;
   role: Role;
   avatar: string | null;
+  isBot: boolean;
   status: AgentStatus;
   statusUpdatedAt: string | null;
   openConversations: number;
@@ -313,6 +315,8 @@ export interface AgentPerformanceStats {
     totalAgents: number;
     activeNow: number;
     messagesSentToday: number;
+    messagesSentTodayByBot: number;
+    messagesSentTodayByHuman: number;
     resolvedToday: number;
     avgResponseMinutes: number | null;
     totalActiveHoursToday: number;

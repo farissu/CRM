@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Users, Building2, Mail, Phone } from 'lucide-react';
+import { Plus, X, Pencil, Users, Building2, Mail, Phone, Bot } from 'lucide-react';
 import type { Agent, Company, Role } from '@/types';
 import { agentApi, companyApi } from '@/lib/api';
 import { formatPhoneNumber, getRoleBadgeColor, getRoleLabel } from '../settingsUtils';
@@ -8,15 +8,32 @@ interface AgentsTabProps {
   agent?: Agent;
 }
 
-const EMPTY_AGENT_FORM = { name: '', email: '', password: '', phone: '', role: 'AGENT' as Role, companyId: '' };
+interface AgentFormState {
+  id: string | null;
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: Role;
+  companyId: string;
+  isActive: boolean;
+  isBot: boolean;
+}
+
+const EMPTY_AGENT_FORM: AgentFormState = {
+  id: null, name: '', email: '', password: '', phone: '', role: 'AGENT', companyId: '', isActive: true, isBot: false,
+};
 
 export default function AgentsTab({ agent }: AgentsTabProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState(EMPTY_AGENT_FORM);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState<AgentFormState>(EMPTY_AGENT_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isSuperAdmin = agent?.role === 'SUPER_ADMIN';
+  const isEditing = formData.id !== null;
 
   useEffect(() => {
     void Promise.all([loadAgents(), loadCompanies()]);
@@ -44,22 +61,74 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
     }
   };
 
-  const handleCreate = async () => {
-    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
-      setError('Name, email, and password are required');
+  const getErrorMessage = (err: unknown, fallback: string): string =>
+    (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? (err instanceof Error ? err.message : fallback);
+
+  const startCreate = () => {
+    setFormData(EMPTY_AGENT_FORM);
+    setIsFormOpen(true);
+  };
+
+  const startEdit = (agentItem: Agent) => {
+    setFormData({
+      id: agentItem.id,
+      name: agentItem.name,
+      email: agentItem.email,
+      password: '',
+      phone: agentItem.phone ?? '',
+      role: agentItem.role,
+      companyId: agentItem.companyId,
+      isActive: agentItem.isActive ?? true,
+      isBot: agentItem.isBot ?? false,
+    });
+    setIsFormOpen(true);
+  };
+
+  const cancelForm = () => {
+    setIsFormOpen(false);
+    setFormData(EMPTY_AGENT_FORM);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setError('Name and email are required');
+      return;
+    }
+    if (!isEditing && !formData.password) {
+      setError('Password is required');
       return;
     }
     if (!formData.companyId) { setError('Company is required'); return; }
+
     try {
       setLoading(true);
       setError(null);
-      const response = await agentApi.createAgent({ ...formData, phone: formatPhoneNumber(formData.phone) });
-      setAgents([response.agent as Agent, ...agents]);
-      setFormData(EMPTY_AGENT_FORM);
-      setIsAdding(false);
+      if (isEditing && formData.id) {
+        const response = await agentApi.updateAgent(formData.id, {
+          name: formData.name,
+          email: formData.email,
+          phone: formatPhoneNumber(formData.phone),
+          role: formData.role,
+          companyId: formData.companyId,
+          isActive: formData.isActive,
+          isBot: formData.isBot,
+        });
+        setAgents((prev) => prev.map((a) => (a.id === formData.id ? (response.agent as Agent) : a)));
+      } else {
+        const response = await agentApi.createAgent({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formatPhoneNumber(formData.phone),
+          role: formData.role,
+          companyId: formData.companyId,
+          isBot: formData.isBot,
+        });
+        setAgents([response.agent as Agent, ...agents]);
+      }
+      cancelForm();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create agent';
-      setError((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? msg);
+      setError(getErrorMessage(err, isEditing ? 'Failed to update agent' : 'Failed to create agent'));
     } finally {
       setLoading(false);
     }
@@ -73,8 +142,7 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
       await agentApi.deleteAgent(agentId);
       setAgents(agents.filter(a => a.id !== agentId));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete agent';
-      setError((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? msg);
+      setError(getErrorMessage(err, 'Failed to delete agent'));
     } finally {
       setLoading(false);
     }
@@ -86,11 +154,11 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
         <div>
           <h2 className="text-2xl font-bold text-saas-text-primary">Agents</h2>
           <p className="text-gray-600 mt-1">
-            {agent?.role === 'SUPER_ADMIN' ? 'Manage all agents and their access' : 'View team members in your company'}
+            {isSuperAdmin ? 'Manage all agents and their access' : 'View team members in your company'}
           </p>
         </div>
-        {!isAdding && agent?.role === 'SUPER_ADMIN' && (
-          <button onClick={() => setIsAdding(true)} className="bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white px-5 py-2.5 rounded-xl font-semibold hover:scale-105 transition-all duration-200 shadow-soft-sm flex items-center gap-2">
+        {!isFormOpen && isSuperAdmin && (
+          <button onClick={startCreate} className="bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white px-5 py-2.5 rounded-xl font-semibold hover:scale-105 transition-all duration-200 shadow-soft-sm flex items-center gap-2">
             <Plus className="w-5 h-5" />Add Agent
           </button>
         )}
@@ -104,9 +172,9 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
         </div>
       )}
 
-      {isAdding && agent?.role === 'SUPER_ADMIN' && (
+      {isFormOpen && isSuperAdmin && (
         <div className="bg-white border-2 border-saas-primary-blue rounded-2xl p-6 mb-6 shadow-soft">
-          <h3 className="text-lg font-bold text-saas-text-primary mb-4">New Agent</h3>
+          <h3 className="text-lg font-bold text-saas-text-primary mb-4">{isEditing ? 'Edit Agent' : 'New Agent'}</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -119,10 +187,12 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Password *</label>
-                <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Min 6 characters" className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium" />
-              </div>
+              {!isEditing && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Password *</label>
+                  <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Min 6 characters" className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium" />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
                 <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} placeholder="081299998888" className="w-full px-4 py-3 border-2 border-saas-border rounded-xl focus:border-saas-primary-blue focus:outline-none transition-all duration-200 font-medium" />
@@ -145,11 +215,33 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
                 </select>
               </div>
             </div>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={formData.isBot}
+                  onChange={(e) => setFormData({ ...formData, isBot: e.target.checked })}
+                  className="w-4 h-4 accent-saas-primary-blue"
+                />
+                <span className="text-sm font-semibold text-gray-700">AI Bot (bukan agent manusia)</span>
+              </label>
+              {isEditing && (
+                <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="w-4 h-4 accent-saas-primary-blue"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">Active</span>
+                </label>
+              )}
+            </div>
             <div className="flex gap-3 pt-2">
-              <button onClick={() => void handleCreate()} disabled={loading} className="flex-1 bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white px-5 py-3 rounded-xl font-semibold hover:scale-102 transition-all duration-200 shadow-soft-sm disabled:opacity-50">
-                {loading ? 'Creating...' : 'Create Agent'}
+              <button onClick={() => void handleSave()} disabled={loading} className="flex-1 bg-gradient-to-br from-saas-primary-blue to-saas-secondary-blue text-white px-5 py-3 rounded-xl font-semibold hover:scale-102 transition-all duration-200 shadow-soft-sm disabled:opacity-50">
+                {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Agent'}
               </button>
-              <button onClick={() => { setIsAdding(false); setFormData(EMPTY_AGENT_FORM); }} className="px-5 py-3 border-2 border-saas-border rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all duration-200">Cancel</button>
+              <button onClick={cancelForm} className="px-5 py-3 border-2 border-saas-border rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all duration-200">Cancel</button>
             </div>
           </div>
         </div>
@@ -167,6 +259,11 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
                   <div className="flex items-center gap-3 mb-1">
                     <h3 className="font-bold text-lg text-saas-text-primary">{agentItem.name}</h3>
                     <span className={`${getRoleBadgeColor(agentItem.role)} text-white px-3 py-1 rounded-lg text-xs font-bold shadow-soft-sm`}>{getRoleLabel(agentItem.role)}</span>
+                    {agentItem.isBot && (
+                      <span className="bg-gradient-to-br from-teal-500 to-teal-600 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-soft-sm flex items-center gap-1">
+                        <Bot className="w-3 h-3" />AI Bot
+                      </span>
+                    )}
                     {agentItem.company && (
                       <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1">
                         <Building2 className="w-3 h-3" />{agentItem.company.name}
@@ -179,10 +276,15 @@ export default function AgentsTab({ agent }: AgentsTabProps) {
                   </div>
                 </div>
               </div>
-              {agent?.role === 'SUPER_ADMIN' && (
-                <button onClick={() => void handleDelete(agentItem.id)} disabled={agentItem.id === agent?.id} className="p-2 hover:bg-red-50 rounded-xl transition-all duration-200 text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title={agentItem.id === agent?.id ? 'Cannot delete yourself' : 'Delete agent'}>
-                  <X className="w-5 h-5" />
-                </button>
+              {isSuperAdmin && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => startEdit(agentItem)} className="p-2 hover:bg-blue-50 rounded-xl transition-all duration-200 text-saas-primary-blue" title="Edit agent">
+                    <Pencil className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => void handleDelete(agentItem.id)} disabled={agentItem.id === agent?.id} className="p-2 hover:bg-red-50 rounded-xl transition-all duration-200 text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title={agentItem.id === agent?.id ? 'Cannot delete yourself' : 'Delete agent'}>
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

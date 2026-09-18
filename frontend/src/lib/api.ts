@@ -221,6 +221,7 @@ export const agentApi = {
     companyId?: string;
     phone?: string;
     avatar?: string;
+    isBot?: boolean;
   }): Promise<{ agent: Agent }> => {
     const response = await api.post('/agents', data);
     return response.data;
@@ -234,6 +235,7 @@ export const agentApi = {
     role?: string;
     companyId?: string;
     isActive?: boolean;
+    isBot?: boolean;
   }): Promise<{ agent: Agent }> => {
     const response = await api.put(`/agents/${agentId}`, data);
     return response.data;

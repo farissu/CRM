@@ -118,6 +118,7 @@ export const getAllAgents = async (req: Request, res: Response) => {
         avatar: true,
         phone: true,
         isActive: true,
+        isBot: true,
         status: true,
         statusUpdatedAt: true,
         createdAt: true,
@@ -143,7 +144,7 @@ export const getAllAgents = async (req: Request, res: Response) => {
 // Create agent (Super Admin only)
 export const createAgent = async (req: Request, res: Response) => {
   try {
-    const { email, password, name, role, companyId, phone, avatar } = req.body;
+    const { email, password, name, role, companyId, phone, avatar, isBot } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Email, password, and name are required' });
@@ -178,6 +179,7 @@ export const createAgent = async (req: Request, res: Response) => {
         companyId,
         phone,
         avatar,
+        isBot: isBot ?? false,
       },
       select: {
         id: true,
@@ -194,6 +196,7 @@ export const createAgent = async (req: Request, res: Response) => {
           }
         },
         isActive: true,
+        isBot: true,
         createdAt: true,
       }
     });
@@ -208,7 +211,7 @@ export const createAgent = async (req: Request, res: Response) => {
 export const updateAgent = async (req: Request, res: Response) => {
   try {
     const { agentId } = req.params;
-    const { name, email, phone, avatar, role, companyId, isActive } = req.body;
+    const { name, email, phone, avatar, role, companyId, isActive, isBot } = req.body;
 
     // Check if email is already taken by another user
     if (email) {
@@ -234,6 +237,7 @@ export const updateAgent = async (req: Request, res: Response) => {
         ...(role && { role }),
         ...(companyId !== undefined && { companyId }),
         ...(isActive !== undefined && { isActive }),
+        ...(isBot !== undefined && { isBot }),
       },
       select: {
         id: true,
@@ -250,6 +254,7 @@ export const updateAgent = async (req: Request, res: Response) => {
           }
         },
         isActive: true,
+        isBot: true,
         createdAt: true,
       }
     });

@@ -15,6 +15,7 @@ export interface AgentPerformanceRow {
   name: string;
   role: string;
   avatar: string | null;
+  isBot: boolean;
   status: string;
   statusUpdatedAt: Date | null;
   openConversations: number;
@@ -31,6 +32,8 @@ export interface AgentPerformanceStats {
     totalAgents: number;
     activeNow: number;
     messagesSentToday: number;
+    messagesSentTodayByBot: number;
+    messagesSentTodayByHuman: number;
     resolvedToday: number;
     avgResponseMinutes: number | null;
     totalActiveHoursToday: number;
@@ -55,7 +58,7 @@ class AgentPerformanceService {
     const [agents, conversationCounts, resolvedToday, messagesTotal, messagesToday, activeLogsToday, responseRows] = await Promise.all([
       prisma.agent.findMany({
         where: agentWhere,
-        select: { id: true, name: true, role: true, avatar: true, status: true, statusUpdatedAt: true },
+        select: { id: true, name: true, role: true, avatar: true, isBot: true, status: true, statusUpdatedAt: true },
         orderBy: { name: 'asc' },
       }),
       prisma.conversation.groupBy({
@@ -136,6 +139,7 @@ class AgentPerformanceService {
       name: a.name,
       role: a.role,
       avatar: a.avatar,
+      isBot: a.isBot,
       status: a.status,
       statusUpdatedAt: a.statusUpdatedAt,
       openConversations: openByAgent.get(a.id) ?? 0,
@@ -160,6 +164,8 @@ class AgentPerformanceService {
         totalAgents: agentRows.length,
         activeNow: agentRows.filter((a) => a.status === 'ACTIVE').length,
         messagesSentToday: agentRows.reduce((sum, a) => sum + a.messagesSentToday, 0),
+        messagesSentTodayByBot: agentRows.filter((a) => a.isBot).reduce((sum, a) => sum + a.messagesSentToday, 0),
+        messagesSentTodayByHuman: agentRows.filter((a) => !a.isBot).reduce((sum, a) => sum + a.messagesSentToday, 0),
         resolvedToday,
         avgResponseMinutes,
         totalActiveHoursToday: Math.round((agentRows.reduce((sum, a) => sum + a.activeMinutesToday, 0) / 60) * 10) / 10,

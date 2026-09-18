@@ -86,6 +86,7 @@ export const createAgentSchema = z.object({
   companyId: z.string().optional(),
   phone: z.string().optional(),
   avatar: z.string().url().optional(),
+  isBot: z.boolean().optional(),
 });
 
 export const updateAgentSchema = z.object({
@@ -96,6 +97,7 @@ export const updateAgentSchema = z.object({
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT']).optional(),
   companyId: z.string().optional(),
   isActive: z.boolean().optional(),
+  isBot: z.boolean().optional(),
 });
 
 export const changePasswordSchema = z.object({
