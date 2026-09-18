@@ -96,7 +96,11 @@ class AutoReplyService {
           text: settings.message,
           messageType: MessageType.TEXT,
           status: MessageStatus.SENT,
+          senderId: process.env.DEFAULT_API_SENDER_AGENT_ID,
           metadata: { autoReply: true, waMessageId } as Prisma.InputJsonValue,
+        },
+        include: {
+          sender: { select: { id: true, name: true, email: true } },
         },
       });
 
