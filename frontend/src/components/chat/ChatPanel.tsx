@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Tag, Star, ChevronLeft, CheckCircle } from 'lucide-react';
-import type { Conversation, Message } from '@/types';
+import { MoreVertical, Tag, Star, ChevronLeft, CheckCircle, UserPlus } from 'lucide-react';
+import type { Agent, Conversation, Message } from '@/types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ManageLabelsModal from './ManageLabelsModal';
@@ -73,9 +73,11 @@ interface ChatPanelProps {
   onTypingStop: () => void;
   onResolveConversation?: () => void;
   onConversationUpdate?: () => void;
+  onAssignToMe?: () => void | Promise<void>;
   onSendCsat?: () => Promise<void>;
   typingIndicator?: { agentName: string } | null;
   onBack?: () => void;
+  agent?: Agent;
 }
 
 export default function ChatPanel({
@@ -90,9 +92,11 @@ export default function ChatPanel({
   onTypingStop,
   onResolveConversation,
   onConversationUpdate,
+  onAssignToMe,
   onSendCsat,
   typingIndicator,
   onBack,
+  agent,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -106,7 +110,18 @@ export default function ChatPanel({
   const [showSendTemplateModal, setShowSendTemplateModal] = useState(false);
   const [sendingCsat, setSendingCsat] = useState(false);
   const [showCsatConfirm, setShowCsatConfirm] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleAssignToMeClick = async () => {
+    if (!onAssignToMe || assigning) return;
+    setAssigning(true);
+    try {
+      await onAssignToMe();
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -244,6 +259,16 @@ export default function ChatPanel({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {onAssignToMe && agent && conversation.assignedAgentId !== agent.id && (
+            <button
+              onClick={() => void handleAssignToMeClick()}
+              disabled={assigning}
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-2.5 sm:px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 shadow-soft-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">{assigning ? 'Assigning...' : 'Assign to Me'}</span>
+            </button>
+          )}
           {onSendCsat && (
             <button
               onClick={() => setShowCsatConfirm(true)}

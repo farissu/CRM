@@ -60,6 +60,7 @@ interface UseConversationsReturn {
   handleSelectConversation: (conversation: Conversation) => Promise<void>;
   handleSendMessage: (text: string, file?: File, quotedMessageId?: string) => Promise<void>;
   handleResolveConversation: () => Promise<void>;
+  handleAssignToMe: () => Promise<void>;
   handleSendCsat: () => Promise<void>;
   handleTypingStart: () => void;
   handleTypingStop: () => void;
@@ -323,6 +324,17 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     }
   };
 
+  const handleAssignToMe = async () => {
+    if (!activeConversation) return;
+    try {
+      const updated = await conversationApi.assignAgent(activeConversation.id, agentId);
+      setConversations(prev => prev.map(c => c.id === activeConversation.id ? updated : c));
+      setActiveConversation(updated);
+    } catch {
+      alert('Failed to assign conversation');
+    }
+  };
+
   const handleSendCsat = async () => {
     if (!activeConversation) return;
     try {
@@ -393,7 +405,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
     activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
     typingIndicator, handleSelectConversation,
-    handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
+    handleSendMessage, handleResolveConversation, handleAssignToMe, handleSendCsat, handleTypingStart, handleTypingStop,
     setConversations, loadConversations, loadMoreConversations,
   };
 }

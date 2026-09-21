@@ -58,7 +58,7 @@ export default function HomePage() {
     activeConversation, messages, loadingConversations, loadingMoreConversations,
     hasMoreConversations, loadingMessages, hasMoreMessages, loadingMoreMessages, loadMoreMessages,
     typingIndicator, handleSelectConversation,
-    handleSendMessage, handleResolveConversation, handleSendCsat, handleTypingStart, handleTypingStop,
+    handleSendMessage, handleResolveConversation, handleAssignToMe, handleSendCsat, handleTypingStart, handleTypingStop,
     loadConversations, loadMoreConversations,
   } = useConversations({ isAuthenticated, agentId, agentName });
 
@@ -138,9 +138,11 @@ export default function HomePage() {
                 onTypingStop={handleTypingStop}
                 onResolveConversation={handleResolveConversation}
                 onConversationUpdate={loadConversations}
+                onAssignToMe={handleAssignToMe}
                 onSendCsat={handleSendCsat}
                 typingIndicator={typingIndicator}
                 onBack={() => setMobileView('list')}
+                agent={agent || undefined}
               />
             </div>
           </>
