@@ -76,7 +76,7 @@ export class ConversationController {
   async resolveConversation(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const conversation = await conversationService.resolveConversation(id);
+      const conversation = await conversationService.resolveConversation(id, req.user?.id);
 
       res.json(conversation);
     } catch (err: unknown) {

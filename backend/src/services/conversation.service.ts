@@ -322,11 +322,12 @@ export class ConversationService {
   /**
    * Resolve conversation
    */
-  async resolveConversation(conversationId: string) {
+  async resolveConversation(conversationId: string, resolvedByAgentId?: string) {
     const conversation = await prisma.conversation.update({
       where: { id: conversationId },
       data: {
-        status: ConversationStatus.RESOLVED
+        status: ConversationStatus.RESOLVED,
+        ...(resolvedByAgentId ? { assignedAgentId: resolvedByAgentId } : {})
       },
       include: {
         contact: true,
