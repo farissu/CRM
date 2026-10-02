@@ -33,6 +33,19 @@ interface WhatsAppMediaPayload {
   filename?: string;
 }
 
+interface WhatsAppLocation {
+  latitude: number | string;
+  longitude: number | string;
+  name?: string;
+  address?: string;
+  url?: string;
+}
+
+interface WhatsAppSharedContact {
+  name?: { formatted_name?: string; first_name?: string; last_name?: string };
+  phones?: Array<{ phone?: string; wa_id?: string; type?: string }>;
+}
+
 interface WhatsAppMessage {
   id: string;
   from: string;
@@ -48,6 +61,8 @@ interface WhatsAppMessage {
   interactive?: { button_reply?: { title: string }; list_reply?: { title: string } };
   context?: { id: string };
   reaction?: { message_id: string; emoji?: string };
+  location?: WhatsAppLocation;
+  contacts?: WhatsAppSharedContact[];
   order?: {
     catalog_id: string;
     text?: string;
@@ -59,6 +74,28 @@ function extractContactName(contacts: WhatsAppContact[] | undefined, from: strin
   if (!contacts) return from;
   const match = contacts.find(c => c.wa_id === from);
   return match?.profile?.name ?? from;
+}
+
+function formatLocation(location: WhatsAppLocation): string {
+  const { name, address, url } = location;
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+  const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+  const mapsLink = hasCoordinates ? `https://maps.google.com/?q=${latitude},${longitude}` : '';
+  return ['📍 Lokasi', name, address, url, mapsLink].filter(Boolean).join('\n');
+}
+
+function formatSharedContact(contact: WhatsAppSharedContact): string {
+  const { formatted_name, first_name, last_name } = contact.name ?? {};
+  const name = formatted_name || [first_name, last_name].filter(Boolean).join(' ') || 'Tanpa nama';
+  const phones = (contact.phones ?? [])
+    .filter(p => p.phone || p.wa_id)
+    .map(p => (p.type ? `${p.phone || p.wa_id} (${p.type})` : `${p.phone || p.wa_id}`));
+  return [`👤 ${name}`, ...phones].join('\n');
+}
+
+function formatContacts(contacts: WhatsAppSharedContact[]): string {
+  return ['📇 Kontak', ...contacts.map(formatSharedContact)].join('\n\n');
 }
 
 async function extractMediaContent(message: WhatsAppMessage): Promise<{
@@ -112,6 +149,14 @@ async function extractMediaContent(message: WhatsAppMessage): Promise<{
   if (type === 'interactive' && message.interactive) {
     const title = message.interactive.button_reply?.title ?? message.interactive.list_reply?.title ?? '';
     return { text: title };
+  }
+
+  if (type === 'location' && message.location) {
+    return { text: formatLocation(message.location) };
+  }
+
+  if (type === 'contacts' && message.contacts?.length) {
+    return { text: formatContacts(message.contacts) };
   }
 
   if (type === 'order' && message.order) {
