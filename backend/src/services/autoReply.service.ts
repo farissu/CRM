@@ -1,7 +1,8 @@
-import { MessageDirection, MessageStatus, MessageType, Prisma } from '@prisma/client';
+import { MessageDirection, MessageStatus, MessageType, Prisma, Channel } from '@prisma/client';
 import prisma from '../config/database';
 import { io } from '../index';
 import { whatsAppService } from './whatsapp.service';
+import { instagramService } from './instagram.service';
 
 const SETTINGS_ID = 'singleton';
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -67,7 +68,7 @@ class AutoReplyService {
    * on the conversation — the auto-reply must not make the conversation look answered,
    * so it still shows up under "Belum Dibalas" for a human agent to actually handle.
    */
-  async maybeSendAutoReply(conversationId: string, phoneNumber: string, inboundText: string): Promise<void> {
+  async maybeSendAutoReply(conversationId: string, phoneNumber: string, inboundText: string, channel: Channel = Channel.WHATSAPP): Promise<void> {
     try {
       const trimmed = inboundText.trim().toLowerCase();
       if (EXCLUDED_MESSAGE_PREFIXES.some((prefix) => trimmed.startsWith(prefix.toLowerCase()))) return;
@@ -83,11 +84,9 @@ class AutoReplyService {
       if (!conversation) return;
       if (conversation.lastAutoReplyAt && Date.now() - conversation.lastAutoReplyAt.getTime() < COOLDOWN_MS) return;
 
-      const waMessageId = await whatsAppService.sendMessage({
-        to: phoneNumber,
-        text: settings.message,
-        messageType: 'text',
-      });
+      const waMessageId = channel === Channel.INSTAGRAM
+        ? await instagramService.sendMessage({ to: phoneNumber, text: settings.message })
+        : await whatsAppService.sendMessage({ to: phoneNumber, text: settings.message, messageType: 'text' });
 
       const message = await prisma.message.create({
         data: {

@@ -1,7 +1,8 @@
-import { MessageDirection, MessageType, MessageStatus, Prisma } from '@prisma/client';
+import { MessageDirection, MessageType, MessageStatus, Prisma, Channel } from '@prisma/client';
 import axios from 'axios';
 import prisma from '../config/database';
 import { whatsAppService } from './whatsapp.service';
+import { instagramService } from './instagram.service';
 import { conversationService } from './conversation.service';
 import { storageService } from './storage.service';
 import { mediaService } from './media.service';
@@ -89,6 +90,7 @@ interface ReceiveMessageParams {
   fileSize?: number;
   caption?: string;
   quotedExternalId?: string;
+  channel?: Channel;
 }
 
 export class MessageService {
@@ -166,8 +168,13 @@ export class MessageService {
     buttonText?: string;
     buttonUrl?: string;
     buttons?: QuickReplyButton[];
+    channel?: Channel;
   }) {
-    const conversation = await conversationService.getOrCreateConversation(params.phoneNumber, params.contactName);
+    const conversation = await conversationService.getOrCreateConversation(
+      params.phoneNumber,
+      params.contactName,
+      params.channel ?? Channel.WHATSAPP
+    );
     return this.sendToConversation(conversation, {
       conversationId: conversation.id,
       text: params.text,
@@ -184,7 +191,7 @@ export class MessageService {
   }
 
   private async sendToConversation(
-    conversation: { id: string; contact: { phoneNumber: string } },
+    conversation: { id: string; contact: { phoneNumber: string; channel: Channel } },
     params: SendMessageParams
   ) {
     const { conversationId, text, senderId, messageType, fileName, fileSize, caption, buttonText, buttonUrl, buttons, quotedMessageId } = params;
@@ -221,29 +228,42 @@ export class MessageService {
       include: MESSAGE_INCLUDE
     });
 
-    // Send via WhatsApp Cloud API
+    // Send via the contact's channel (WhatsApp Cloud API or Instagram Messaging API)
     try {
       const outboundMediaUrl = await resolveOutboundMediaUrl(mediaUrl);
-      const waMessageId = await whatsAppService.sendMessage({
-        to: conversation.contact.phoneNumber,
-        text: text || caption,
-        messageType: messageType || 'text',
-        mediaUrl: outboundMediaUrl,
-        caption,
-        fileName,
-        buttonText,
-        buttonUrl,
-        buttons,
-        quotedExternalId: quotedMessage?.externalId ?? undefined
-      });
+      const isInstagram = conversation.contact.channel === Channel.INSTAGRAM;
 
-      const interactiveMetadata = buttonUrl
+      // Instagram has no message templates or interactive buttons/quoted replies —
+      // those params are simply dropped for that channel rather than erroring.
+      const waMessageId = isInstagram
+        ? await instagramService.sendMessage({
+            to: conversation.contact.phoneNumber,
+            text: text || caption,
+            mediaUrl: outboundMediaUrl,
+            mediaType,
+          })
+        : await whatsAppService.sendMessage({
+            to: conversation.contact.phoneNumber,
+            text: text || caption,
+            messageType: messageType || 'text',
+            mediaUrl: outboundMediaUrl,
+            caption,
+            fileName,
+            buttonText,
+            buttonUrl,
+            buttons,
+            quotedExternalId: quotedMessage?.externalId ?? undefined
+          });
+
+      const interactiveMetadata = !isInstagram && buttonUrl
         ? { type: 'cta_url', buttonText: buttonText ?? null, buttonUrl }
-        : buttons?.length
+        : !isInstagram && buttons?.length
         ? { type: 'buttons', buttons }
         : undefined;
 
       // Update message status
+      // `waMessageId` stores the sent message id regardless of channel (kept as-is so
+      // status-webhook lookups like updateMessageStatusByWaId don't need a second key).
       const updatedMessage = await prisma.message.update({
         where: { id: message.id },
         data: {
@@ -294,16 +314,16 @@ export class MessageService {
    * Receive inbound message (from webhook)
    */
   async receiveMessage(params: ReceiveMessageParams) {
-    const { phoneNumber, text, contactName, timestamp, messageType, externalId, mediaUrl, mediaType, fileName, fileSize, caption, quotedExternalId } = params;
+    const { phoneNumber, text, contactName, timestamp, messageType, externalId, mediaUrl, mediaType, fileName, fileSize, caption, quotedExternalId, channel = Channel.WHATSAPP } = params;
 
-    // Deduplication: skip if we already processed this WhatsApp message
+    // Deduplication: skip if we already processed this message
     if (externalId) {
       const existing = await prisma.message.findUnique({ where: { externalId }, include: MESSAGE_INCLUDE });
       if (existing) return existing;
     }
 
     // Get or create conversation
-    const conversation = await conversationService.getOrCreateConversation(phoneNumber, contactName);
+    const conversation = await conversationService.getOrCreateConversation(phoneNumber, contactName, channel);
 
     const resolvedType = toMessageType(messageType);
 
@@ -346,7 +366,7 @@ export class MessageService {
 
     // Fire-and-forget: an auto-reply failure or slow WhatsApp API call must never
     // delay or break the webhook's response to Meta.
-    void autoReplyService.maybeSendAutoReply(conversation.id, phoneNumber, text || caption || '');
+    void autoReplyService.maybeSendAutoReply(conversation.id, phoneNumber, text || caption || '', channel);
 
     return message;
   }

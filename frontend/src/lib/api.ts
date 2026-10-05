@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats, AutoReplySettings, DashboardPeriod } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats, AutoReplySettings, DashboardPeriod, Channel } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -30,6 +30,7 @@ export const conversationApi = {
     unreadOnly?: boolean;
     awaitingReply?: boolean;
     labelId?: string;
+    channel?: Channel;
   }): Promise<ConversationsResponse> => {
     const response = await api.get('/conversations', { params });
     return response.data;
@@ -83,6 +84,11 @@ export const messageApi = {
 
   reactToMessage: async (messageId: string, emoji: string): Promise<Message> => {
     const response = await api.post(`/messages/${messageId}/react`, { emoji });
+    return response.data;
+  },
+
+  getChannelsStatus: async (): Promise<{ whatsapp: boolean; instagram: boolean }> => {
+    const response = await api.get('/messages/channels/status');
     return response.data;
   },
 

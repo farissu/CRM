@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Shield, Save, X } from 'lucide-react';
+import { Zap, Shield, Save, X, MessageCircle, Instagram, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Agent, Company } from '@/types';
-import { companyApi } from '@/lib/api';
+import { companyApi, messageApi } from '@/lib/api';
 
 interface ApiIntegrationTabProps {
   agent?: Agent;
@@ -12,10 +12,15 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookSuccess, setWebhookSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [channelsStatus, setChannelsStatus] = useState<{ whatsapp: boolean; instagram: boolean } | null>(null);
 
   useEffect(() => {
     void loadWebhookData();
   }, [agent?.companyId]);
+
+  useEffect(() => {
+    messageApi.getChannelsStatus().then(setChannelsStatus).catch(() => setChannelsStatus(null));
+  }, []);
 
   const loadWebhookData = async () => {
     if (!agent?.companyId) return;
@@ -52,6 +57,21 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
     <div className="max-w-3xl">
       <h2 className="text-2xl font-bold text-saas-text-primary mb-2">API Integration</h2>
       <p className="text-gray-600 mb-6">Configure webhook URLs for WhatsApp Business API or other messaging platforms</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <ChannelStatusCard
+          icon={<MessageCircle className="w-5 h-5 text-white" />}
+          iconBg="bg-green-500"
+          name="WhatsApp"
+          connected={channelsStatus?.whatsapp ?? null}
+        />
+        <ChannelStatusCard
+          icon={<Instagram className="w-5 h-5 text-white" />}
+          iconBg="bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400"
+          name="Instagram DM"
+          connected={channelsStatus?.instagram ?? null}
+        />
+      </div>
 
       {error && (
         <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-4 flex items-center gap-3">
@@ -95,6 +115,37 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
             <li>Use HTTPS for secure communication</li>
           </ul>
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface ChannelStatusCardProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  name: string;
+  connected: boolean | null;
+}
+
+function ChannelStatusCard({ icon, iconBg, name, connected }: ChannelStatusCardProps) {
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-saas-border flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-saas-text-primary truncate">{name}</p>
+        {connected === null ? (
+          <p className="text-xs text-gray-400">Checking...</p>
+        ) : connected ? (
+          <p className="text-xs text-green-600 font-medium flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />Connected
+          </p>
+        ) : (
+          <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5" />Not connected — add credentials in .env
+          </p>
+        )}
       </div>
     </div>
   );

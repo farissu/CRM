@@ -1,9 +1,9 @@
 import React from 'react';
 import clsx from 'clsx';
-import { MessageSquare, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
+import { MessageCircle, Instagram, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
 import type { Role } from '@/types';
 
-type Tab = 'conversations' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
+type Tab = 'conversations' | 'instagram' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
 
 interface MainNavigationProps {
   activeTab: Tab;
@@ -22,7 +22,7 @@ export default function MainNavigation({
   agentRole,
   hideMobileNav,
 }: MainNavigationProps) {
-  // AGENT has no access to either dashboard — just Inbox, Broadcast, and Settings.
+  // AGENT has no access to either dashboard — just the WhatsApp/Instagram inboxes, Broadcast, and Settings.
   const showDashboards = agentRole !== 'AGENT';
 
   return (
@@ -40,11 +40,18 @@ export default function MainNavigation({
 
         {/* Navigation Items */}
         <NavItem
-          icon={<MessageSquare className="w-6 h-6" />}
-          label="Inbox"
+          icon={<MessageCircle className="w-6 h-6" />}
+          label="WhatsApp"
           active={activeTab === 'conversations'}
           onClick={() => onTabChange('conversations')}
           badge={0}
+        />
+
+        <NavItem
+          icon={<Instagram className="w-6 h-6" />}
+          label="Instagram"
+          active={activeTab === 'instagram'}
+          onClick={() => onTabChange('instagram')}
         />
 
         <NavItem
@@ -104,10 +111,16 @@ export default function MainNavigation({
         )}
       >
         <MobileNavItem
-          icon={<MessageSquare className="w-5 h-5" />}
-          label="Inbox"
+          icon={<MessageCircle className="w-5 h-5" />}
+          label="WhatsApp"
           active={activeTab === 'conversations'}
           onClick={() => onTabChange('conversations')}
+        />
+        <MobileNavItem
+          icon={<Instagram className="w-5 h-5" />}
+          label="Instagram"
+          active={activeTab === 'instagram'}
+          onClick={() => onTabChange('instagram')}
         />
         <MobileNavItem
           icon={<Radio className="w-5 h-5" />}

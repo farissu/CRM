@@ -1,4 +1,4 @@
-import { Prisma, ConversationStatus, MessageDirection } from '@prisma/client';
+import { Prisma, ConversationStatus, MessageDirection, Channel } from '@prisma/client';
 import prisma from '../config/database';
 import { io } from '../index';
 
@@ -13,6 +13,8 @@ export interface GetConversationsOptions {
   awaitingReply?: boolean;
   /** A label id, or the sentinel 'UNLABELED' for contacts with no labels at all. */
   labelId?: string;
+  /** Restrict to one channel's inbox (WhatsApp and Instagram have separate inbox menus). */
+  channel?: Channel;
 }
 
 export class ConversationService {
@@ -29,7 +31,8 @@ export class ConversationService {
       includeCounts = false,
       unreadOnly = false,
       awaitingReply = false,
-      labelId
+      labelId,
+      channel
     } = options;
     const skip = (page - 1) * limit;
 
@@ -37,7 +40,13 @@ export class ConversationService {
     // of rows happens to be loaded — so they're computed against agentId only, never
     // against the status/unread/label/search filters used for the current page's row
     // query below.
-    const baseWhere: Prisma.ConversationWhereInput = agentId ? { assignedAgentId: agentId } : {};
+    // The channel filter is part of the base too: each channel's inbox has its own badges.
+    // Every `contact:` filter below must spread `channelContact` so it doesn't drop it.
+    const channelContact: Prisma.ContactWhereInput = channel ? { channel } : {};
+    const baseWhere: Prisma.ConversationWhereInput = {
+      ...(agentId ? { assignedAgentId: agentId } : {}),
+      ...(channel ? { contact: channelContact } : {})
+    };
 
     const searchTerm = search?.trim();
     const contactFilter: Prisma.ContactWhereInput | undefined =
@@ -60,7 +69,7 @@ export class ConversationService {
       ...(status ? { status: status as ConversationStatus } : {}),
       ...(unreadOnly ? { unreadCount: { gt: 0 } } : {}),
       ...(awaitingReply ? { lastMessageDirection: MessageDirection.INBOUND } : {}),
-      ...(contactFilter ? { contact: contactFilter } : {})
+      ...(contactFilter ? { contact: { ...channelContact, ...contactFilter } } : {})
     };
 
     // The status/label badge counts only matter to the sidebar's first page load — every
@@ -78,6 +87,7 @@ export class ConversationService {
             select: {
               id: true,
               phoneNumber: true,
+              channel: true,
               name: true,
               email: true,
               labels: {
@@ -125,7 +135,7 @@ export class ConversationService {
         : Promise.resolve(0),
       includeCounts
         ? prisma.conversation.count({
-            where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { labels: { none: {} } } }
+            where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { ...channelContact, labels: { none: {} } } }
           })
         : Promise.resolve(0)
     ]);
@@ -134,7 +144,7 @@ export class ConversationService {
       ? await Promise.all(
           labels.map(label =>
             prisma.conversation.count({
-              where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { labels: { some: { labelId: label.id } } } }
+              where: { ...baseWhere, status: ConversationStatus.OPEN, contact: { ...channelContact, labels: { some: { labelId: label.id } } } }
             })
           )
         )
@@ -219,10 +229,14 @@ export class ConversationService {
   /**
    * Get or create conversation for a contact
    */
-  async getOrCreateConversation(phoneNumber: string, contactName?: string) {
+  async getOrCreateConversation(phoneNumber: string, contactName?: string, channel: Channel = Channel.WHATSAPP) {
+    // Contacts are unique per channel: the same id string on WhatsApp and Instagram
+    // belongs to two different people.
+    const contactKey = { channel_phoneNumber: { channel, phoneNumber } };
+
     // Find or create contact
     let contact = await prisma.contact.findUnique({
-      where: { phoneNumber }
+      where: contactKey
     });
 
     if (!contact) {
@@ -230,13 +244,14 @@ export class ConversationService {
       contact = await prisma.contact.create({
         data: {
           phoneNumber,
+          channel,
           name: contactName || phoneNumber
         }
       });
     } else if (contactName && contactName !== contact.name) {
       // Update contact name if changed
       contact = await prisma.contact.update({
-        where: { phoneNumber },
+        where: contactKey,
         data: { name: contactName }
       });
     }

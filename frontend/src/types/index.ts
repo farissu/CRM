@@ -89,9 +89,12 @@ export interface AutoReplySettings {
   updatedAt: string | null;
 }
 
+export type Channel = 'WHATSAPP' | 'INSTAGRAM';
+
 export interface Contact {
   id: string;
   phoneNumber: string;
+  channel: Channel;
   name?: string;
   email?: string;
   labels?: Label[];

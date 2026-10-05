@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { conversationApi, messageApi, complaintApi } from '@/lib/api';
 import { socketClient } from '@/lib/socket';
-import type { Conversation, ConversationLabelCounts, ConversationStatusCounts, Message } from '@/types';
+import type { Channel, Conversation, ConversationLabelCounts, ConversationStatusCounts, Message } from '@/types';
 
 const EMPTY_STATUS_COUNTS: ConversationStatusCounts = { served: 0, unread: 0, awaitingReply: 0, resolved: 0, all: 0 };
 const EMPTY_LABEL_COUNTS: ConversationLabelCounts = { unlabeled: 0, byLabel: {} };
@@ -16,6 +16,7 @@ export type ConversationFilter = 'served' | 'unread' | 'awaiting_reply' | 'resol
 export type ConversationViewMode = 'normal' | 'label';
 
 interface FetchScope {
+  channel: Channel;
   status?: string;
   unreadOnly?: boolean;
   awaitingReply?: boolean;
@@ -23,13 +24,15 @@ interface FetchScope {
 }
 
 function scopeKey(scope: FetchScope): string {
-  return `${scope.status ?? ''}|${scope.unreadOnly ? 1 : 0}|${scope.awaitingReply ? 1 : 0}|${scope.labelId ?? ''}`;
+  return `${scope.channel}|${scope.status ?? ''}|${scope.unreadOnly ? 1 : 0}|${scope.awaitingReply ? 1 : 0}|${scope.labelId ?? ''}`;
 }
 
 interface UseConversationsParams {
   isAuthenticated: boolean;
   agentId: string;
   agentName: string;
+  /** Which channel's inbox this is — WhatsApp and Instagram are separate menus. */
+  channel: Channel;
 }
 
 interface UseConversationsReturn {
@@ -69,7 +72,7 @@ interface UseConversationsReturn {
   loadMoreConversations: () => Promise<void>;
 }
 
-export function useConversations({ isAuthenticated, agentId, agentName }: UseConversationsParams): UseConversationsReturn {
+export function useConversations({ isAuthenticated, agentId, agentName, channel }: UseConversationsParams): UseConversationsReturn {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [statusCounts, setStatusCounts] = useState<ConversationStatusCounts>(EMPTY_STATUS_COUNTS);
   const [labelCounts, setLabelCounts] = useState<ConversationLabelCounts>(EMPTY_LABEL_COUNTS);
@@ -80,7 +83,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
   // "Per Label" always scopes to served (OPEN) conversations; picking a specific label
   // (or "Tanpa Label") narrows it further via labelId, so the fetched rows — not just
   // the badge count — match what that tab actually shows.
-  const effectiveScope: FetchScope = viewMode === 'label'
+  const filterScope: Omit<FetchScope, 'channel'> = viewMode === 'label'
     ? { status: 'OPEN', labelId: activeLabelTab === 'all' ? undefined : activeLabelTab === 'unlabeled' ? 'UNLABELED' : activeLabelTab }
     : statusFilter === 'served'
       ? { status: 'OPEN' }
@@ -91,6 +94,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
           : statusFilter === 'resolved'
             ? { status: 'RESOLVED' }
             : {};
+  const effectiveScope: FetchScope = { channel, ...filterScope };
   const effectiveScopeKey = scopeKey(effectiveScope);
   // Always-current scope for callbacks (loadConversations, search) to read without a
   // stale closure; `activeScopeRef` instead tracks the scope of the page that's
@@ -131,6 +135,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       const response = await conversationApi.getConversations({
         page: 1,
         limit: CONVERSATIONS_PAGE_SIZE,
+        channel: scope.channel,
         status: scope.status,
         unreadOnly: scope.unreadOnly,
         awaitingReply: scope.awaitingReply,
@@ -163,6 +168,7 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       const response = await conversationApi.getConversations({
         page: nextPage,
         limit: CONVERSATIONS_PAGE_SIZE,
+        channel: scope.channel,
         status: scope.status,
         unreadOnly: scope.unreadOnly,
         awaitingReply: scope.awaitingReply,
@@ -213,8 +219,9 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       try {
         // Deliberately its own independent query, not scoped to the active tab/label —
         // searching for a contact should find their conversation regardless of whether
-        // it's currently Served, Unread, or whatever tab happens to be selected.
-        const response = await conversationApi.getConversations({ search: trimmed, page: 1, limit: SEARCH_RESULT_LIMIT });
+        // it's currently Served, Unread, or whatever tab happens to be selected. It does
+        // stay within the current channel's inbox.
+        const response = await conversationApi.getConversations({ search: trimmed, page: 1, limit: SEARCH_RESULT_LIMIT, channel: desiredScopeRef.current.channel });
         if (searchRequestIdRef.current !== requestId) return;
         setSearchResults(response.conversations);
       } catch (err: unknown) {
@@ -233,6 +240,14 @@ export function useConversations({ isAuthenticated, agentId, agentName }: UseCon
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
   }, []);
+
+  // Switching between the WhatsApp and Instagram inbox: the open chat and any search
+  // belong to the previous channel, so drop them (the list itself refetches via scope).
+  useEffect(() => {
+    setActiveConversation(null);
+    setMessages([]);
+    setSearchQuery('');
+  }, [channel, setSearchQuery]);
 
   // Keep activeConversation in sync when conversation list updates (e.g. label changes)
   useEffect(() => {

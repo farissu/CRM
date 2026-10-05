@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Channel } from '@prisma/client';
 import { emitContactLabelUpdate, getContactWithLabels } from '../services/label.service';
 
 const prisma = new PrismaClient();
@@ -167,7 +167,7 @@ export const labelController = {
         return res.status(400).json({ error: 'phoneNumber and labelId are required' });
       }
 
-      const existingContact = await prisma.contact.findUnique({ where: { phoneNumber } });
+      const existingContact = await prisma.contact.findUnique({ where: { channel_phoneNumber: { channel: Channel.WHATSAPP, phoneNumber } } });
       if (!existingContact) {
         return res.status(404).json({ error: 'Contact not found for this phoneNumber' });
       }
@@ -197,7 +197,7 @@ export const labelController = {
         return res.status(400).json({ error: 'phoneNumber and labelId are required' });
       }
 
-      const existingContact = await prisma.contact.findUnique({ where: { phoneNumber } });
+      const existingContact = await prisma.contact.findUnique({ where: { channel_phoneNumber: { channel: Channel.WHATSAPP, phoneNumber } } });
       if (!existingContact) {
         return res.status(404).json({ error: 'Contact not found for this phoneNumber' });
       }
@@ -229,7 +229,7 @@ export const labelController = {
       const { phoneNumber } = req.params;
 
       const contact = await prisma.contact.findUnique({
-        where: { phoneNumber },
+        where: { channel_phoneNumber: { channel: Channel.WHATSAPP, phoneNumber } },
         include: {
           labels: {
             include: {

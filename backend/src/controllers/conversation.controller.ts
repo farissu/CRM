@@ -1,5 +1,10 @@
 import { Request, Response } from 'express';
+import { Channel } from '@prisma/client';
 import { conversationService } from '../services/conversation.service';
+
+function parseChannel(value: unknown): Channel | undefined {
+  return Object.values(Channel).includes(value as Channel) ? (value as Channel) : undefined;
+}
 
 export class ConversationController {
   /**
@@ -7,7 +12,11 @@ export class ConversationController {
    */
   async getConversations(req: Request, res: Response) {
     try {
-      const { agentId, status, page = '1', limit = '20', search, includeCounts, unreadOnly, awaitingReply, labelId } = req.query;
+      const { agentId, status, page = '1', limit = '20', search, includeCounts, unreadOnly, awaitingReply, labelId, channel } = req.query;
+
+      if (channel !== undefined && !parseChannel(channel)) {
+        return res.status(400).json({ error: `Invalid channel. Use one of: ${Object.values(Channel).join(', ')}` });
+      }
 
       const result = await conversationService.getConversations({
         agentId: agentId as string,
@@ -18,7 +27,8 @@ export class ConversationController {
         includeCounts: includeCounts === 'true',
         unreadOnly: unreadOnly === 'true',
         awaitingReply: awaitingReply === 'true',
-        labelId: labelId as string
+        labelId: labelId as string,
+        channel: parseChannel(channel)
       });
 
       res.json(result);

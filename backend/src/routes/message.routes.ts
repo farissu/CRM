@@ -18,6 +18,10 @@ const upload = multer({
 router.get('/webhooks/whatsapp', (req, res) => messageController.verifyWebhook(req, res));
 router.post('/webhooks/whatsapp', (req, res) => messageController.handleWebhook(req, res));
 
+// Instagram Messaging API webhook endpoints (no JWT — called by Meta)
+router.get('/webhooks/instagram', (req, res) => messageController.verifyInstagramWebhook(req, res));
+router.post('/webhooks/instagram', (req, res) => messageController.handleInstagramWebhook(req, res));
+
 // External integrations (n8n, scripts, etc.) — API key auth, not JWT.
 // Sent messages are stored and appear in the dashboard like any other outbound message.
 router.post('/send-external', apiKeyAuth, validate(sendExternalMessageSchema), (req, res) => messageController.sendExternalMessage(req, res));
@@ -28,6 +32,9 @@ router.get('/gcs-media/:objectPath(*)', (req, res) => messageController.getGcsMe
 
 // All other routes require authentication
 router.use(authenticate);
+
+// Whether each channel's Meta credentials are configured (used by Settings > API Integration)
+router.get('/channels/status', (req, res) => messageController.getChannelsStatus(req, res));
 
 // Upload an image/video/document/audio file to GCS, returns a mediaUrl to pass to POST /
 router.post('/upload', upload.single('file'), (req, res) => messageController.uploadMedia(req, res));

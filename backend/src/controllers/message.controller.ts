@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
-import { MessageStatus } from '@prisma/client';
+import { MessageStatus, Channel } from '@prisma/client';
 import { dedupeCaseInsensitive } from '../utils/error-format.util';
 import { messageService } from '../services/message.service';
 import { mediaService } from '../services/media.service';
@@ -231,6 +231,49 @@ async function processWhatsAppMessage(message: WhatsAppMessage, contacts: WhatsA
   });
 }
 
+interface InstagramAttachment {
+  type: string;
+  payload?: { url?: string };
+}
+
+interface InstagramMessage {
+  mid: string;
+  text?: string;
+  attachments?: InstagramAttachment[];
+}
+
+interface InstagramMessagingEvent {
+  sender: { id: string };
+  recipient: { id: string };
+  timestamp?: number;
+  message?: InstagramMessage;
+}
+
+const INSTAGRAM_ATTACHMENT_TYPE_MAP: Record<string, string> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  file: 'document',
+};
+
+async function processInstagramMessage(event: InstagramMessagingEvent) {
+  const { sender, message } = event;
+  if (!sender?.id || !message) return;
+
+  const attachment = message.attachments?.[0];
+  const messageType = attachment ? INSTAGRAM_ATTACHMENT_TYPE_MAP[attachment.type] ?? 'document' : 'text';
+
+  await messageService.receiveMessage({
+    phoneNumber: sender.id,
+    text: message.text ?? '',
+    timestamp: event.timestamp ? new Date(event.timestamp) : undefined,
+    messageType,
+    externalId: message.mid,
+    mediaUrl: attachment?.payload?.url,
+    channel: Channel.INSTAGRAM,
+  });
+}
+
 async function forwardToWebhook(payload: unknown) {
   try {
     const companies = await prisma.company.findMany({
@@ -362,6 +405,45 @@ export class MessageController {
     } catch (err: unknown) {
       res.status(500).json({ error: 'Failed to process webhook', message: err instanceof Error ? err.message : 'Unknown error' });
     }
+  }
+
+  verifyInstagramWebhook(req: Request, res: Response) {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+    if (mode === 'subscribe' && token === process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) {
+      res.status(200).send(challenge);
+    } else {
+      res.status(403).json({ error: 'Forbidden' });
+    }
+  }
+
+  async handleInstagramWebhook(req: Request, res: Response) {
+    try {
+      const body = req.body;
+
+      if (Array.isArray(body.entry)) {
+        for (const entry of body.entry) {
+          for (const event of entry.messaging ?? []) {
+            // Meta echoes back messages this account itself sent (e.g. sent from the
+            // native Instagram app) — those aren't inbound customer messages.
+            if (event.message?.is_echo) continue;
+            await processInstagramMessage(event as InstagramMessagingEvent);
+          }
+        }
+      }
+
+      res.status(200).json({ success: true });
+    } catch (err: unknown) {
+      res.status(500).json({ error: 'Failed to process webhook', message: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }
+
+  getChannelsStatus(_req: Request, res: Response) {
+    res.json({
+      whatsapp: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN),
+      instagram: Boolean(process.env.INSTAGRAM_PAGE_ID && process.env.INSTAGRAM_PAGE_ACCESS_TOKEN),
+    });
   }
 
   async uploadMedia(req: Request, res: Response) {

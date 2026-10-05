@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { ChevronDown } from 'lucide-react';
 import { labelApi } from '@/lib/api';
 import AgentProfileBar from './AgentProfileBar';
+import ChannelIcon from '../common/ChannelIcon';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -689,6 +690,9 @@ function ConversationItem({ conversation, isActive, onClick }: ConversationItemP
             <span className="text-white font-bold text-lg">
               {displayName.charAt(0).toUpperCase()}
             </span>
+          </div>
+          <div className="absolute -bottom-1 -left-1">
+            <ChannelIcon channel={conversation.contact.channel} className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           {conversation.assignedAgent && (
             <div

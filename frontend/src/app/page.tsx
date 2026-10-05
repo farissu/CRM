@@ -14,10 +14,13 @@ import TeamStatusPanel from '@/components/team-status/TeamStatusPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
 
-type ActiveTab = 'conversations' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
+import type { Channel } from '@/types';
+
+// 'conversations' is the WhatsApp inbox (name kept so a tab saved in localStorage still works).
+type ActiveTab = 'conversations' | 'instagram' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
 
 const ACTIVE_TAB_STORAGE_KEY = 'activeTab';
-const VALID_TABS: ActiveTab[] = ['conversations', 'dashboard', 'broadcast', 'team-status', 'settings'];
+const VALID_TABS: ActiveTab[] = ['conversations', 'instagram', 'dashboard', 'broadcast', 'team-status', 'settings'];
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('conversations');
@@ -51,6 +54,9 @@ export default function HomePage() {
     }
   }, [agent?.role, activeTab]);
 
+  const isInboxTab = activeTab === 'conversations' || activeTab === 'instagram';
+  const inboxChannel: Channel = activeTab === 'instagram' ? 'INSTAGRAM' : 'WHATSAPP';
+
   const {
     conversations, statusCounts, labelCounts,
     statusFilter, setStatusFilter, viewMode, setViewMode, activeLabelTab, setActiveLabelTab,
@@ -60,7 +66,7 @@ export default function HomePage() {
     typingIndicator, handleSelectConversation,
     handleSendMessage, handleResolveConversation, handleAssignToMe, handleSendCsat, handleTypingStart, handleTypingStop,
     loadConversations, loadMoreConversations,
-  } = useConversations({ isAuthenticated, agentId, agentName });
+  } = useConversations({ isAuthenticated, agentId, agentName, channel: inboxChannel });
 
   if (checkingAuth) {
     return (
@@ -81,7 +87,7 @@ export default function HomePage() {
     return <ForceChangePasswordPage onPasswordChanged={refreshAgentData} />;
   }
 
-  const isMobileChatOpen = activeTab === 'conversations' && mobileView === 'chat';
+  const isMobileChatOpen = isInboxTab && mobileView === 'chat';
 
   return (
     <div className="flex flex-col md:flex-row h-dvh bg-saas-bg">
@@ -95,7 +101,7 @@ export default function HomePage() {
       />
 
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        {activeTab === 'conversations' && (
+        {isInboxTab && (
           <>
             <div className={clsx('h-full min-w-0', mobileView === 'chat' ? 'hidden md:block' : 'block')}>
               <ConversationSidebar

@@ -29,6 +29,11 @@ enum ConversationStatus {
   PENDING  @map("pending")
 }
 
+enum Channel {
+  WHATSAPP  @map("whatsapp")
+  INSTAGRAM @map("instagram")
+}
+
 enum MessageDirection {
   INBOUND  @map("inbound")
   OUTBOUND @map("outbound")
@@ -161,7 +166,12 @@ model AgentStatusLog {
 
 model Contact {
   id          String   @id @default(uuid())
-  phoneNumber String   @unique
+  // The contact's channel-native identifier: a WhatsApp phone number for
+  // channel = WHATSAPP, or an Instagram-scoped sender ID for channel = INSTAGRAM.
+  // Kept as `phoneNumber` (rather than renamed) to avoid touching every call site
+  // that already treats it as "the contact's external id" for WhatsApp.
+  phoneNumber String
+  channel     Channel  @default(WHATSAPP)
   name        String?
   email       String?
   metadata    Json?
@@ -171,6 +181,7 @@ model Contact {
   conversations Conversation[]
   labels        ContactLabel[]
 
+  @@unique([channel, phoneNumber])
   @@map("contacts")
 }
 

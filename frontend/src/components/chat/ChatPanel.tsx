@@ -6,6 +6,7 @@ import MessageInput from './MessageInput';
 import ManageLabelsModal from './ManageLabelsModal';
 import ConfirmDialog from './ConfirmDialog';
 import SendTemplateModal from './SendTemplateModal';
+import ChannelIcon from '../common/ChannelIcon';
 
 // Helper function to format date for separator
 function formatDateSeparator(date: Date): string {
@@ -234,10 +235,15 @@ export default function ChatPanel({
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
-          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 shadow-soft-sm">
-            <span className="text-xl font-bold">
-              {contactName.charAt(0).toUpperCase()}
-            </span>
+          <div className="relative flex-shrink-0">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-soft-sm">
+              <span className="text-xl font-bold">
+                {contactName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="absolute -bottom-1 -left-1">
+              <ChannelIcon channel={conversation.contact.channel} className="w-5 h-5" />
+            </div>
           </div>
           <div className="flex flex-col justify-center min-w-0">
             <h2 className="font-bold text-lg leading-tight truncate">{contactName}</h2>
