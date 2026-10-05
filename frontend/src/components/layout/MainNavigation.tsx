@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
-import { MessageCircle, Instagram, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
+import { Instagram, Settings, LogOut, Radio, LayoutDashboard, Users } from 'lucide-react';
+import WhatsAppIcon from '@/components/common/WhatsAppIcon';
 import type { Role } from '@/types';
 
 type Tab = 'conversations' | 'instagram' | 'dashboard' | 'broadcast' | 'team-status' | 'settings';
@@ -40,7 +41,7 @@ export default function MainNavigation({
 
         {/* Navigation Items */}
         <NavItem
-          icon={<MessageCircle className="w-6 h-6" />}
+          icon={<WhatsAppIcon className="w-6 h-6" />}
           label="WhatsApp"
           active={activeTab === 'conversations'}
           onClick={() => onTabChange('conversations')}
@@ -111,7 +112,7 @@ export default function MainNavigation({
         )}
       >
         <MobileNavItem
-          icon={<MessageCircle className="w-5 h-5" />}
+          icon={<WhatsAppIcon className="w-5 h-5" />}
           label="WhatsApp"
           active={activeTab === 'conversations'}
           onClick={() => onTabChange('conversations')}

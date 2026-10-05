@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Shield, Save, X, MessageCircle, Instagram, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Zap, Shield, Save, X, Instagram, CheckCircle2, AlertCircle } from 'lucide-react';
+import WhatsAppIcon from '@/components/common/WhatsAppIcon';
 import type { Agent, Company } from '@/types';
 import { companyApi, messageApi } from '@/lib/api';
 
@@ -60,7 +61,7 @@ export default function ApiIntegrationTab({ agent }: ApiIntegrationTabProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <ChannelStatusCard
-          icon={<MessageCircle className="w-5 h-5 text-white" />}
+          icon={<WhatsAppIcon className="w-5 h-5 text-white" />}
           iconBg="bg-green-500"
           name="WhatsApp"
           connected={channelsStatus?.whatsapp ?? null}

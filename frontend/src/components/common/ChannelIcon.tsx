@@ -1,4 +1,6 @@
-import { Instagram, MessageCircle } from 'lucide-react';
+import type { ComponentType } from 'react';
+import { Instagram } from 'lucide-react';
+import WhatsAppIcon from './WhatsAppIcon';
 import type { Channel } from '@/types';
 
 interface ChannelIconProps {
@@ -8,8 +10,8 @@ interface ChannelIconProps {
   className?: string;
 }
 
-const CHANNEL_STYLES: Record<Channel, { Icon: typeof Instagram; bg: string; label: string }> = {
-  WHATSAPP: { Icon: MessageCircle, bg: 'bg-green-500', label: 'WhatsApp' },
+const CHANNEL_STYLES: Record<Channel, { Icon: ComponentType<{ className?: string; strokeWidth?: number | string }>; bg: string; label: string }> = {
+  WHATSAPP: { Icon: WhatsAppIcon, bg: 'bg-green-500', label: 'WhatsApp' },
   INSTAGRAM: { Icon: Instagram, bg: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400', label: 'Instagram' },
 };
 
