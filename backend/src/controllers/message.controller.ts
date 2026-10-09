@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import { MessageStatus, Channel } from '@prisma/client';
 import { dedupeCaseInsensitive } from '../utils/error-format.util';
 import { messageService } from '../services/message.service';
+import { templateService, TemplateWebhookValue } from '../services/template.service';
 import { mediaService } from '../services/media.service';
 import { storageService } from '../services/storage.service';
 import { GCS_FOLDER_PREFIX } from '../config/storage';
@@ -369,6 +370,7 @@ export class MessageController {
         for (const entry of body.entry) {
           for (const change of entry.changes ?? []) {
             const value = change.value;
+            await templateService.applyWebhookUpdate(change.field, value as TemplateWebhookValue);
             for (const message of value.messages ?? []) {
               await processWhatsAppMessage(message as WhatsAppMessage, value.contacts);
             }

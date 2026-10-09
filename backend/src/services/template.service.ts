@@ -46,6 +46,37 @@ interface MetaTemplatesListResponse {
 
 const TEMPLATE_LIST_FIELDS = 'name,language,status,category,components,quality_score,rejected_reason';
 
+const VALID_CATEGORIES = new Set<string>(Object.values(TemplateCategory));
+
+/**
+ * Meta can re-classify an approved template (e.g. UTILITY -> MARKETING), so the
+ * category must be refreshed on every sync. Unknown values are ignored rather
+ * than written, keeping the stored category intact.
+ */
+function toTemplateCategory(category: string | undefined): TemplateCategory | undefined {
+  return category && VALID_CATEGORIES.has(category) ? (category as TemplateCategory) : undefined;
+}
+
+const VALID_STATUSES = new Set<string>(Object.values(TemplateStatus));
+
+/**
+ * Template webhook fields from the WABA subscription. `template_category_update` with
+ * `correct_category` (and no `new_category`) is Meta's 24h advance notice — the category
+ * only changes when the follow-up event carrying `new_category` arrives.
+ */
+export const TEMPLATE_WEBHOOK_FIELDS = {
+  CATEGORY: 'template_category_update',
+  STATUS: 'message_template_status_update',
+} as const;
+
+export interface TemplateWebhookValue {
+  message_template_id?: string | number;
+  message_template_name?: string;
+  new_category?: string;
+  event?: string;
+  reason?: string;
+}
+
 interface MetaUploadSessionResponse {
   id: string;
 }
@@ -200,6 +231,7 @@ export class TemplateService {
           },
         },
         update: {
+          category: toTemplateCategory(metaTemplate.category),
           status: metaTemplate.status as TemplateStatus,
           metaTemplateId: metaTemplate.id,
           components: metaTemplate.components as object[],
@@ -226,6 +258,31 @@ export class TemplateService {
       where: { companyId },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Applies a template category/status change pushed by Meta's webhook so stored templates
+   * stay in sync without waiting for a manual or page-load sync. Returns the number of rows
+   * updated (0 when the template isn't tracked or the payload carries nothing actionable).
+   */
+  async applyWebhookUpdate(field: string, value: TemplateWebhookValue): Promise<number> {
+    if (value.message_template_id === undefined) return 0;
+    const metaTemplateId = String(value.message_template_id);
+
+    const data =
+      field === TEMPLATE_WEBHOOK_FIELDS.CATEGORY
+        ? { category: toTemplateCategory(value.new_category) }
+        : field === TEMPLATE_WEBHOOK_FIELDS.STATUS && value.event && VALID_STATUSES.has(value.event)
+          ? {
+              status: value.event as TemplateStatus,
+              rejectedReason: value.event === TemplateStatus.REJECTED ? value.reason : null,
+            }
+          : null;
+
+    if (!data || Object.values(data).every(v => v === undefined)) return 0;
+
+    const result = await prisma.messageTemplate.updateMany({ where: { metaTemplateId }, data });
+    return result.count;
   }
 
   async deleteTemplate(id: string, companyId: string) {
@@ -270,6 +327,7 @@ export class TemplateService {
           return prisma.messageTemplate.updateMany({
             where: { companyId, metaTemplateId: id },
             data: {
+              category: toTemplateCategory(t.category),
               status: t.status as TemplateStatus,
               qualityScore: t.quality_score?.score,
               rejectedReason: t.rejected_reason,
