@@ -17,6 +17,10 @@ const EXCLUDED_MESSAGE_PREFIXES = [
   'Halo tim SharingHappiness, Saya mau konfirmasi donasi',
 ];
 
+// A sticker on its own is a reaction/acknowledgement, not a request that needs the
+// outside-hours notice.
+const EXCLUDED_MESSAGE_TYPES: readonly MessageType[] = [MessageType.STICKER];
+
 export interface AutoReplySettingsInput {
   isEnabled: boolean;
   message: string;
@@ -68,8 +72,16 @@ class AutoReplyService {
    * on the conversation — the auto-reply must not make the conversation look answered,
    * so it still shows up under "Belum Dibalas" for a human agent to actually handle.
    */
-  async maybeSendAutoReply(conversationId: string, phoneNumber: string, inboundText: string, channel: Channel = Channel.WHATSAPP): Promise<void> {
+  async maybeSendAutoReply(
+    conversationId: string,
+    phoneNumber: string,
+    inboundText: string,
+    inboundType: MessageType,
+    channel: Channel = Channel.WHATSAPP,
+  ): Promise<void> {
     try {
+      if (EXCLUDED_MESSAGE_TYPES.includes(inboundType)) return;
+
       const trimmed = inboundText.trim().toLowerCase();
       if (EXCLUDED_MESSAGE_PREFIXES.some((prefix) => trimmed.startsWith(prefix.toLowerCase()))) return;
 

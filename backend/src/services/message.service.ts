@@ -366,7 +366,7 @@ export class MessageService {
 
     // Fire-and-forget: an auto-reply failure or slow WhatsApp API call must never
     // delay or break the webhook's response to Meta.
-    void autoReplyService.maybeSendAutoReply(conversation.id, phoneNumber, text || caption || '', channel);
+    void autoReplyService.maybeSendAutoReply(conversation.id, phoneNumber, text || caption || '', resolvedType, channel);
 
     return message;
   }
