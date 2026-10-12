@@ -17,9 +17,13 @@ const EXCLUDED_MESSAGE_PREFIXES = [
   'Halo tim SharingHappiness, Saya mau konfirmasi donasi',
 ];
 
-// A sticker on its own is a reaction/acknowledgement, not a request that needs the
-// outside-hours notice.
-const EXCLUDED_MESSAGE_TYPES: readonly MessageType[] = [MessageType.STICKER];
+// Stickers and images are usually reactions/acknowledgements (or proof-of-transfer
+// screenshots), not requests that need the outside-hours notice.
+const EXCLUDED_MESSAGE_TYPES: readonly MessageType[] = [MessageType.STICKER, MessageType.IMAGE];
+
+// Closing/acknowledgement words ("Aamiin", "Alhamdulillah", ...) in any spelling
+// variant — a reply to these would just restart the conversation.
+const EXCLUDED_KEYWORD_PATTERN = /\b(a+m+i+n+|al+hamdul+il+a+h?)\b/i;
 
 export interface AutoReplySettingsInput {
   isEnabled: boolean;
@@ -81,6 +85,7 @@ class AutoReplyService {
   ): Promise<void> {
     try {
       if (EXCLUDED_MESSAGE_TYPES.includes(inboundType)) return;
+      if (EXCLUDED_KEYWORD_PATTERN.test(inboundText)) return;
 
       const trimmed = inboundText.trim().toLowerCase();
       if (EXCLUDED_MESSAGE_PREFIXES.some((prefix) => trimmed.startsWith(prefix.toLowerCase()))) return;
