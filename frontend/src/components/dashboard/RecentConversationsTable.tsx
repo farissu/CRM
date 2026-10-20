@@ -10,6 +10,12 @@ import type { Channel, Conversation } from '@/types';
 const MAX_ROWS = 6;
 const CHANNEL_LABEL: Record<Channel, string> = { WHATSAPP: 'WhatsApp', INSTAGRAM: 'Instagram' };
 
+/** "11 menit lalu" / "1 jam lalu" — date-fns' "sekitar 1 jam yang lalu" is too wide for the column. */
+function timeAgo(iso: string): string {
+  const distance = formatDistanceToNow(new Date(iso), { locale: idLocale }).replace(/^sekitar /, '');
+  return `${distance} lalu`;
+}
+
 function statusBadge(conv: Conversation): { label: string; className: string } {
   if (conv.status === 'RESOLVED') return { label: 'Selesai', className: 'bg-emerald-50 text-emerald-600' };
   if (conv.status === 'PENDING') return { label: 'Pending', className: 'bg-violet-50 text-violet-600' };
@@ -42,7 +48,7 @@ export default function RecentConversationsTable({ conversations, onViewAll }: R
               <th className="py-2.5 px-3 hidden sm:table-cell">Pesan Terakhir</th>
               <th className="py-2.5 px-3 w-24">Status</th>
               <th className="py-2.5 px-3 w-24 hidden md:table-cell">Agent</th>
-              <th className="py-2.5 px-3 w-24 rounded-r-lg">Waktu</th>
+              <th className="py-2.5 px-3 w-28 rounded-r-lg">Waktu</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-saas-border">
@@ -85,12 +91,10 @@ function ConversationRow({ conv }: { conv: Conversation }) {
       <td className="py-3 px-3">
         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badge.className}`}>{badge.label}</span>
       </td>
-      <td className="py-3 px-3 text-gray-600 truncate hidden md:table-cell">
+      <td className="py-3 px-3 text-gray-600 truncate hidden md:table-cell" title={conv.assignedAgent?.name}>
         {conv.assignedAgent?.name ?? <span className="text-gray-400">—</span>}
       </td>
-      <td className="py-3 px-3 text-xs text-gray-500 truncate">
-        {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: true, locale: idLocale })}
-      </td>
+      <td className="py-3 px-3 text-xs text-gray-500 truncate">{timeAgo(conv.lastMessageAt)}</td>
     </tr>
   );
 }
