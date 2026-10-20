@@ -1,13 +1,10 @@
 import prisma from '../config/database';
+import { fetchResponseTimesByAgent, weightedAverageMinutes } from './responseTime';
 
 const MS_DAY = 86_400_000;
 // Same convention as dashboard.service.ts: timestamps are stored as naive UTC,
 // interpreted here in the Asia/Jakarta business timezone.
 const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
-// Response-time gaps longer than this are almost always "agent was offline
-// overnight" rather than a real response-time problem, so they're excluded
-// to keep the average meaningful.
-const MAX_RESPONSE_GAP_MINUTES = 4 * 60;
 
 export type DashboardPeriod = 'today' | 'week' | 'month' | 'custom';
 
@@ -119,28 +116,7 @@ class AgentPerformanceService {
         },
         select: { agentId: true, startedAt: true, endedAt: true },
       }),
-      prisma.$queryRaw<Array<{ agentId: string; sampleCount: number; avgMinutes: number }>>`
-        WITH ordered AS (
-          SELECT
-            "senderId",
-            "timestamp",
-            direction,
-            LAG(direction) OVER (PARTITION BY "conversationId" ORDER BY "timestamp") AS prev_direction,
-            LAG("timestamp") OVER (PARTITION BY "conversationId" ORDER BY "timestamp") AS prev_timestamp
-          FROM messages
-          WHERE "timestamp" >= ${rangeStart} AND "timestamp" < ${rangeEnd}
-        )
-        SELECT
-          "senderId" AS "agentId",
-          COUNT(*)::int AS "sampleCount",
-          AVG(EXTRACT(EPOCH FROM ("timestamp" - prev_timestamp)) / 60) AS "avgMinutes"
-        FROM ordered
-        WHERE direction = 'outbound'
-          AND prev_direction = 'inbound'
-          AND "senderId" IS NOT NULL
-          AND EXTRACT(EPOCH FROM ("timestamp" - prev_timestamp)) / 60 <= ${MAX_RESPONSE_GAP_MINUTES}
-        GROUP BY "senderId"
-      `,
+      fetchResponseTimesByAgent(rangeStart, rangeEnd),
     ]);
 
     const openByAgent = new Map<string, number>();
@@ -166,7 +142,7 @@ class AgentPerformanceService {
       activeMinutesByAgent.set(log.agentId, (activeMinutesByAgent.get(log.agentId) ?? 0) + minutes);
     }
 
-    const responseByAgent = new Map(responseRows.map((r) => [r.agentId, { avg: Number(r.avgMinutes), count: r.sampleCount }]));
+    const responseByAgent = new Map(responseRows.map((r) => [r.agentId, r]));
 
     const agentRows: AgentPerformanceRow[] = agents.map((a) => ({
       id: a.id,
@@ -181,17 +157,14 @@ class AgentPerformanceService {
       totalConversations: totalByAgent.get(a.id) ?? 0,
       messagesSent: messagesInRangeByAgent.get(a.id) ?? 0,
       messagesSentTotal: messagesTotalByAgent.get(a.id) ?? 0,
-      avgResponseMinutes: responseByAgent.get(a.id)?.avg ?? null,
+      avgResponseMinutes: responseByAgent.get(a.id)?.avgMinutes ?? null,
       activeMinutes: Math.round(activeMinutesByAgent.get(a.id) ?? 0),
     }));
 
-    const responseSamples = agentRows
-      .map((a) => ({ agentId: a.id, ...responseByAgent.get(a.id) }))
-      .filter((r): r is { agentId: string; avg: number; count: number } => r.avg !== undefined);
-    const totalSamples = responseSamples.reduce((sum, r) => sum + r.count, 0);
-    const avgResponseMinutes = totalSamples > 0
-      ? responseSamples.reduce((sum, r) => sum + r.avg * r.count, 0) / totalSamples
-      : null;
+    // Only count replies from the agents listed here (active, in scope).
+    const avgResponseMinutes = weightedAverageMinutes(
+      responseRows.filter((r) => agentRows.some((a) => a.id === r.agentId))
+    );
 
     return {
       range: { start: rangeStart.toISOString(), end: rangeEnd.toISOString() },

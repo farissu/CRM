@@ -283,17 +283,51 @@ export interface MessagesResponse {
   totalPages: number;
 }
 
+export type DashboardRangeDays = 7 | 30;
+
+export interface DashboardSlaKpi {
+  targetHours: number;
+  met: number;
+  total: number;
+  prevMet: number;
+  prevTotal: number;
+}
+
+export interface DashboardTopAgent {
+  id: string;
+  name: string;
+  avatar: string | null;
+  resolved: number;
+  avgResponseMinutes: number | null;
+}
+
+export interface DashboardAlerts {
+  failedMessages: number;
+  problemTemplateCount: number;
+  problemTemplates: Array<{ id: string; name: string; status: string }>;
+  failedBroadcasts: number;
+  failedBroadcastRecipients: number;
+}
+
 export interface DashboardStats {
-  totalConversations: number;
-  openConversations: number;
-  resolvedConversations: number;
-  totalMessages: number;
-  todayMessages: number;
-  totalContacts: number;
-  newContactsToday: number;
-  messageVolume: Array<{ day: string; messages: number }>;
+  range: { days: number; start: string; end: string };
+  kpis: {
+    avgResponseMinutes: number | null;
+    prevAvgResponseMinutes: number | null;
+    resolvedConversations: number;
+    prevResolvedConversations: number;
+    activeConversations: number;
+    sla: DashboardSlaKpi;
+    agents: { online: number; total: number };
+  };
+  messageTrend: Array<{ date: string; inbound: number; outbound: number }>;
+  channelDistribution: Array<{ channel: Channel; conversations: number }>;
+  awaitingReply: { total: number; unassigned: number };
+  topAgents: DashboardTopAgent[];
+  alerts: DashboardAlerts;
   peakHours: Array<{ hour: string; messages: number }>;
   labelDistribution: Array<{ id: string; name: string; color: string; value: number }>;
+  contacts: { total: number; newInRange: number };
 }
 
 export type DashboardPeriod = 'today' | 'week' | 'month' | 'custom';

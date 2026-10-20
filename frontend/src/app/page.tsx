@@ -154,7 +154,7 @@ export default function HomePage() {
           </>
         )}
 
-        {activeTab === 'dashboard' && agent?.role !== 'AGENT' && <DashboardPanel />}
+        {activeTab === 'dashboard' && agent?.role !== 'AGENT' && <DashboardPanel onNavigate={setActiveTab} />}
 
         {activeTab === 'broadcast' && <BroadcastPanel />}
 
