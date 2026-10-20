@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { io } from '../index';
 import { whatsAppService } from './whatsapp.service';
 import { instagramService } from './instagram.service';
+import { hasClosingKeyword, startsDonationFlow } from '../utils/closing-message.util';
 
 const SETTINGS_ID = 'singleton';
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -10,20 +11,9 @@ const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // evaluated in the Asia/Jakarta wall-clock timezone.
 const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-// These open a donation-specific flow (consultation/confirmation) that shouldn't be
-// interrupted by the generic outside-hours notice, regardless of when they arrive.
-const EXCLUDED_MESSAGE_PREFIXES = [
-  'Halo tim SharingHappiness, Saya mau konsultasi donasi dengan No donasi',
-  'Halo tim SharingHappiness, Saya mau konfirmasi donasi',
-];
-
 // Stickers and images are usually reactions/acknowledgements (or proof-of-transfer
 // screenshots), not requests that need the outside-hours notice.
 const EXCLUDED_MESSAGE_TYPES: readonly MessageType[] = [MessageType.STICKER, MessageType.IMAGE];
-
-// Closing/acknowledgement words ("Aamiin", "Alhamdulillah", ...) in any spelling
-// variant — a reply to these would just restart the conversation.
-const EXCLUDED_KEYWORD_PATTERN = /\b(a+m+i+n+|al+hamdul+il+a+h?)\b/i;
 
 export interface AutoReplySettingsInput {
   isEnabled: boolean;
@@ -85,10 +75,10 @@ class AutoReplyService {
   ): Promise<void> {
     try {
       if (EXCLUDED_MESSAGE_TYPES.includes(inboundType)) return;
-      if (EXCLUDED_KEYWORD_PATTERN.test(inboundText)) return;
-
-      const trimmed = inboundText.trim().toLowerCase();
-      if (EXCLUDED_MESSAGE_PREFIXES.some((prefix) => trimmed.startsWith(prefix.toLowerCase()))) return;
+      if (hasClosingKeyword(inboundText)) return;
+      // A donation flow (consultation/confirmation) shouldn't be interrupted by the
+      // generic outside-hours notice, regardless of when it arrives.
+      if (startsDonationFlow(inboundText)) return;
 
       const settings = await this.getSettings();
       if (!settings.isEnabled || !settings.message.trim()) return;

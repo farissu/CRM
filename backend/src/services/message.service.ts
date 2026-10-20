@@ -9,6 +9,7 @@ import { mediaService } from './media.service';
 import { io } from '../index';
 import { broadcastService } from './broadcast.service';
 import { autoReplyService } from './autoReply.service';
+import { autoResolveService } from './autoResolve.service';
 
 function resolveOutboundMediaUrl(mediaUrl?: string): Promise<string | undefined> {
   if (!mediaUrl) return Promise.resolve(undefined);
@@ -367,6 +368,10 @@ export class MessageService {
     // Fire-and-forget: an auto-reply failure or slow WhatsApp API call must never
     // delay or break the webhook's response to Meta.
     void autoReplyService.maybeSendAutoReply(conversation.id, phoneNumber, text || caption || '', resolvedType, channel);
+
+    // A closing message (sticker / Aamiin / Alhamdulillah) resolves the conversation to the
+    // PIC instead of leaving it under "Belum Dibalas". Handles its own errors.
+    await autoResolveService.maybeAutoResolve(conversation.id, text || caption || '', resolvedType);
 
     return message;
   }
