@@ -80,7 +80,9 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-saas-bg overflow-y-auto">
+    // min-w-0 lets this flex child shrink to the viewport instead of growing to its widest
+    // card; overflow-x-hidden is a backstop so nothing can ever add a sideways scrollbar.
+    <div className="flex-1 min-w-0 flex flex-col bg-saas-bg overflow-y-auto overflow-x-hidden">
       <header className="bg-saas-secondary-blue text-white px-4 md:px-8 py-5 shadow-soft flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold leading-none">Dashboard</h1>
@@ -171,7 +173,7 @@ function KpiRow({ stats }: { stats: DashboardStats }) {
         iconClassName="bg-blue-50 text-blue-600"
         title="Rata-rata Waktu Respon"
         value={formatDuration(kpis.avgResponseMinutes)}
-        subtitle="Waktu agent membalas pesan pelanggan"
+        subtitle="Waktu balas agent"
         trend={{ change: percentChange(kpis.avgResponseMinutes, kpis.prevAvgResponseMinutes), unit: '%', isLowerBetter: true }}
       />
       <KpiCard
@@ -189,8 +191,8 @@ function KpiRow({ stats }: { stats: DashboardStats }) {
         value={slaRate === null ? '—' : `${slaRate.toFixed(1).replace('.', ',')}%`}
         subtitle={
           sla.total > 0
-            ? `${formatNumber(sla.met)} dari ${formatNumber(sla.total)} pesan dibalas tepat waktu`
-            : 'Belum ada pesan yang bisa dinilai'
+            ? `${formatNumber(sla.met)} dari ${formatNumber(sla.total)} tepat waktu`
+            : 'Belum ada data'
         }
         trend={{ change: slaRate !== null && prevSlaRate !== null ? slaRate - prevSlaRate : null, unit: ' poin' }}
       />
@@ -200,7 +202,7 @@ function KpiRow({ stats }: { stats: DashboardStats }) {
         title="Agent Online"
         value={formatNumber(kpis.agents.online)}
         valueSuffix={`/${formatNumber(kpis.agents.total)}`}
-        subtitle="Agent yang sedang aktif saat ini"
+        subtitle="Sedang aktif sekarang"
       />
     </div>
   );

@@ -6,7 +6,7 @@ import ChannelIcon from '@/components/common/ChannelIcon';
 import { formatNumber, ratePercent } from './dashboardFormat';
 import type { Channel, DashboardStats } from '@/types';
 
-const DONUT_SIZE = 200;
+const DONUT_SIZE = 180;
 const CHANNEL_META: Record<Channel, { label: string; color: string }> = {
   WHATSAPP: { label: 'WhatsApp', color: '#25D366' },
   INSTAGRAM: { label: 'Instagram', color: '#E1306C' },
@@ -24,7 +24,9 @@ export default function ChannelDonut({ data, days }: ChannelDonutProps) {
   return (
     <DashboardCard title="Kontribusi Saluran Chat" subtitle={`Percakapan aktif ${days} hari terakhir`}>
       {total > 0 ? (
-        <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center gap-6">
+        // Stacked at every width: the card is only a third of the row on desktop, too narrow
+        // for the donut and legend side by side without the legend spilling out of the card.
+        <div className="flex flex-col sm:flex-row lg:flex-col items-center gap-5 min-w-0">
           <div className="relative shrink-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -52,18 +54,18 @@ export default function ChannelDonut({ data, days }: ChannelDonutProps) {
               <span className="text-xs text-gray-500">Total Percakapan</span>
             </div>
           </div>
-          <ul className="w-full space-y-3">
+          <ul className="w-full min-w-0 space-y-3">
             {slices.map((s) => (
-              <li key={s.channel} className="flex items-center justify-between gap-3 text-sm">
+              <li key={s.channel} className="flex items-center justify-between gap-3 text-sm min-w-0">
                 <span className="flex items-center gap-2 min-w-0">
-                  <ChannelIcon channel={s.channel} className="w-6 h-6" />
-                  <span className="font-medium text-saas-text-primary truncate">{s.label}</span>
-                </span>
-                <span className="text-right whitespace-nowrap">
-                  <span className="font-semibold text-saas-text-primary">
-                    {(ratePercent(s.conversations, total) ?? 0).toFixed(1).replace('.', ',')}%
+                  <ChannelIcon channel={s.channel} className="w-6 h-6 shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block font-medium text-saas-text-primary truncate">{s.label}</span>
+                    <span className="block text-xs text-gray-400 truncate">{formatNumber(s.conversations)} percakapan</span>
                   </span>
-                  <span className="block text-xs text-gray-400">{formatNumber(s.conversations)} percakapan</span>
+                </span>
+                <span className="font-semibold text-saas-text-primary shrink-0">
+                  {(ratePercent(s.conversations, total) ?? 0).toFixed(1).replace('.', ',')}%
                 </span>
               </li>
             ))}

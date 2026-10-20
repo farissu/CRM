@@ -33,25 +33,24 @@ export default function RecentConversationsTable({ conversations, onViewAll }: R
       {rows.length === 0 ? (
         <EmptyState message="Belum ada percakapan" />
       ) : (
-        <div className="overflow-x-auto -mx-5 px-5">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="text-left text-xs font-semibold text-gray-500 bg-saas-bg">
-                <th className="py-2.5 px-3 rounded-l-lg">Pelanggan</th>
-                <th className="py-2.5 px-3">Channel</th>
-                <th className="py-2.5 px-3">Pesan Terakhir</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">Agent</th>
-                <th className="py-2.5 px-3 rounded-r-lg">Waktu</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-saas-border">
-              {rows.map((conv) => (
-                <ConversationRow key={conv.id} conv={conv} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        // table-fixed keeps the table inside the card at any width: the message column takes
+        // whatever is left and truncates, and the channel shows as a badge on the avatar.
+        <table className="w-full table-fixed text-sm">
+          <thead>
+            <tr className="text-left text-xs font-semibold text-gray-500 bg-saas-bg">
+              <th className="py-2.5 px-3 rounded-l-lg w-[38%] sm:w-[30%]">Pelanggan</th>
+              <th className="py-2.5 px-3 hidden sm:table-cell">Pesan Terakhir</th>
+              <th className="py-2.5 px-3 w-24">Status</th>
+              <th className="py-2.5 px-3 w-24 hidden md:table-cell">Agent</th>
+              <th className="py-2.5 px-3 w-24 rounded-r-lg">Waktu</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-saas-border">
+            {rows.map((conv) => (
+              <ConversationRow key={conv.id} conv={conv} />
+            ))}
+          </tbody>
+        </table>
       )}
     </DashboardCard>
   );
@@ -66,31 +65,30 @@ function ConversationRow({ conv }: { conv: Conversation }) {
     <tr className="align-middle">
       <td className="py-3 px-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-saas-200 text-saas-800 flex items-center justify-center text-xs font-bold shrink-0">
-            {initials(name)}
+          <div className="relative shrink-0" title={CHANNEL_LABEL[channel]}>
+            <div className="w-9 h-9 rounded-full bg-saas-200 text-saas-800 flex items-center justify-center text-xs font-bold">
+              {initials(name)}
+            </div>
+            <ChannelIcon channel={channel} className="w-4 h-4 absolute -bottom-0.5 -right-0.5" />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-saas-text-primary truncate max-w-[160px]">{name}</p>
-            {conv.contact?.name && <p className="text-xs text-gray-400 truncate max-w-[160px]">{conv.contact.phoneNumber}</p>}
+            <p className="font-semibold text-saas-text-primary truncate">{name}</p>
+            {conv.contact?.name && <p className="text-xs text-gray-400 truncate">{conv.contact.phoneNumber}</p>}
           </div>
         </div>
       </td>
-      <td className="py-3 px-3">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600">
-          <ChannelIcon channel={channel} className="w-5 h-5" />
-          {CHANNEL_LABEL[channel]}
-        </span>
-      </td>
-      <td className="py-3 px-3">
-        <p className="text-gray-600 truncate max-w-[200px]" title={conv.lastMessageText ?? ''}>
+      <td className="py-3 px-3 hidden sm:table-cell">
+        <p className="text-gray-600 truncate" title={conv.lastMessageText ?? ''}>
           {conv.lastMessageText || <span className="italic text-gray-400">Media</span>}
         </p>
       </td>
       <td className="py-3 px-3">
         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badge.className}`}>{badge.label}</span>
       </td>
-      <td className="py-3 px-3 text-gray-600 whitespace-nowrap">{conv.assignedAgent?.name ?? <span className="text-gray-400">—</span>}</td>
-      <td className="py-3 px-3 text-xs text-gray-500 whitespace-nowrap">
+      <td className="py-3 px-3 text-gray-600 truncate hidden md:table-cell">
+        {conv.assignedAgent?.name ?? <span className="text-gray-400">—</span>}
+      </td>
+      <td className="py-3 px-3 text-xs text-gray-500 truncate">
         {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: true, locale: idLocale })}
       </td>
     </tr>
