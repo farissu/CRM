@@ -1,19 +1,19 @@
 import { Request, Response } from 'express';
-import { dashboardService, DASHBOARD_RANGE_DAYS, DashboardRangeDays } from '../services/dashboard.service';
+import { dashboardService, defaultDateRange } from '../services/dashboard.service';
 import { agentPerformanceService, DashboardPeriod } from '../services/agentPerformance.service';
 
 const VALID_PERIODS: DashboardPeriod[] = ['today', 'week', 'month', 'custom'];
-const DEFAULT_RANGE_DAYS: DashboardRangeDays = 7;
 
 export class DashboardController {
   /**
-   * GET /api/dashboard/stats?days=7|30
+   * GET /api/dashboard/stats?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+   * Query is already validated by dashboardStatsQuerySchema; no dates = last 30 days.
    */
   async getStats(req: Request, res: Response) {
     try {
-      const requestedDays = Number(req.query.days);
-      const days = DASHBOARD_RANGE_DAYS.find((d) => d === requestedDays) ?? DEFAULT_RANGE_DAYS;
-      const stats = await dashboardService.getStats({ role: req.user!.role, companyId: req.user!.companyId }, days);
+      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+      const dates = startDate && endDate ? { startDate, endDate } : defaultDateRange();
+      const stats = await dashboardService.getStats({ role: req.user!.role, companyId: req.user!.companyId }, dates);
       res.json(stats);
     } catch (err: unknown) {
       res.status(500).json({

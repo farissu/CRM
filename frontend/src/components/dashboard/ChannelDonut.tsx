@@ -14,15 +14,15 @@ const CHANNEL_META: Record<Channel, { label: string; color: string }> = {
 
 interface ChannelDonutProps {
   data: DashboardStats['channelDistribution'];
-  days: number;
+  periodLabel: string;
 }
 
-export default function ChannelDonut({ data, days }: ChannelDonutProps) {
+export default function ChannelDonut({ data, periodLabel }: ChannelDonutProps) {
   const total = data.reduce((sum, d) => sum + d.conversations, 0);
   const slices = data.map((d) => ({ ...d, ...CHANNEL_META[d.channel] }));
 
   return (
-    <DashboardCard title="Kontribusi Saluran Chat" subtitle={`Percakapan aktif ${days} hari terakhir`}>
+    <DashboardCard title="Kontribusi Saluran Chat" subtitle={`Percakapan aktif · ${periodLabel}`}>
       {total > 0 ? (
         // Stacked at every width: the card is only a third of the row on desktop, too narrow
         // for the donut and legend side by side without the legend spilling out of the card.

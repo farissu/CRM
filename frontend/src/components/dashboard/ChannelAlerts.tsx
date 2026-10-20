@@ -28,7 +28,7 @@ const TONE_STYLES = {
   warning: { row: 'bg-amber-50 border-amber-100', icon: 'bg-amber-500', title: 'text-amber-700', button: 'bg-white text-amber-700 border-amber-200' },
 };
 
-function buildAlerts(alerts: DashboardAlerts, days: number): AlertItem[] {
+function buildAlerts(alerts: DashboardAlerts, periodLabel: string): AlertItem[] {
   const items: AlertItem[] = [];
   if (alerts.failedMessages > 0) {
     items.push({
@@ -36,7 +36,7 @@ function buildAlerts(alerts: DashboardAlerts, days: number): AlertItem[] {
       tone: 'danger',
       icon: <AlertTriangle className="w-4 h-4" />,
       title: `${formatNumber(alerts.failedMessages)} pesan gagal terkirim`,
-      detail: `Dalam ${days} hari terakhir`,
+      detail: `Periode ${periodLabel}`,
       actionLabel: 'Lihat Inbox',
       tab: 'conversations',
     });
@@ -62,7 +62,7 @@ function buildAlerts(alerts: DashboardAlerts, days: number): AlertItem[] {
       tone: 'danger',
       icon: <Megaphone className="w-4 h-4" />,
       title: `${formatNumber(alerts.failedBroadcasts)} broadcast dengan pengiriman gagal`,
-      detail: `${formatNumber(alerts.failedBroadcastRecipients)} penerima gagal dalam ${days} hari terakhir`,
+      detail: `${formatNumber(alerts.failedBroadcastRecipients)} penerima gagal · ${periodLabel}`,
       actionLabel: 'Lihat Detail',
       tab: 'broadcast',
     });
@@ -72,12 +72,12 @@ function buildAlerts(alerts: DashboardAlerts, days: number): AlertItem[] {
 
 interface ChannelAlertsProps {
   alerts: DashboardAlerts;
-  days: number;
+  periodLabel: string;
   onNavigate?: (tab: DashboardLinkTab) => void;
 }
 
-export default function ChannelAlerts({ alerts, days, onNavigate }: ChannelAlertsProps) {
-  const items = buildAlerts(alerts, days);
+export default function ChannelAlerts({ alerts, periodLabel, onNavigate }: ChannelAlertsProps) {
+  const items = buildAlerts(alerts, periodLabel);
 
   return (
     <DashboardCard title="Peringatan Saluran & Integrasi">

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { inclusiveDayCount, isValidIsoDate, jakartaToday } from '../utils/jakarta-date.util';
+import { MAX_RANGE_DAYS } from '../services/dashboard.service';
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -123,6 +125,30 @@ export const createComplaintSchema = z.object({
   conversationId: z.string().min(1, 'conversationId is required'),
   type: z.string().min(1, 'type is required'),
 });
+
+// Both dates or neither (the controller then defaults to the last 30 days); inclusive
+// Jakarta calendar dates, not in the future, at most MAX_RANGE_DAYS long.
+export const dashboardStatsQuerySchema = z
+  .object({
+    startDate: z.string().refine(isValidIsoDate, 'startDate must be a valid YYYY-MM-DD date').optional(),
+    endDate: z.string().refine(isValidIsoDate, 'endDate must be a valid YYYY-MM-DD date').optional(),
+  })
+  .refine((q) => Boolean(q.startDate) === Boolean(q.endDate), {
+    message: 'startDate and endDate must be provided together',
+    path: ['startDate'],
+  })
+  .refine((q) => !q.startDate || !q.endDate || q.startDate <= q.endDate, {
+    message: 'startDate must be on or before endDate',
+    path: ['startDate'],
+  })
+  .refine((q) => !q.startDate || q.startDate <= jakartaToday(), {
+    message: 'startDate cannot be in the future',
+    path: ['startDate'],
+  })
+  .refine((q) => !q.startDate || !q.endDate || inclusiveDayCount(q.startDate, q.endDate) <= MAX_RANGE_DAYS, {
+    message: `Date range cannot exceed ${MAX_RANGE_DAYS} days`,
+    path: ['endDate'],
+  });
 
 export const createComplaintExternalSchema = z.object({
   phoneNumber: z.string().min(1, 'phoneNumber is required'),

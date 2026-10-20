@@ -20,15 +20,15 @@ export interface SlaCounts {
   total: number;
 }
 
-/** Messages per Jakarta calendar day and direction, from `start` onwards. */
-export async function fetchMessageTrendRows(start: Date): Promise<DayDirectionCount[]> {
+/** Messages per Jakarta calendar day and direction, in [start, end). */
+export async function fetchMessageTrendRows(start: Date, end: Date): Promise<DayDirectionCount[]> {
   const rows = await prisma.$queryRaw<Array<{ day: string; direction: string; cnt: number }>>`
     SELECT
       to_char("timestamp" AT TIME ZONE ${UTC} AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS day,
       direction::text AS direction,
       COUNT(*)::int AS cnt
     FROM messages
-    WHERE "timestamp" >= ${start}
+    WHERE "timestamp" >= ${start} AND "timestamp" < ${end}
     GROUP BY 1, 2
   `;
   return rows.map((r) => ({
@@ -39,23 +39,26 @@ export async function fetchMessageTrendRows(start: Date): Promise<DayDirectionCo
 }
 
 /** Inbound messages per 4-hour Jakarta slot (0 = 00:00-04:00 .. 5 = 20:00-24:00). */
-export async function fetchPeakSlotRows(start: Date): Promise<Map<number, number>> {
+export async function fetchPeakSlotRows(start: Date, end: Date): Promise<Map<number, number>> {
   const rows = await prisma.$queryRaw<Array<{ slot: number; cnt: number }>>`
     SELECT (EXTRACT(HOUR FROM ("timestamp" AT TIME ZONE ${UTC} AT TIME ZONE ${TZ}))::int / 4) AS slot, COUNT(*)::int AS cnt
     FROM messages
-    WHERE "timestamp" >= ${start} AND direction = 'inbound'
+    WHERE "timestamp" >= ${start} AND "timestamp" < ${end} AND direction = 'inbound'
     GROUP BY 1
   `;
   return new Map(rows.map((r) => [Number(r.slot), Number(r.cnt)]));
 }
 
-/** Conversations with any activity since `start`, per contact channel ('WHATSAPP', ...). */
-export async function fetchChannelCounts(start: Date): Promise<Map<string, number>> {
+/**
+ * Conversations whose latest activity falls in [start, end), per contact channel
+ * ('WHATSAPP', ...). Same population as the "percakapan aktif" KPI.
+ */
+export async function fetchChannelCounts(start: Date, end: Date): Promise<Map<string, number>> {
   const rows = await prisma.$queryRaw<Array<{ channel: string; cnt: number }>>`
     SELECT ct.channel::text AS channel, COUNT(*)::int AS cnt
     FROM conversations cv
     JOIN contacts ct ON ct.id = cv."contactId"
-    WHERE cv."lastMessageAt" >= ${start}
+    WHERE cv."lastMessageAt" >= ${start} AND cv."lastMessageAt" < ${end}
     GROUP BY 1
   `;
   return new Map(rows.map((r) => [r.channel.toUpperCase(), Number(r.cnt)]));

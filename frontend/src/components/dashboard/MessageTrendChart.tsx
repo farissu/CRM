@@ -13,16 +13,16 @@ const SERIES = [
 
 interface MessageTrendChartProps {
   data: DashboardStats['messageTrend'];
-  days: number;
+  periodLabel: string;
 }
 
-export default function MessageTrendChart({ data, days }: MessageTrendChartProps) {
+export default function MessageTrendChart({ data, periodLabel }: MessageTrendChartProps) {
   const hasData = data.some((d) => d.inbound > 0 || d.outbound > 0);
 
   return (
     <DashboardCard
       title="Grafik Pesan"
-      subtitle={`Tren pesan masuk dan pesan terkirim dalam ${days} hari terakhir`}
+      subtitle={`Tren pesan masuk dan pesan terkirim · ${periodLabel}`}
       headerRight={
         <div className="hidden sm:flex items-center gap-4">
           {SERIES.map((s) => (
@@ -75,7 +75,7 @@ export default function MessageTrendChart({ data, days }: MessageTrendChartProps
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <EmptyState message={`Belum ada pesan dalam ${days} hari terakhir`} heightClassName="h-[280px]" />
+        <EmptyState message="Belum ada pesan pada periode ini" heightClassName="h-[280px]" />
       )}
     </DashboardCard>
   );

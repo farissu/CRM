@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, DashboardRangeDays, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats, AutoReplySettings, DashboardPeriod, Channel } from '@/types';
+import type { Conversation, ConversationsResponse, MessagesResponse, Message, Label, QuickReply, Agent, Company, Contact, MessageTemplate, TemplateCategory, TemplateComponent, Complaint, Broadcast, BroadcastsResponse, DashboardStats, DashboardDateRange, AgentStatus, AgentStatusSummary, AgentStatusHistoryResponse, AgentPerformanceStats, AutoReplySettings, DashboardPeriod, Channel } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -404,8 +404,8 @@ export const broadcastApi = {
 };
 
 export const dashboardApi = {
-  getStats: async (days: DashboardRangeDays): Promise<DashboardStats> => {
-    const response = await api.get('/dashboard/stats', { params: { days } });
+  getStats: async (range: DashboardDateRange): Promise<DashboardStats> => {
+    const response = await api.get('/dashboard/stats', { params: range });
     return response.data as DashboardStats;
   },
 

@@ -2,13 +2,14 @@ import { Channel } from '@prisma/client';
 import prisma from '../config/database';
 import { fetchResponseTimesByAgent, weightedAverageMinutes, AgentResponseTime } from './responseTime';
 import { fetchChannelCounts, fetchMessageTrendRows, fetchPeakSlotRows, fetchSlaCounts, SlaCounts } from './dashboard.queries';
+import { addDays, inclusiveDayCount, jakartaDayStart, jakartaToday } from '../utils/jakarta-date.util';
 
 const MS_DAY = 86_400_000;
-// Timestamps are naive UTC; day boundaries are drawn in Jakarta (UTC+7).
-const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-export const DASHBOARD_RANGE_DAYS = [7, 30] as const;
-export type DashboardRangeDays = (typeof DASHBOARD_RANGE_DAYS)[number];
+// Default window when the caller gives no dates: the last 30 days including today.
+export const DEFAULT_RANGE_DAYS = 30;
+// Longest window the dashboard will compute (it also scans the same length before it).
+export const MAX_RANGE_DAYS = 366;
 
 // A customer message counts as handled on time when an agent replies within this window.
 export const SLA_TARGET_HOURS = 4;
@@ -24,8 +25,14 @@ export interface DashboardScope {
   companyId: string;
 }
 
+/** Inclusive Jakarta calendar dates, 'YYYY-MM-DD'. */
+export interface DashboardDateRange {
+  startDate: string;
+  endDate: string;
+}
+
 export interface DashboardStats {
-  range: { days: number; start: string; end: string };
+  range: { days: number; startDate: string; endDate: string; start: string; end: string };
   kpis: {
     avgResponseMinutes: number | null;
     prevAvgResponseMinutes: number | null;
@@ -55,26 +62,30 @@ interface DashboardRange {
   days: number;
   now: Date;
   start: Date;
+  /** Exclusive; capped at `now` so a range ending today doesn't reach into the future. */
+  end: Date;
   prevStart: Date;
 }
 
-function resolveRange(days: DashboardRangeDays): DashboardRange {
+export function defaultDateRange(now: Date = new Date()): DashboardDateRange {
+  const endDate = jakartaToday(now);
+  return { startDate: addDays(endDate, -(DEFAULT_RANGE_DAYS - 1)), endDate };
+}
+
+// The comparison window is the same number of days right before `start`.
+function resolveRange(dates: DashboardDateRange): DashboardRange {
   const now = new Date();
-  // The UTC instant that starts "today" in Jakarta; the window covers today plus the
-  // previous days - 1 days, and the comparison window is the same length right before it.
-  const jktWall = new Date(now.getTime() + TZ_OFFSET_MS);
-  const startToday = new Date(
-    Date.UTC(jktWall.getUTCFullYear(), jktWall.getUTCMonth(), jktWall.getUTCDate()) - TZ_OFFSET_MS
-  );
-  const start = new Date(startToday.getTime() - (days - 1) * MS_DAY);
-  return { days, now, start, prevStart: new Date(start.getTime() - days * MS_DAY) };
+  const days = inclusiveDayCount(dates.startDate, dates.endDate);
+  const start = jakartaDayStart(dates.startDate);
+  const dayAfterEnd = new Date(jakartaDayStart(dates.endDate).getTime() + MS_DAY);
+  const end = dayAfterEnd < now ? dayAfterEnd : now;
+  return { days, now, start, end, prevStart: new Date(start.getTime() - days * MS_DAY) };
 }
 
 /** Jakarta 'YYYY-MM-DD' keys for every day in the range, oldest first. */
 function dayKeys(range: DashboardRange): string[] {
-  return Array.from({ length: range.days }, (_, i) =>
-    new Date(range.start.getTime() + i * MS_DAY + TZ_OFFSET_MS).toISOString().slice(0, 10)
-  );
+  const firstDay = jakartaToday(range.start);
+  return Array.from({ length: range.days }, (_, i) => addDays(firstDay, i));
 }
 
 /**
@@ -83,8 +94,8 @@ function dayKeys(range: DashboardRange): string[] {
  * agents, templates and broadcasts are company-scoped unless the caller is SUPER_ADMIN.
  */
 export class DashboardService {
-  async getStats(scope: DashboardScope, days: DashboardRangeDays): Promise<DashboardStats> {
-    const range = resolveRange(days);
+  async getStats(scope: DashboardScope, dates: DashboardDateRange): Promise<DashboardStats> {
+    const range = resolveRange(dates);
     const companyWhere = scope.role === 'SUPER_ADMIN' ? {} : { companyId: scope.companyId };
 
     const [kpis, charts, awaitingReply, topAgents, alerts, contacts] = await Promise.all([
@@ -97,7 +108,7 @@ export class DashboardService {
     ]);
 
     return {
-      range: { days, start: range.start.toISOString(), end: range.now.toISOString() },
+      range: { days: range.days, ...dates, start: range.start.toISOString(), end: range.end.toISOString() },
       kpis,
       ...charts,
       awaitingReply,
@@ -111,15 +122,15 @@ export class DashboardService {
     const humanAgentWhere = { ...companyWhere, isActive: true, isBot: false };
     const [responseNow, responsePrev, resolved, prevResolved, activeConversations, sla, agentsTotal, agentsOnline] =
       await Promise.all([
-        fetchResponseTimesByAgent(range.start, range.now),
+        fetchResponseTimesByAgent(range.start, range.end),
         fetchResponseTimesByAgent(range.prevStart, range.start),
-        prisma.conversation.count({ where: { status: 'RESOLVED', updatedAt: { gte: range.start } } }),
+        prisma.conversation.count({ where: { status: 'RESOLVED', updatedAt: { gte: range.start, lt: range.end } } }),
         prisma.conversation.count({ where: { status: 'RESOLVED', updatedAt: { gte: range.prevStart, lt: range.start } } }),
-        prisma.conversation.count({ where: { lastMessageAt: { gte: range.start } } }),
+        prisma.conversation.count({ where: { lastMessageAt: { gte: range.start, lt: range.end } } }),
         fetchSlaCounts({
           prevStart: range.prevStart,
           start: range.start,
-          end: range.now,
+          end: range.end,
           now: range.now,
           targetMinutes: SLA_TARGET_HOURS * 60,
         }),
@@ -140,9 +151,9 @@ export class DashboardService {
 
   private async loadCharts(range: DashboardRange) {
     const [trendRows, peakBySlot, channelCounts, labelRefs, labelCounts] = await Promise.all([
-      fetchMessageTrendRows(range.start),
-      fetchPeakSlotRows(range.start),
-      fetchChannelCounts(range.start),
+      fetchMessageTrendRows(range.start, range.end),
+      fetchPeakSlotRows(range.start, range.end),
+      fetchChannelCounts(range.start, range.end),
       prisma.label.findMany({ select: { id: true, name: true, color: true } }),
       prisma.contactLabel.groupBy({ by: ['labelId'], _count: { _all: true } }),
     ]);
@@ -187,10 +198,10 @@ export class DashboardService {
       }),
       prisma.conversation.groupBy({
         by: ['assignedAgentId'],
-        where: { status: 'RESOLVED', assignedAgentId: { not: null }, updatedAt: { gte: range.start } },
+        where: { status: 'RESOLVED', assignedAgentId: { not: null }, updatedAt: { gte: range.start, lt: range.end } },
         _count: { _all: true },
       }),
-      fetchResponseTimesByAgent(range.start, range.now),
+      fetchResponseTimesByAgent(range.start, range.end),
     ]);
 
     const resolvedByAgent = new Map(resolvedRows.map((r) => [r.assignedAgentId as string, r._count._all]));
@@ -210,7 +221,7 @@ export class DashboardService {
   private async loadAlerts(range: DashboardRange, companyWhere: { companyId?: string }): Promise<DashboardStats['alerts']> {
     const templateWhere = { ...companyWhere, status: { in: [...PROBLEM_TEMPLATE_STATUSES] } };
     const [failedMessages, problemTemplateCount, problemTemplates, broadcasts] = await Promise.all([
-      prisma.message.count({ where: { direction: 'OUTBOUND', status: 'FAILED', timestamp: { gte: range.start } } }),
+      prisma.message.count({ where: { direction: 'OUTBOUND', status: 'FAILED', timestamp: { gte: range.start, lt: range.end } } }),
       prisma.messageTemplate.count({ where: templateWhere }),
       prisma.messageTemplate.findMany({
         where: templateWhere,
@@ -219,7 +230,11 @@ export class DashboardService {
         take: ALERT_TEMPLATE_LIMIT,
       }),
       prisma.broadcast.aggregate({
-        where: { ...companyWhere, createdAt: { gte: range.start }, OR: [{ status: 'FAILED' }, { failedCount: { gt: 0 } }] },
+        where: {
+          ...companyWhere,
+          createdAt: { gte: range.start, lt: range.end },
+          OR: [{ status: 'FAILED' }, { failedCount: { gt: 0 } }],
+        },
         _count: { _all: true },
         _sum: { failedCount: true },
       }),
@@ -237,7 +252,7 @@ export class DashboardService {
   private async loadContacts(range: DashboardRange): Promise<DashboardStats['contacts']> {
     const [total, newInRange] = await Promise.all([
       prisma.contact.count(),
-      prisma.contact.count({ where: { createdAt: { gte: range.start } } }),
+      prisma.contact.count({ where: { createdAt: { gte: range.start, lt: range.end } } }),
     ]);
     return { total, newInRange };
   }

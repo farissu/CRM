@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, RefreshCw, ShieldCheck, Timer, Users } from 'lucide-react';
 import { conversationApi, dashboardApi, labelApi } from '@/lib/api';
-import type { Conversation, DashboardRangeDays, DashboardStats, Label } from '@/types';
+import type { Conversation, DashboardDateRange, DashboardStats, Label } from '@/types';
 import KpiCard from './KpiCard';
 import MessageTrendChart from './MessageTrendChart';
 import ChannelDonut from './ChannelDonut';
@@ -14,11 +14,9 @@ import AwaitingReplyCard from './AwaitingReplyCard';
 import { LabelDistributionChart, PeakHoursChart } from './InsightCharts';
 import RecentContacts from './RecentContacts';
 import { formatDuration, formatNumber, percentChange, ratePercent } from './dashboardFormat';
+import DateRangePicker from './DateRangePicker';
+import { defaultDateRange, describeRange } from './dashboardDateRange';
 
-const RANGE_OPTIONS: Array<{ days: DashboardRangeDays; label: string }> = [
-  { days: 7, label: '7 Hari Terakhir' },
-  { days: 30, label: '30 Hari Terakhir' },
-];
 // Enough recent conversations to fill the table and the recent-contacts list.
 const RECENT_CONVERSATION_LIMIT = 100;
 
@@ -27,7 +25,8 @@ interface DashboardPanelProps {
 }
 
 export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
-  const [days, setDays] = useState<DashboardRangeDays>(7);
+  // Defaults to the last 30 days, matching the backend's default.
+  const [dateRange, setDateRange] = useState<DashboardDateRange>(() => defaultDateRange());
   const [reloadKey, setReloadKey] = useState(0);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -43,7 +42,7 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
         setLoading(true);
         setError(null);
         const [statsResponse, convResponse, labelsResponse] = await Promise.all([
-          dashboardApi.getStats(days),
+          dashboardApi.getStats(dateRange),
           conversationApi.getConversations({ limit: RECENT_CONVERSATION_LIMIT }),
           labelApi.getLabels(),
         ]);
@@ -62,7 +61,9 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
     return () => {
       isCurrent = false;
     };
-  }, [days, reloadKey]);
+  }, [dateRange, reloadKey]);
+
+  const periodLabel = describeRange(dateRange);
 
   if (!stats) {
     return (
@@ -89,16 +90,7 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
           <p className="text-sm text-white/80 font-medium mt-1">Ringkasan performa layanan pelanggan</p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value) as DashboardRangeDays)}
-            aria-label="Periode"
-            className="text-sm font-semibold bg-white text-saas-text-primary rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/60"
-          >
-            {RANGE_OPTIONS.map((opt) => (
-              <option key={opt.days} value={opt.days}>{opt.label}</option>
-            ))}
-          </select>
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
           <button
             type="button"
             onClick={() => setReloadKey((k) => k + 1)}
@@ -118,9 +110,9 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 min-w-0">
-            <MessageTrendChart data={stats.messageTrend} days={stats.range.days} />
+            <MessageTrendChart data={stats.messageTrend} periodLabel={periodLabel} />
           </div>
-          <ChannelDonut data={stats.channelDistribution} days={stats.range.days} />
+          <ChannelDonut data={stats.channelDistribution} periodLabel={periodLabel} />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
@@ -131,7 +123,7 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
             />
           </div>
           <div className="xl:col-span-5 space-y-5 min-w-0">
-            <ChannelAlerts alerts={stats.alerts} days={stats.range.days} onNavigate={onNavigate} />
+            <ChannelAlerts alerts={stats.alerts} periodLabel={periodLabel} onNavigate={onNavigate} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <TopAgents agents={stats.topAgents} />
               <AwaitingReplyCard
@@ -144,7 +136,7 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <PeakHoursChart data={stats.peakHours} days={stats.range.days} />
+          <PeakHoursChart data={stats.peakHours} periodLabel={periodLabel} />
           <LabelDistributionChart data={stats.labelDistribution} />
         </div>
 
@@ -153,7 +145,7 @@ export default function DashboardPanel({ onNavigate }: DashboardPanelProps) {
           labels={labels}
           totalContacts={stats.contacts.total}
           newContacts={stats.contacts.newInRange}
-          days={stats.range.days}
+          periodLabel={periodLabel}
         />
       </div>
     </div>

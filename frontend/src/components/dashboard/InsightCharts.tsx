@@ -8,9 +8,9 @@ import type { DashboardStats } from '@/types';
 const CHART_HEIGHT = 240;
 const TOOLTIP_STYLE = { borderRadius: 12, border: '1px solid #E1E8F0', fontSize: 12 };
 
-export function PeakHoursChart({ data, days }: { data: DashboardStats['peakHours']; days: number }) {
+export function PeakHoursChart({ data, periodLabel }: { data: DashboardStats['peakHours']; periodLabel: string }) {
   return (
-    <DashboardCard title="Jam Sibuk" subtitle={`Pesan masuk per jam, ${days} hari terakhir`}>
+    <DashboardCard title="Jam Sibuk" subtitle={`Pesan masuk per jam · ${periodLabel}`}>
       {data.some((d) => d.messages > 0) ? (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>

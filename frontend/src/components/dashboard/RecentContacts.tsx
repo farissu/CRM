@@ -55,10 +55,10 @@ interface RecentContactsProps {
   labels: Label[];
   totalContacts: number;
   newContacts: number;
-  days: number;
+  periodLabel: string;
 }
 
-export default function RecentContacts({ conversations, labels, totalContacts, newContacts, days }: RecentContactsProps) {
+export default function RecentContacts({ conversations, labels, totalContacts, newContacts, periodLabel }: RecentContactsProps) {
   const [labelId, setLabelId] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export default function RecentContacts({ conversations, labels, totalContacts, n
   return (
     <DashboardCard
       title="Kontak Terbaru"
-      subtitle={`${formatNumber(totalContacts)} kontak · ${formatNumber(newContacts)} baru dalam ${days} hari terakhir`}
+      subtitle={`${formatNumber(totalContacts)} kontak · ${formatNumber(newContacts)} baru (${periodLabel})`}
       headerRight={
         <div className="flex items-center gap-2 shrink-0">
           <select

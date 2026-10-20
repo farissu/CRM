@@ -283,7 +283,11 @@ export interface MessagesResponse {
   totalPages: number;
 }
 
-export type DashboardRangeDays = 7 | 30;
+/** Inclusive calendar dates in the business timezone, 'YYYY-MM-DD'. */
+export interface DashboardDateRange {
+  startDate: string;
+  endDate: string;
+}
 
 export interface DashboardSlaKpi {
   targetHours: number;
@@ -310,7 +314,7 @@ export interface DashboardAlerts {
 }
 
 export interface DashboardStats {
-  range: { days: number; start: string; end: string };
+  range: { days: number; startDate: string; endDate: string; start: string; end: string };
   kpis: {
     avgResponseMinutes: number | null;
     prevAvgResponseMinutes: number | null;
