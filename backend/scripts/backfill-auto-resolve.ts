@@ -11,40 +11,28 @@
 // message is not — e.g. a question followed by a sticker):
 //   npx ts-node scripts/backfill-auto-resolve.ts --apply --include-mixed
 import { PrismaClient, ConversationStatus, MessageDirection, MessageType } from '@prisma/client';
-import { isClosingMessage } from '../src/utils/closing-message.util';
+import {
+  isClosingMessage,
+  onlyClosingMessagesPending,
+  pendingCustomerMessages,
+  PendingCustomerMessage,
+  PENDING_LOOKBACK_MESSAGES,
+} from '../src/utils/closing-message.util';
 
 const prisma = new PrismaClient();
-// Enough history to reach the last agent reply in practically every conversation.
-const MESSAGES_TO_INSPECT = 30;
 const SAMPLE_SIZE = 8;
 const SAMPLE_TEXT_LENGTH = 60;
-
-interface PendingMessage {
-  text: string;
-  type: MessageType;
-}
 
 interface Candidate {
   id: string;
   name: string;
-  pending: PendingMessage[];
+  pending: PendingCustomerMessage[];
 }
 
 const isApply = process.argv.includes('--apply');
 const includeMixed = process.argv.includes('--include-mixed');
 
-/** Customer messages since the last real agent reply (outside-hours auto-replies don't count). */
-function pendingInbound(messages: Array<{ direction: MessageDirection; text: string | null; caption: string | null; messageType: MessageType; metadata: unknown }>): PendingMessage[] {
-  const pending: PendingMessage[] = [];
-  for (const m of messages) {
-    const isAutoReply = (m.metadata as { autoReply?: boolean } | null)?.autoReply === true;
-    if (m.direction === MessageDirection.OUTBOUND && !isAutoReply) break;
-    if (m.direction === MessageDirection.INBOUND) pending.push({ text: m.text || m.caption || '', type: m.messageType });
-  }
-  return pending;
-}
-
-function describe(msg: PendingMessage): string {
+function describe(msg: PendingCustomerMessage): string {
   if (msg.type === MessageType.STICKER) return '[stiker]';
   if (msg.type !== MessageType.TEXT && !msg.text) return `[${msg.type.toLowerCase()}]`;
   return JSON.stringify(msg.text.length > SAMPLE_TEXT_LENGTH ? `${msg.text.slice(0, SAMPLE_TEXT_LENGTH)}…` : msg.text);
@@ -73,7 +61,7 @@ async function main() {
       contact: { select: { name: true, phoneNumber: true } },
       messages: {
         orderBy: { timestamp: 'desc' },
-        take: MESSAGES_TO_INSPECT,
+        take: PENDING_LOOKBACK_MESSAGES,
         select: { direction: true, text: true, caption: true, messageType: true, metadata: true },
       },
     },
@@ -82,10 +70,10 @@ async function main() {
   const safe: Candidate[] = [];
   const mixed: Candidate[] = [];
   for (const conv of conversations) {
-    const pending = pendingInbound(conv.messages);
+    const pending = pendingCustomerMessages(conv.messages);
     if (pending.length === 0 || !isClosingMessage(pending[0].text, pending[0].type)) continue;
     const candidate = { id: conv.id, name: conv.contact.name || 'Tanpa nama', pending };
-    (pending.every((m) => isClosingMessage(m.text, m.type)) ? safe : mixed).push(candidate);
+    (onlyClosingMessagesPending(pending) ? safe : mixed).push(candidate);
   }
 
   console.log(`PIC: ${pic.name}`);
